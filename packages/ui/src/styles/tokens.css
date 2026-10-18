@@ -37,8 +37,10 @@
   --color-info: #5ea8f0;
 
   /* Type */
+  /* Same type system as Supabase: Inter for text, Manrope for headings, Source Code Pro for code */
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-heading: "Manrope Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Source Code Pro Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   /* Shape */
   --radius-control: 6px;
@@ -113,6 +115,12 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overflow: hidden; /* desktop app: panels scroll, the window never does */
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
   }
 
   :focus-visible {

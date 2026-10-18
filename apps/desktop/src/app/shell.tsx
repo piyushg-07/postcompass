@@ -64,7 +64,7 @@ export function Shell() {
             <CompassMark size={22} />
           </span>
           {!collapsed && (
-            <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
+            <span className="font-heading text-sm font-bold tracking-tight whitespace-nowrap">
               PostCompass
             </span>
           )}

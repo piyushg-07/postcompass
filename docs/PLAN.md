@@ -215,7 +215,7 @@ Dark only for now. All colors are CSS variables in `packages/ui/src/styles/token
 
 Everything else stays neutral black, grey, or white. If emerald appears in more than about 3 places on a screen, it's being overused.
 
-**Type:** Inter (UI) + JetBrains Mono (SQL, logs, ports, versions). Base size 14px.
+**Type:** same as Supabase: Inter (UI text), Manrope (headings), Source Code Pro (SQL, logs, ports, versions). All open-source (OFL), bundled locally. Base size 14px.
 **Radius:** 6px (controls), 10px (cards / dialogs). **Spacing:** 4px scale. **Motion:** 120–200ms ease-out, and none when `prefers-reduced-motion` is set.
 
 ### 5.2 Component stack
