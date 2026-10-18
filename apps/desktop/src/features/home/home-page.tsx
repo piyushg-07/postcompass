@@ -1,20 +1,17 @@
 import { Button, EmptyState, Kbd, Tooltip } from "@repo/ui";
 import { Database, Plus, Server } from "lucide-react";
 import { useAppState } from "../../app/app-state";
+import { useNavigation } from "../../app/navigation";
 import { PageHeader } from "../../app/page";
 import { greeting } from "../../lib/format";
 import { ServerCard } from "../servers/server-card";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
-export function HomePage({
-  onInstall,
-  onOpenServers,
-  onOpen,
-}: {
-  onInstall: () => void;
-  onOpenServers: () => void;
-  onOpen: (serverId: string) => void;
-}) {
+export function HomePage() {
+  const onInstall = useNavigation((s) => s.startInstall);
+  const goTo = useNavigation((s) => s.goTo);
+  const onOpen = useNavigation((s) => s.openServer);
+  const onOpenServers = () => goTo("servers");
   const { state } = useAppState();
   const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
   const hasServers = state.servers.length > 0;

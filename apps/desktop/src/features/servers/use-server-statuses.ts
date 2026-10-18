@@ -1,33 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ServerStatus } from "../../lib/bindings";
 import { commands, unwrap } from "../../lib/ipc";
+import { queryKeys } from "../../lib/query";
 
 const POLL_MS = 5000;
 
-/** Live status of every managed server, refreshed every few seconds while the window is visible. */
+/**
+ * Live status of every managed server. One shared query, so Home and Servers never poll twice;
+ * polling pauses while the window is hidden.
+ */
 export function useServerStatuses(serverIds: string[]) {
-  const [statuses, setStatuses] = useState<Record<string, ServerStatus>>({});
-  const key = serverIds.join(",");
-
-  const refresh = useCallback(async () => {
-    if (!key) return;
-    try {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.serverStatuses,
+    queryFn: async () => {
       const entries = await unwrap(commands.serverStatuses());
-      setStatuses(Object.fromEntries(entries.map((e) => [e.id, e.status])));
-    } catch {
-      // Keep the last known statuses; the next poll retries
-    }
-  }, [key]);
+      return Object.fromEntries(entries.map((e) => [e.id, e.status])) as Record<string, ServerStatus>;
+    },
+    enabled: serverIds.length > 0,
+    refetchInterval: POLL_MS,
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    void refresh();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [refresh]);
+  /** Apply a status a command just returned, without waiting for the next poll. */
+  const setStatus = (id: string, status: ServerStatus) =>
+    queryClient.setQueryData<Record<string, ServerStatus>>(queryKeys.serverStatuses, (prev) => ({
+      ...prev,
+      [id]: status,
+    }));
 
-  const setStatus = (id: string, status: ServerStatus) => setStatuses((s) => ({ ...s, [id]: status }));
-
-  return { statuses, refresh, setStatus };
+  return { statuses: query.data ?? {}, setStatus };
 }

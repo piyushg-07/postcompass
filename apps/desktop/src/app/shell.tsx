@@ -1,6 +1,6 @@
 import { cn } from "@repo/ui";
 import { Database, Home, Palette, Server, Settings } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { ExplorerPage } from "../features/explorer/explorer-page";
 import { HomePage } from "../features/home/home-page";
 import { ServersPage } from "../features/servers/servers-page";
@@ -8,8 +8,7 @@ import { SettingsPage } from "../features/settings/settings-page";
 import { Playground } from "../playground/playground";
 import { useAppState } from "./app-state";
 import { CompassMark } from "./compass-mark";
-
-export type Section = "home" | "servers" | "settings" | "playground" | "explorer";
+import { type Section, useNavigation } from "./navigation";
 
 const NAV: { id: Section; label: string; icon: ReactNode; devOnly?: boolean }[] = [
   { id: "home", label: "Home", icon: <Home /> },
@@ -20,20 +19,11 @@ const NAV: { id: Section; label: string; icon: ReactNode; devOnly?: boolean }[] 
 
 export function Shell() {
   const { info, state } = useAppState();
-  const [section, setSection] = useState<Section>("home");
-  const [installOpen, setInstallOpen] = useState(false);
-  const [openServerId, setOpenServerId] = useState<string | null>(null);
+  const section = useNavigation((s) => s.section);
+  const openServerId = useNavigation((s) => s.openServerId);
+  const goTo = useNavigation((s) => s.goTo);
+  const closeServer = useNavigation((s) => s.closeServer);
   const openServer = state.servers.find((s) => s.id === openServerId);
-
-  const open = (serverId: string) => {
-    setOpenServerId(serverId);
-    setSection("explorer");
-  };
-
-  const openInstall = () => {
-    setSection("servers");
-    setInstallOpen(true);
-  };
 
   return (
     <div className="flex h-full">
@@ -49,7 +39,7 @@ export function Shell() {
                 active={section === item.id}
                 icon={item.icon}
                 label={item.label}
-                onClick={() => setSection(item.id)}
+                onClick={() => goTo(item.id)}
               />
             </li>
           ))}
@@ -61,7 +51,7 @@ export function Shell() {
                   active={section === "explorer"}
                   icon={<Database />}
                   label={openServer.name}
-                  onClick={() => setSection("explorer")}
+                  onClick={() => goTo("explorer")}
                 />
               </li>
             </>
@@ -72,22 +62,11 @@ export function Shell() {
 
       <main className="min-w-0 flex-1 overflow-y-auto">
         {section === "explorer" && openServerId ? (
-          <ExplorerPage
-            key={openServerId}
-            serverId={openServerId}
-            onClose={() => {
-              setOpenServerId(null);
-              setSection("servers");
-            }}
-          />
+          <ExplorerPage key={openServerId} serverId={openServerId} onClose={closeServer} />
         ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
-            {section === "home" && (
-              <HomePage onInstall={openInstall} onOpenServers={() => setSection("servers")} onOpen={open} />
-            )}
-            {section === "servers" && (
-              <ServersPage installOpen={installOpen} onInstallOpenChange={setInstallOpen} onOpen={open} />
-            )}
+            {section === "home" && <HomePage />}
+            {section === "servers" && <ServersPage />}
             {section === "settings" && <SettingsPage />}
             {section === "playground" && <Playground />}
           </div>

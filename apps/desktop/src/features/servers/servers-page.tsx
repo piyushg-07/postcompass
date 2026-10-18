@@ -2,6 +2,7 @@ import { Button, Dialog, DialogContent, EmptyState } from "@repo/ui";
 import { Plus, RefreshCw, Server } from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
+import { useNavigation } from "../../app/navigation";
 import { PageHeader } from "../../app/page";
 import { DetectionResults } from "./detection-results";
 import { InstallFlow } from "./install-flow";
@@ -9,15 +10,10 @@ import { ServerCard } from "./server-card";
 import { useDetection } from "./use-detection";
 import { useServerStatuses } from "./use-server-statuses";
 
-export function ServersPage({
-  installOpen,
-  onInstallOpenChange,
-  onOpen,
-}: {
-  installOpen: boolean;
-  onInstallOpenChange: (open: boolean) => void;
-  onOpen: (serverId: string) => void;
-}) {
+export function ServersPage() {
+  const installOpen = useNavigation((s) => s.installDialogOpen);
+  const onInstallOpenChange = useNavigation((s) => s.setInstallDialogOpen);
+  const onOpen = useNavigation((s) => s.openServer);
   const { state, refresh } = useAppState();
   const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
   const detection = useDetection();

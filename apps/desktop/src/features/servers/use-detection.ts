@@ -1,26 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { DetectionReport } from "../../lib/bindings";
 import { commands, unwrap } from "../../lib/ipc";
+import { queryKeys } from "../../lib/query";
 
 export type DetectionState =
   | { status: "scanning" }
   | { status: "done"; report: DetectionReport }
   | { status: "error"; message: string };
 
-/** Runs local PostgreSQL detection on mount; `rescan` runs it again. */
+/** Local PostgreSQL detection. Cached and shared between onboarding and the Servers page. */
 export function useDetection() {
-  const [state, setState] = useState<DetectionState>({ status: "scanning" });
+  const query = useQuery({
+    queryKey: queryKeys.detection("postgres"),
+    queryFn: () => unwrap(commands.detectLocal("postgres")),
+    // Installs don't change on their own often; rescan is explicit
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  const rescan = useCallback(() => {
-    setState({ status: "scanning" });
-    unwrap(commands.detectLocal("postgres"))
-      .then((report) => setState({ status: "done", report }))
-      .catch((e: unknown) => setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
-  }, []);
+  const state: DetectionState = query.isFetching
+    ? { status: "scanning" }
+    : query.error
+      ? { status: "error", message: query.error.message }
+      : query.data
+        ? { status: "done", report: query.data }
+        : { status: "scanning" };
 
-  useEffect(rescan, [rescan]);
-
-  return { state, rescan };
+  return { state, rescan: () => void query.refetch() };
 }
 
 /** Found anything not managed by PostCompass. */

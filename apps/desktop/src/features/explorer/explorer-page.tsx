@@ -1,80 +1,80 @@
 import { Badge, Button, cn, EmptyState, Skeleton, StatusDot } from "@repo/ui";
 import { ChevronRight, Database, Eye, FolderTree, Layers, RefreshCw, Table2, Unplug } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
 import { useAppState } from "../../app/app-state";
-import type { DatabaseInfo, OpenedConnection, SchemaInfo, TableInfo, TableKind } from "../../lib/bindings";
+import type { TableInfo, TableKind } from "../../lib/bindings";
 import { formatBytes, formatCount } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
+import { queryKeys } from "../../lib/query";
 
 type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
-/** Loads `fetch()` whenever `key` changes. `null` key means "nothing selected". */
-function useLoad<T>(key: string | null, fetch: () => Promise<T>) {
-  const [state, setState] = useState<Load<T>>({ status: "loading" });
-  const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    if (key === null) return;
-    let alive = true;
-    setState({ status: "loading" });
-    fetch()
-      .then((data) => alive && setState({ status: "ready", data }))
-      .catch((e: unknown) => alive && setState({ status: "error", message: describeError(e).message }));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` captures everything `fetch` depends on
-  }, [key, nonce]);
-
-  return { state, reload: useCallback(() => setNonce((n) => n + 1), []) };
+function toLoad<T>(query: UseQueryResult<T>): Load<T> {
+  if (query.isError) return { status: "error", message: describeError(query.error).message };
+  if (query.isSuccess) return { status: "ready", data: query.data };
+  return { status: "loading" };
 }
 
 /** Browse a connected server: databases → schemas → tables. */
 export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const { state } = useAppState();
+  const queryClient = useQueryClient();
   const server = state.servers.find((s) => s.id === serverId);
-  const [connection, setConnection] = useState<Load<OpenedConnection>>({ status: "loading" });
   const [database, setDatabase] = useState<string | null>(null);
   const [schema, setSchema] = useState<string | null>(null);
 
-  const connect = useCallback(() => {
-    setConnection({ status: "loading" });
-    unwrap(commands.openServer(serverId))
-      .then((opened) => {
-        setConnection({ status: "ready", data: opened });
-        setDatabase((db) => db ?? opened.database);
-      })
-      .catch((e: unknown) => {
-        const { title, message, hint } = describeError(e);
-        setConnection({ status: "error", message: hint ? `${title}: ${message}. ${hint}` : `${title}: ${message}` });
-      });
-  }, [serverId]);
+  // The session lives in Rust; this query just opens it once and remembers the result
+  const connectionQuery = useQuery({
+    queryKey: queryKeys.connection(serverId),
+    queryFn: () => unwrap(commands.openServer(serverId)),
+    staleTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const connection = connectionQuery.data;
+  const connectionId = connection?.connectionId ?? null;
+  const activeDatabase = database ?? connection?.database ?? null;
 
-  useEffect(connect, [connect]);
-
-  const connectionId = connection.status === "ready" ? connection.data.connectionId : null;
-
-  const databases = useLoad<DatabaseInfo[]>(connectionId, () => unwrap(commands.listDatabases(connectionId!)));
-  const schemas = useLoad<SchemaInfo[]>(connectionId && database ? `${connectionId}/${database}` : null, () =>
-    unwrap(commands.listSchemas(connectionId!, database!)),
-  );
-  const tables = useLoad<TableInfo[]>(
-    connectionId && database && schema ? `${connectionId}/${database}/${schema}` : null,
-    () => unwrap(commands.listTables(connectionId!, database!, schema!)),
-  );
+  const databases = useQuery({
+    queryKey: queryKeys.explorer.databases(connectionId ?? ""),
+    queryFn: () => unwrap(commands.listDatabases(connectionId!)),
+    enabled: connectionId !== null,
+  });
+  const schemas = useQuery({
+    queryKey: queryKeys.explorer.schemas(connectionId ?? "", activeDatabase ?? ""),
+    queryFn: () => unwrap(commands.listSchemas(connectionId!, activeDatabase!)),
+    enabled: connectionId !== null && activeDatabase !== null,
+  });
+  const tables = useQuery({
+    queryKey: queryKeys.explorer.tables(connectionId ?? "", activeDatabase ?? "", schema ?? ""),
+    queryFn: () => unwrap(commands.listTables(connectionId!, activeDatabase!, schema!)),
+    enabled: connectionId !== null && activeDatabase !== null && schema !== null,
+  });
 
   // Default to the "public" schema (or the first user schema) when a database is picked
   useEffect(() => {
-    if (schemas.state.status !== "ready") return;
-    const names = schemas.state.data;
-    if (schema && names.some((s) => s.name === schema)) return;
-    setSchema(names.find((s) => s.name === "public")?.name ?? names.find((s) => !s.isSystem)?.name ?? null);
-  }, [schemas.state, schema]);
+    if (!schemas.data) return;
+    if (schema && schemas.data.some((s) => s.name === schema)) return;
+    setSchema(
+      schemas.data.find((s) => s.name === "public")?.name ?? schemas.data.find((s) => !s.isSystem)?.name ?? null,
+    );
+  }, [schemas.data, schema]);
+
+  const refresh = () => {
+    if (connectionId) void queryClient.invalidateQueries({ queryKey: queryKeys.explorer.all(connectionId) });
+  };
 
   const disconnect = async () => {
-    if (connectionId) await commands.closeConnection(connectionId);
+    if (connectionId) {
+      await commands.closeConnection(connectionId);
+      queryClient.removeQueries({ queryKey: queryKeys.explorer.all(connectionId) });
+    }
+    queryClient.removeQueries({ queryKey: queryKeys.connection(serverId) });
     onClose();
   };
+
+  const connectionError = connectionQuery.isError ? describeError(connectionQuery.error) : null;
 
   if (!server) {
     return <EmptyState title="Server not found" description="It may have been removed." />;
@@ -85,26 +85,17 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-6">
         <div className="flex min-w-0 items-center gap-3">
           <span className="truncate text-sm font-semibold">{server.name}</span>
-          {connection.status === "ready" && (
+          {connection && (
             <span className="flex items-center gap-2 text-xs text-fg-muted">
               <StatusDot status="running" />
-              Connected · PostgreSQL {connection.data.serverVersion} · {connection.data.latencyMs} ms
+              Connected · PostgreSQL {connection.serverVersion} · {connection.latencyMs} ms
             </span>
           )}
-          {connection.status === "loading" && <span className="text-xs text-fg-subtle">Connecting…</span>}
+          {connectionQuery.isPending && <span className="text-xs text-fg-subtle">Connecting…</span>}
         </div>
         <div className="flex items-center gap-2">
-          {connection.status === "ready" && (
-            <Button
-              size="sm"
-              variant="ghost"
-              iconLeft={<RefreshCw />}
-              onClick={() => {
-                databases.reload();
-                schemas.reload();
-                tables.reload();
-              }}
-            >
+          {connection && (
+            <Button size="sm" variant="ghost" iconLeft={<RefreshCw />} onClick={refresh}>
               Refresh
             </Button>
           )}
@@ -114,16 +105,16 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
         </div>
       </header>
 
-      {connection.status === "error" ? (
+      {connectionError ? (
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
             icon={<Unplug />}
             title="Couldn't open this server"
-            description={connection.message}
+            description={connectionError.hint ? `${connectionError.message}. ${connectionError.hint}` : connectionError.message}
             actions={
               <>
                 <Button onClick={onClose}>Back</Button>
-                <Button variant="primary" onClick={connect}>
+                <Button variant="primary" loading={connectionQuery.isFetching} onClick={() => void connectionQuery.refetch()}>
                   Try again
                 </Button>
               </>
@@ -134,13 +125,13 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
         <div className="grid min-h-0 flex-1 grid-cols-[220px_240px_1fr]">
           <Pane title="Databases" icon={<Database />}>
             <List
-              load={databases.state}
+              load={toLoad(databases)}
               empty="No databases"
               items={(data) =>
                 data.map((db) => (
                   <Item
                     key={db.name}
-                    active={db.name === database}
+                    active={db.name === activeDatabase}
                     disabled={!db.allowConnections}
                     onClick={() => {
                       setDatabase(db.name);
@@ -156,7 +147,7 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
 
           <Pane title="Schemas" icon={<FolderTree />}>
             <List
-              load={database ? schemas.state : { status: "ready", data: [] }}
+              load={activeDatabase ? toLoad(schemas) : { status: "ready", data: [] }}
               empty="No schemas"
               items={(data) => {
                 const user = data.filter((s) => !s.isSystem);
@@ -193,12 +184,12 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
 
           <section className="flex min-w-0 flex-col overflow-hidden">
             <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border px-4 text-xs text-fg-muted">
-              <span>{database ?? "—"}</span>
+              <span>{activeDatabase ?? "—"}</span>
               <ChevronRight className="size-3 text-fg-subtle" />
               <span className="text-fg">{schema ?? "—"}</span>
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
-              <TablesView load={schema ? tables.state : null} schema={schema} />
+              <TablesView load={schema ? toLoad<TableInfo[]>(tables) : null} schema={schema} />
             </div>
           </section>
         </div>

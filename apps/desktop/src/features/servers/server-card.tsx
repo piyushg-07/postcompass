@@ -1,10 +1,12 @@
 import { Badge, Button, Card, ConfirmDialog, IconButton, type Status, StatusBadge, toast } from "@repo/ui";
 import { Copy, Eye, EyeOff, FolderOpen, Play, Square, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import type { ManagedServer, ServerStatus } from "../../lib/bindings";
 import { connectionString } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
+import { queryKeys } from "../../lib/query";
 
 export function ServerCard({
   server,
@@ -21,6 +23,12 @@ export function ServerCard({
   compact?: boolean;
 }) {
   const { refresh } = useAppState();
+  const queryClient = useQueryClient();
+  /** Rust closes the session when a server stops; drop the cached one so the explorer reconnects. */
+  const forgetConnection = () => {
+    queryClient.removeQueries({ queryKey: queryKeys.connection(server.id) });
+    queryClient.removeQueries({ queryKey: queryKeys.explorer.all(`server:${server.id}`) });
+  };
   const [busy, setBusy] = useState<"start" | "stop" | null>(null);
   const [password, setPassword] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -35,6 +43,7 @@ export function ServerCard({
     try {
       const next = await unwrap(action === "start" ? commands.startServer(server.id) : commands.stopServer(server.id));
       onStatus(next);
+      if (action === "stop") forgetConnection();
       toast.success(action === "start" ? `${server.name} started` : `${server.name} stopped`);
     } catch (e) {
       const { title, message, hint } = describeError(e);
@@ -56,6 +65,7 @@ export function ServerCard({
     setRemoving(true);
     try {
       await unwrap(commands.uninstallServer(server.id, false));
+      forgetConnection();
       toast.success(`${server.name} was removed`);
       setConfirmRemove(false);
       await refresh();

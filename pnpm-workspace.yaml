@@ -10,5 +10,11 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-arm64@2.11.9'
   - turbo@2.11.9
   - lucide-react@1.59.0
+  - '@tanstack/query-core@5.104.4'
+  - '@tanstack/react-query@5.104.4'
+  - '@tanstack/query-devtools@5.104.4'
+  - '@tanstack/react-query-devtools@5.104.4'
+  - '@tanstack/hotkeys@0.16.0'
+  - '@tanstack/react-hotkeys@0.15.0'
 allowBuilds:
   esbuild: true

@@ -11,12 +11,15 @@ import {
   type TaskStepState,
   toast,
 } from "@repo/ui";
+import { useDebouncedValue } from "@tanstack/react-pacer";
+import { useQuery } from "@tanstack/react-query";
 import { Channel } from "@tauri-apps/api/core";
 import { AlertTriangle, CheckCircle2, ChevronDown, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { InstallEvent, InstallStep, ManagedServer, RuntimeVersion } from "../../lib/bindings";
+import type { InstallEvent, InstallStep, ManagedServer } from "../../lib/bindings";
 import { formatMb, generatePassword } from "../../lib/format";
 import { commands, describeError, isCancelled, unwrap } from "../../lib/ipc";
+import { queryKeys } from "../../lib/query";
 
 const STEP_LABELS: Record<InstallStep, string> = {
   check_system: "Checking system",
@@ -259,44 +262,58 @@ function InstallForm({
   onCancel?: () => void;
   cancelLabel: string;
 }) {
-  const [versions, setVersions] = useState<RuntimeVersion[]>([]);
   const [values, setValues] = useState<FormValues>(
     initial ?? { name: "", version: "", port: 5432, password: generatePassword(), autoStart: true },
   );
-  const [portFree, setPortFree] = useState<boolean | null>(null);
   const nameTouched = useRef(Boolean(initial));
 
-  useEffect(() => {
-    Promise.all([unwrap(commands.runtimeVersions("postgres")), initial ? null : unwrap(commands.suggestPort("postgres"))])
-      .then(([versions, port]) => {
-        setVersions(versions);
-        setValues((v) => {
-          const version = v.version || versions.find((x) => x.recommended)?.version || versions[0]?.version || "";
-          return {
-            ...v,
-            version,
-            port: port ?? v.port,
-            name: nameTouched.current ? v.name : `Local PostgreSQL ${version.split(".")[0]}`,
-          };
-        });
-      })
-      .catch((e: unknown) => toast.error("Couldn't load install options", { description: describeError(e).message }));
-  }, [initial]);
+  const versionsQuery = useQuery({
+    queryKey: queryKeys.runtimeVersions("postgres"),
+    queryFn: () => unwrap(commands.runtimeVersions("postgres")),
+    staleTime: Infinity,
+  });
+  const suggestedPort = useQuery({
+    queryKey: queryKeys.suggestedPort("postgres"),
+    queryFn: () => unwrap(commands.suggestPort("postgres")),
+    enabled: !initial,
+    staleTime: 0,
+  });
+  const versions = versionsQuery.data ?? [];
 
-  // Live port check, debounced
+  // Fill in defaults once the options arrive
   useEffect(() => {
-    setPortFree(null);
-    if (!Number.isInteger(values.port) || values.port < 1024 || values.port > 65535) return;
-    const timer = setTimeout(() => void commands.isPortFree(values.port).then(setPortFree), 250);
-    return () => clearTimeout(timer);
-  }, [values.port]);
+    if (!versionsQuery.data) return;
+    setValues((v) => {
+      const version =
+        v.version || versionsQuery.data.find((x) => x.recommended)?.version || versionsQuery.data[0]?.version || "";
+      return { ...v, version, name: nameTouched.current ? v.name : `Local PostgreSQL ${version.split(".")[0]}` };
+    });
+  }, [versionsQuery.data]);
+  useEffect(() => {
+    if (suggestedPort.data) setValues((v) => ({ ...v, port: suggestedPort.data }));
+  }, [suggestedPort.data]);
+  useEffect(() => {
+    const error = versionsQuery.error ?? suggestedPort.error;
+    if (error) toast.error("Couldn't load install options", { description: describeError(error).message });
+  }, [versionsQuery.error, suggestedPort.error]);
+
+  // Live port check, debounced so typing doesn't fire a check per keystroke
+  const portValid = Number.isInteger(values.port) && values.port >= 1024 && values.port <= 65535;
+  const [debouncedPort] = useDebouncedValue(values.port, { wait: 250 });
+  const portCheck = useQuery({
+    queryKey: ["port-free", debouncedPort],
+    queryFn: () => commands.isPortFree(debouncedPort),
+    enabled: portValid && debouncedPort === values.port,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const portFree = portValid && debouncedPort === values.port && portCheck.isSuccess ? portCheck.data : null;
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
 
-  const portError =
-    !Number.isInteger(values.port) || values.port < 1024 || values.port > 65535
-      ? "Use a port between 1024 and 65535"
-      : portFree === false
+  const portError = !portValid
+    ? "Use a port between 1024 and 65535"
+    : portFree === false
         ? `Port ${values.port} is in use. Try ${values.port + 1}.`
         : undefined;
   const passwordError = values.password.length < 8 ? "At least 8 characters" : undefined;
