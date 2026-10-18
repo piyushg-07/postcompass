@@ -9,12 +9,13 @@ import {
   toast,
 } from "@repo/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, KeyRound } from "lucide-react";
+import { AlertTriangle, KeyRound, TextSearch } from "lucide-react";
 import { useState } from "react";
 import type { ColumnInfo, ColumnValue, RowChange } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer } from "../explorer-context";
+import { RecordPicker, type Reference } from "./reference";
 
 /** The row being edited: its current values and the key that identifies it. */
 export interface EditTarget {
@@ -49,6 +50,7 @@ export function RowSheet({
   table,
   columns,
   row,
+  references = {},
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,6 +60,8 @@ export function RowSheet({
   columns: ColumnInfo[];
   /** Present when editing. */
   row?: EditTarget | null;
+  /** Foreign keys by column name; those fields get a record picker. */
+  references?: Record<string, Reference>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,6 +72,7 @@ export function RowSheet({
           table={table}
           columns={columns}
           row={row ?? null}
+          references={references}
           onDone={() => onOpenChange(false)}
         />
       )}
@@ -84,6 +89,7 @@ function RowForm({
   table,
   columns,
   row,
+  references,
   onDone,
 }: {
   database: string;
@@ -91,8 +97,10 @@ function RowForm({
   table: string;
   columns: ColumnInfo[];
   row: EditTarget | null;
+  references: Record<string, Reference>;
   onDone: () => void;
 }) {
+  const [picking, setPicking] = useState<number | null>(null);
   const { connectionId } = useExplorer();
   const queryClient = useQueryClient();
   const editing = row !== null;
@@ -281,6 +289,17 @@ function RowForm({
                         onChange={(e) => set(i, e.target.value)}
                       />
                     )}
+                    {references[c.name] && (
+                      <button
+                        type="button"
+                        title={`Select a record from ${references[c.name]!.table}`}
+                        onClick={() => setPicking(i)}
+                        className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-border px-2 text-[11px] text-fg-muted hover:border-fg-subtle hover:text-fg"
+                      >
+                        <TextSearch className="size-3.5" />
+                        Select record
+                      </button>
+                    )}
                     {c.nullable && (
                       <button
                         type="button"
@@ -297,6 +316,14 @@ function RowForm({
                       </button>
                     )}
                   </div>
+                )}
+                {references[c.name] && (
+                  <span className="text-[11px] text-fg-subtle">
+                    References{" "}
+                    <span className="font-mono">
+                      {references[c.name]!.table}.{references[c.name]!.column}
+                    </span>
+                  </span>
                 )}
                 {!auto && !editing && (
                   <span className="text-[11px] text-fg-subtle">
@@ -318,6 +345,15 @@ function RowForm({
         )}
         <button type="submit" hidden />
       </form>
+      {picking !== null && references[columns[picking]!.name] && (
+        <RecordPicker
+          database={database}
+          reference={references[columns[picking]!.name]!}
+          open
+          onOpenChange={(o) => !o && setPicking(null)}
+          onPick={(v) => set(picking, v)}
+        />
+      )}
     </SheetContent>
   );
 }

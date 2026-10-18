@@ -5,7 +5,13 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, KeyRound, Maximize2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  KeyRound,
+  Maximize2,
+} from "lucide-react";
 import {
   type KeyboardEvent,
   type MouseEvent,
@@ -24,6 +30,8 @@ export interface GridColumn {
   name: string;
   dataType?: string;
   isKey?: boolean;
+  /** Foreign key: cells get a button that opens the referenced record. */
+  references?: string;
 }
 
 export interface GridRow {
@@ -71,6 +79,8 @@ export interface DataGridProps {
   headerMenu?: (column: GridColumn) => ReactNode;
   /** When set, each row shows an expand button that calls this (e.g. to edit it in a panel). */
   onExpandRow?: (rowId: string) => void;
+  /** Called from a foreign-key cell's link button. */
+  onOpenReference?: (columnIndex: number, value: string) => void;
 }
 
 export function DataGrid({
@@ -85,6 +95,7 @@ export function DataGrid({
   emptyText = "No rows",
   headerMenu,
   onExpandRow,
+  onOpenReference,
 }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -302,6 +313,8 @@ export function DataGrid({
                     editing?.rowId === original.id ? editing.col : null
                   }
                   onSelect={(e) => toggleRow(item.index, original.id, e)}
+                  references={columns.map((c) => c.references)}
+                  onReference={onOpenReference}
                   onCheck={
                     onSelectedChange
                       ? (e) => checkRow(item.index, original.id, e)
@@ -340,6 +353,8 @@ const GridRowView = memo(function GridRowView({
   selected,
   editingCol,
   onSelect,
+  references,
+  onReference,
   onCheck,
   onExpand,
   onStartEdit,
@@ -353,6 +368,8 @@ const GridRowView = memo(function GridRowView({
   selected: boolean;
   editingCol: number | null;
   onSelect: (e: MouseEvent) => void;
+  references?: (string | undefined)[];
+  onReference?: (col: number, value: string) => void;
   onCheck?: (e: MouseEvent) => void;
   onExpand?: () => void;
   onStartEdit?: (col: number) => void;
@@ -424,9 +441,26 @@ const GridRowView = memo(function GridRowView({
           ) : value === undefined ? (
             <span className="text-fg-subtle italic">DEFAULT</span>
           ) : (
-            <span className="truncate whitespace-pre text-fg">
-              {value.replaceAll("\n", "↵ ")}
-            </span>
+            <>
+              <span className="truncate whitespace-pre text-fg">
+                {value.replaceAll("\n", "↵ ")}
+              </span>
+              {references?.[col] && onReference && row.state !== "new" && (
+                <button
+                  type="button"
+                  aria-label={`Open referenced record in ${references[col]}`}
+                  title={`Open the ${references[col]} record`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReference(col, value);
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="ml-auto flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border border-border-strong bg-surface-raised text-fg-subtle hover:border-accent hover:text-accent"
+                >
+                  <ArrowRight className="size-3" />
+                </button>
+              )}
+            </>
           )}
         </div>
       ))}

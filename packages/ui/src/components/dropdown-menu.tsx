@@ -2,7 +2,13 @@ import { DropdownMenu as Menu } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 
-export const DropdownMenu = Menu.Root;
+/**
+ * Non-modal by default: a modal menu that opens a dialog or side panel from one of its items
+ * can leave `pointer-events: none` on <body> after both close, freezing the whole app.
+ */
+export function DropdownMenu({ modal = false, ...props }: ComponentProps<typeof Menu.Root>) {
+  return <Menu.Root modal={modal} {...props} />;
+}
 export const DropdownMenuTrigger = Menu.Trigger;
 
 export function DropdownMenuContent({

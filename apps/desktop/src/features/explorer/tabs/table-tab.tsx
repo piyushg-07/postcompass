@@ -16,7 +16,12 @@ import { Copy, Eraser, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { ObjectKind } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
-import { dropTable, qualified, renameTable, truncateTable } from "../../../lib/sql";
+import {
+  dropTable,
+  qualified,
+  renameTable,
+  truncateTable,
+} from "../../../lib/sql";
 import { TableData, TableFooter } from "../data/table-data";
 import { useDefinition, useExplorer } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
@@ -41,7 +46,12 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
   const [newName, setNewName] = useState(tab.name);
   const [cascade, setCascade] = useState(false);
   const isView = tab.kind === "view" || tab.kind === "materialized_view";
-  const kindLabel = tab.kind === "view" ? "view" : tab.kind === "materialized_view" ? "materialized view" : "table";
+  const kindLabel =
+    tab.kind === "view"
+      ? "view"
+      : tab.kind === "materialized_view"
+        ? "materialized view"
+        : "table";
 
   const footerRight = (
     <>
@@ -53,7 +63,9 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
             onClick={() => updateTab(tab.id, { view: v.id })}
             className={cn(
               "h-6 cursor-pointer rounded px-2.5 text-xs transition-colors",
-              tab.view === v.id ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg",
+              tab.view === v.id
+                ? "bg-surface-hover text-fg"
+                : "text-fg-muted hover:text-fg",
             )}
           >
             {v.label}
@@ -70,21 +82,33 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           <DropdownMenuItem
             icon={<Copy />}
             onSelect={() =>
-              void navigator.clipboard.writeText(qualified(tab.schema, tab.name)).then(() => toast.success("Name copied"))
+              void navigator.clipboard
+                .writeText(qualified(tab.schema, tab.name))
+                .then(() => toast.success("Name copied"))
             }
           >
             Copy name
           </DropdownMenuItem>
-          <DropdownMenuItem icon={<Pencil />} onSelect={() => setAction("rename")}>
+          <DropdownMenuItem
+            icon={<Pencil />}
+            onSelect={() => setAction("rename")}
+          >
             Rename…
           </DropdownMenuItem>
           {!isView && (
-            <DropdownMenuItem icon={<Eraser />} onSelect={() => setAction("truncate")}>
+            <DropdownMenuItem
+              icon={<Eraser />}
+              onSelect={() => setAction("truncate")}
+            >
               Empty table (truncate)…
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem icon={<Trash2 />} danger onSelect={() => setAction("drop")}>
+          <DropdownMenuItem
+            icon={<Trash2 />}
+            danger
+            onSelect={() => setAction("drop")}
+          >
             Drop {kindLabel}…
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -96,18 +120,36 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
     <div className="flex h-full min-h-0 flex-col">
       {tab.view === "data" ? (
         <div className="min-h-0 flex-1">
-          <TableData database={tab.database} schema={tab.schema} table={tab.name} footerRight={footerRight} />
+          <TableData
+            // Following a foreign key here again restarts the view with its filter
+            key={JSON.stringify(tab.filters ?? [])}
+            database={tab.database}
+            schema={tab.schema}
+            table={tab.name}
+            initialFilters={tab.filters}
+            footerRight={footerRight}
+          />
         </div>
       ) : (
         <>
           <div className="min-h-0 flex-1">
             {tab.view === "structure" ? (
-              <StructureView database={tab.database} schema={tab.schema} table={tab.name} />
+              <StructureView
+                database={tab.database}
+                schema={tab.schema}
+                table={tab.name}
+              />
             ) : (
               <DefinitionView
                 database={tab.database}
                 schema={tab.schema}
-                kind={tab.kind === "view" ? "view" : tab.kind === "materialized_view" ? "materialized_view" : "table"}
+                kind={
+                  tab.kind === "view"
+                    ? "view"
+                    : tab.kind === "materialized_view"
+                      ? "materialized_view"
+                      : "table"
+                }
                 name={tab.name}
               />
             )}
@@ -121,7 +163,11 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           open
           onOpenChange={(open) => !open && setAction(null)}
           title={`Rename ${tab.name}`}
-          sql={newName.trim() && newName !== tab.name ? renameTable(tab.schema, tab.name, newName.trim()) : "-- type a new name"}
+          sql={
+            newName.trim() && newName !== tab.name
+              ? renameTable(tab.schema, tab.name, newName.trim())
+              : "-- type a new name"
+          }
           database={tab.database}
           confirmLabel="Rename"
           successMessage={`Renamed to ${newName.trim()}`}
@@ -130,7 +176,15 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           }}
         >
           <Field label="New name">
-            {(p) => <Input {...p} className="font-mono" autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} />}
+            {(p) => (
+              <Input
+                {...p}
+                className="font-mono"
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            )}
           </Field>
         </RunSqlDialog>
       )}
@@ -189,18 +243,30 @@ export function DefinitionView({
       </div>
     );
   }
-  if (definition.isError) return <p className="p-4 text-sm text-danger">{describeError(definition.error).message}</p>;
+  if (definition.isError)
+    return (
+      <p className="p-4 text-sm text-danger">
+        {describeError(definition.error).message}
+      </p>
+    );
   return (
     <div className="relative h-full">
       <Button
         size="sm"
         className="absolute top-2 right-4 z-10"
         iconLeft={<Copy />}
-        onClick={() => void navigator.clipboard.writeText(definition.data).then(() => toast.success("Definition copied"))}
+        onClick={() =>
+          void navigator.clipboard
+            .writeText(definition.data)
+            .then(() => toast.success("Definition copied"))
+        }
       >
         Copy
       </Button>
-      <SqlBlock sql={definition.data} className="h-full rounded-none border-0" />
+      <SqlBlock
+        sql={definition.data}
+        className="h-full rounded-none border-0"
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ObjectKind, TableKind } from "../../lib/bindings";
+import type { FilterSpec, ObjectKind, TableKind } from "../../lib/bindings";
 
 export type TableView = "data" | "structure" | "definition";
 
@@ -16,6 +16,8 @@ export type Tab =
       name: string;
       kind: TableKind;
       view: TableView;
+      /** Filters to start with, e.g. when following a foreign key. */
+      filters?: FilterSpec[];
     }
   | { id: string; type: "query"; database: string; title: string; sql: string }
   | {
@@ -29,7 +31,13 @@ export type Tab =
     }
   | { id: string; type: "diagram"; database: string; schema: string }
   | { id: string; type: "extensions"; database: string }
-  | { id: string; type: "objects"; database: string; schema: string; group: ObjectGroup };
+  | {
+      id: string;
+      type: "objects";
+      database: string;
+      schema: string;
+      group: ObjectGroup;
+    };
 
 /** Tab without an id; ids are derived so opening the same object twice focuses the existing tab. */
 export type NewTab = Tab extends infer T
@@ -160,7 +168,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               const tabs =
                 tab.type === "table"
                   ? ws.tabs.map((t) =>
-                      t.id === id ? ({ ...t, view: tab.view } as Tab) : t,
+                      t.id === id
+                        ? ({
+                            ...t,
+                            view: tab.view,
+                            ...(tab.filters ? { filters: tab.filters } : {}),
+                          } as Tab)
+                        : t,
                     )
                   : ws.tabs;
               return {
@@ -240,8 +254,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const state = persisted as Pick<WorkspaceState, "workspaces">;
         if (version < 2) {
           for (const ws of Object.values(state.workspaces ?? {})) {
-            ws.tabs = ws.tabs.filter((t) => (t.type as string) !== "create-table");
-            if (!ws.tabs.some((t) => t.id === ws.activeTabId)) ws.activeTabId = ws.tabs.at(-1)?.id ?? null;
+            ws.tabs = ws.tabs.filter(
+              (t) => (t.type as string) !== "create-table",
+            );
+            if (!ws.tabs.some((t) => t.id === ws.activeTabId))
+              ws.activeTabId = ws.tabs.at(-1)?.id ?? null;
           }
         }
         return state as WorkspaceState;

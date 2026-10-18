@@ -52,7 +52,7 @@ import type {
 } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
-import { useExplorer } from "../explorer-context";
+import { useExplorer, useStructure } from "../explorer-context";
 import { SqlBlock } from "../sql/sql-editor";
 import { ColumnSheet } from "../structure/add-column-sheet";
 import { RunSqlDialog } from "../run-sql-dialog";
@@ -66,6 +66,7 @@ import {
 import { FilterBar } from "./filter-bar";
 import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
+import { type Reference, ReferenceSheet } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
 
 const EMPTY_PAGE: RowsPage = {
@@ -99,11 +100,14 @@ export function TableData({
   database,
   schema,
   table,
+  initialFilters,
   footerRight,
 }: {
   database: string;
   schema: string;
   table: string;
+  /** Filters to start with (e.g. when following a foreign key). */
+  initialFilters?: FilterSpec[];
   /** Shown on the right of the bottom bar (view switch, table actions). */
   footerRight?: ReactNode;
 }) {
@@ -112,7 +116,24 @@ export function TableData({
   const [pageSize, setPageSize] = useState(100);
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState<SortSpec[]>([]);
-  const [filters, setFilters] = useState<FilterSpec[]>([]);
+  const [filters, setFilters] = useState<FilterSpec[]>(initialFilters ?? []);
+  const [reference, setReference] = useState<
+    (Reference & { value: string }) | null
+  >(null);
+  // Single-column foreign keys make a column a link to another table
+  const structure = useStructure(database, schema, table);
+  const references = useMemo(() => {
+    const out: Record<string, Reference> = {};
+    for (const fk of structure.data?.foreignKeys ?? []) {
+      if (fk.columns.length === 1 && fk.referencedColumns.length === 1)
+        out[fk.columns[0]!] = {
+          schema: fk.referencedSchema,
+          table: fk.referencedTable,
+          column: fk.referencedColumns[0]!,
+        };
+    }
+    return out;
+  }, [structure.data]);
   const [insert, setInsert] = useState<"row" | "column" | null>(null);
   const [editRow, setEditRow] = useState<EditTarget | null>(null);
   const [editColumn, setEditColumn] = useState<ColumnInfo | null>(null);
@@ -147,8 +168,11 @@ export function TableData({
         name: c.name,
         dataType: c.dataType,
         isKey: c.isPrimaryKey,
+        references: references[c.name]
+          ? `${references[c.name]!.schema}.${references[c.name]!.table}`
+          : undefined,
       })),
-    [data.columns],
+    [data.columns, references],
   );
   const keyIndexes = useMemo(
     () =>
@@ -524,6 +548,10 @@ export function TableData({
                 }
               />
             )}
+            onOpenReference={(col, value) => {
+              const ref = references[data.columns[col]!.name];
+              if (ref) setReference({ ...ref, value });
+            }}
             onExpandRow={
               editable
                 ? (id) => {
@@ -638,6 +666,12 @@ export function TableData({
         table={table}
         columns={data.columns}
         row={editRow}
+        references={references}
+      />
+      <ReferenceSheet
+        database={database}
+        target={reference}
+        onOpenChange={(o) => !o && setReference(null)}
       />
       <ColumnSheet
         open={insert === "column" || editColumn !== null}
