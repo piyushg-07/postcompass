@@ -1,5 +1,14 @@
-import { cn, Spinner } from "@repo/ui";
-import { Database, Home, Palette, Server, Settings } from "lucide-react";
+import { cn, Kbd, Spinner, Tooltip } from "@repo/ui";
+import { useHotkey } from "@tanstack/react-hotkeys";
+import {
+  Database,
+  Home,
+  Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Server,
+  Settings,
+} from "lucide-react";
 import { lazy, type ReactNode, Suspense } from "react";
 import { HomePage } from "../features/home/home-page";
 import { ServersPage } from "../features/servers/servers-page";
@@ -10,6 +19,7 @@ import { Playground } from "../playground/playground";
 import { useAppState } from "./app-state";
 import { CompassMark } from "./compass-mark";
 import { type Section, useNavigation } from "./navigation";
+import { useUiPrefs } from "./ui-prefs";
 
 // The explorer pulls in the SQL editor and data grid; load it when a server is first opened
 const ExplorerPage = lazy(() =>
@@ -37,18 +47,33 @@ export function Shell() {
   const goTo = useNavigation((s) => s.goTo);
   const closeServer = useNavigation((s) => s.closeServer);
   const openServer = state.servers.find((s) => s.id === openServerId);
+  const collapsed = useUiPrefs((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
+  useHotkey("Mod+B", toggleSidebar, { ignoreInputs: false });
 
   return (
     <div className="flex h-full">
       <nav
-        className="flex w-56 shrink-0 flex-col border-r border-border bg-surface"
+        className={cn(
+          "flex shrink-0 flex-col overflow-hidden border-r border-border bg-surface transition-[width] duration-200 ease-out",
+          collapsed ? "w-14" : "w-56",
+        )}
         aria-label="Main"
       >
-        <div className="flex h-14 items-center gap-2.5 px-4">
-          <CompassMark size={22} />
-          <span className="text-sm font-semibold tracking-tight">
-            PostCompass
+        <div
+          className={cn(
+            "flex h-14 items-center gap-2.5",
+            collapsed ? "justify-center px-0" : "px-4",
+          )}
+        >
+          <span className="shrink-0">
+            <CompassMark size={22} />
           </span>
+          {!collapsed && (
+            <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
+              PostCompass
+            </span>
+          )}
         </div>
         <ul className="flex flex-1 flex-col gap-0.5 px-2 py-2">
           {NAV.filter((item) => !item.devOnly || import.meta.env.DEV).map(
@@ -58,6 +83,7 @@ export function Shell() {
                   active={section === item.id}
                   icon={item.icon}
                   label={item.label}
+                  collapsed={collapsed}
                   onClick={() => goTo(item.id)}
                 />
               </li>
@@ -65,22 +91,58 @@ export function Shell() {
           )}
           {openServer && (
             <>
-              <li className="px-2.5 pt-4 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
-                Open
-              </li>
+              {collapsed ? (
+                <li className="mx-2 my-2 h-px bg-border" aria-hidden />
+              ) : (
+                <li className="px-2.5 pt-4 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
+                  Open
+                </li>
+              )}
               <li>
                 <NavButton
                   active={section === "explorer"}
                   icon={<Database />}
                   label={openServer.name}
+                  collapsed={collapsed}
                   onClick={() => goTo("explorer")}
                 />
               </li>
             </>
           )}
         </ul>
-        <div className="px-4 py-3 font-mono text-[11px] text-fg-subtle">
-          v{info.version}
+        <div
+          className={cn(
+            "flex items-center gap-2 border-t border-border py-2",
+            collapsed ? "justify-center px-0" : "justify-between pr-2 pl-4",
+          )}
+        >
+          {!collapsed && (
+            <span className="font-mono text-[11px] whitespace-nowrap text-fg-subtle">
+              v{info.version}
+            </span>
+          )}
+          <Tooltip
+            side="right"
+            content={
+              <span className="flex items-center gap-2">
+                {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                <span className="flex gap-0.5">
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>B</Kbd>
+                </span>
+              </span>
+            }
+          >
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!collapsed}
+              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg [&_svg]:size-4"
+            >
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </button>
+          </Tooltip>
         </div>
       </nav>
 
@@ -120,20 +182,23 @@ function NavButton({
   active,
   icon,
   label,
+  collapsed,
   onClick,
 }: {
   active: boolean;
   icon: ReactNode;
   label: string;
+  collapsed: boolean;
   onClick: () => void;
 }) {
-  return (
+  const button = (
     <button
       type="button"
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 text-sm transition-colors [&_svg]:size-4",
+        "relative flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-control text-sm transition-colors [&_svg]:size-4",
+        collapsed ? "justify-center px-0" : "px-2.5",
         active
           ? "bg-surface-hover text-fg"
           : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
@@ -142,8 +207,20 @@ function NavButton({
       {active && (
         <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />
       )}
-      <span className={active ? "text-accent" : undefined}>{icon}</span>
-      <span className="truncate">{label}</span>
+      <span className={cn("shrink-0", active && "text-accent")}>{icon}</span>
+      {collapsed ? (
+        <span className="sr-only">{label}</span>
+      ) : (
+        <span className="truncate whitespace-nowrap">{label}</span>
+      )}
     </button>
+  );
+  // Collapsed: the icon alone, with the label as a tooltip
+  return collapsed ? (
+    <Tooltip side="right" content={label}>
+      {button}
+    </Tooltip>
+  ) : (
+    button
   );
 }

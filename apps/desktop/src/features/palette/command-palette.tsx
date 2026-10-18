@@ -13,6 +13,7 @@ import {
   Layers,
   Network,
   Palette,
+  PanelLeft,
   Play,
   Plus,
   Search,
@@ -26,6 +27,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
+import { useUiPrefs } from "../../app/ui-prefs";
 import type {
   OpenedConnection,
   SchemaObjects,
@@ -476,6 +478,15 @@ function useCommands(): Command[] {
       ]);
     for (const [id, label, icon, run] of pages)
       list.push({ id: `nav:${id}`, group: "Navigation", label, icon, run });
+    list.push({
+      id: "toggle-sidebar",
+      group: "Navigation",
+      label: "Toggle sidebar",
+      keywords: "collapse expand hide show",
+      hint: "Ctrl+B",
+      icon: <PanelLeft />,
+      run: () => useUiPrefs.getState().toggleSidebar(),
+    });
 
     return list;
   }, [
