@@ -4,6 +4,9 @@ import type { ObjectKind, TableKind } from "../../lib/bindings";
 
 export type TableView = "data" | "structure" | "definition";
 
+/** The list pages in the sidebar's "Database" section. */
+export type ObjectGroup = "functions" | "triggers" | "enums" | "sequences";
+
 export type Tab =
   | {
       id: string;
@@ -26,7 +29,7 @@ export type Tab =
     }
   | { id: string; type: "diagram"; database: string; schema: string }
   | { id: string; type: "extensions"; database: string }
-  | { id: string; type: "create-table"; database: string; schema: string };
+  | { id: string; type: "objects"; database: string; schema: string; group: ObjectGroup };
 
 /** Tab without an id; ids are derived so opening the same object twice focuses the existing tab. */
 export type NewTab = Tab extends infer T
@@ -97,8 +100,8 @@ function tabId(tab: NewTab, queryCount: number) {
       return `diagram:${tab.database}.${tab.schema}`;
     case "extensions":
       return `extensions:${tab.database}`;
-    case "create-table":
-      return `create-table:${tab.database}.${tab.schema}`;
+    case "objects":
+      return `objects:${tab.database}.${tab.schema}.${tab.group}`;
     case "query":
       return `query:${queryCount}:${Date.now()}`;
   }
@@ -229,7 +232,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           update(serverId, () => ({ activeTabId: id })),
       };
     },
-    { name: "postcompass-workspaces", version: 1 },
+    {
+      name: "postcompass-workspaces",
+      version: 2,
+      // v2: "New table" became a side panel, so drop old create-table tabs
+      migrate: (persisted, version) => {
+        const state = persisted as Pick<WorkspaceState, "workspaces">;
+        if (version < 2) {
+          for (const ws of Object.values(state.workspaces ?? {})) {
+            ws.tabs = ws.tabs.filter((t) => (t.type as string) !== "create-table");
+            if (!ws.tabs.some((t) => t.id === ws.activeTabId)) ws.activeTabId = ws.tabs.at(-1)?.id ?? null;
+          }
+        }
+        return state as WorkspaceState;
+      },
+    },
   ),
 );
 

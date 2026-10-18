@@ -147,7 +147,16 @@ export function Shell() {
         </div>
       </nav>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      {/* The explorer fills the window and scrolls inside its own panes. `clip` (unlike `hidden`)
+          also stops focus and scrollIntoView from scrolling it, which pushed the header and tabs out of view. */}
+      <main
+        className={cn(
+          "min-w-0 flex-1",
+          section === "explorer" && openServerId
+            ? "overflow-clip"
+            : "overflow-y-auto",
+        )}
+      >
         <ErrorBoundary resetKey={`${section}:${openServerId}`}>
           {section === "explorer" && openServerId ? (
             <Suspense

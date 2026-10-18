@@ -1,26 +1,31 @@
 import {
+  Button,
   cn,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Field,
   IconButton,
   Input,
-  NativeSelect,
   Skeleton,
   Switch,
+  toast,
 } from "@repo/ui";
 import {
-  ArchiveRestore,
   Blocks,
-  ChevronRight,
-  Database,
-  DatabaseBackup,
+  Check,
+  ChevronsUpDown,
+  Code,
+  Copy,
   Eye,
-  FolderTree,
   FunctionSquare,
   Hash,
   Layers,
@@ -34,6 +39,7 @@ import {
   TerminalSquare,
   Trash2,
   Type,
+  Zap,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,39 +47,41 @@ import { formatBytes, formatCount } from "../../lib/format";
 import { describeError } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import {
-  createDatabase,
   createSchema,
-  dropDatabase,
   dropSchema,
-  renameDatabase,
+  qualified,
   renameSchema,
 } from "../../lib/sql";
-import { useBackupDialogs } from "../backup/backup-store";
+import { useCreateTableSheet } from "./create-table-sheet";
 import {
-  useDatabases,
   useExplorer,
   useSchemaObjects,
   useSchemas,
   useTables,
 } from "./explorer-context";
-import { RunSqlDialog } from "./run-sql-dialog";
-import { useWorkspace } from "./workspace-store";
+import { NameField, RunSqlDialog } from "./run-sql-dialog";
+import { SqlPanel } from "./sql-panel";
+import { type ObjectGroup, useWorkspace } from "./workspace-store";
 
-type Dialog =
-  | { kind: "create-db" }
-  | { kind: "rename-db" }
-  | { kind: "drop-db" }
-  | { kind: "create-schema" }
-  | { kind: "rename-schema" }
-  | { kind: "drop-schema" };
+const DATABASE_PAGES: { group: ObjectGroup; label: string; icon: ReactNode }[] =
+  [
+    { group: "functions", label: "Functions", icon: <FunctionSquare /> },
+    { group: "triggers", label: "Triggers", icon: <Zap /> },
+    { group: "enums", label: "Enumerated types", icon: <Type /> },
+    { group: "sequences", label: "Sequences", icon: <Hash /> },
+  ];
 
-/** Left sidebar: database + schema pickers, then every object in the schema, searchable. */
+type Dialog = "create-schema" | "rename-schema" | "drop-schema";
+
+/**
+ * Left sidebar, laid out like Supabase's table editor: schema picker, "New table", then the tables.
+ * Views, functions and other objects sit under "More". The database is picked in the header.
+ */
 export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   const { serverId, connectionId } = useExplorer();
   const queryClient = useQueryClient();
   const ws = useWorkspace(serverId);
   const database = ws.database ?? defaultDatabase;
-  const databases = useDatabases();
   const schemas = useSchemas(database);
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -95,29 +103,18 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   const schema = ws.schema;
   const tables = useTables(database, schema);
   const objects = useSchemaObjects(database, schema);
+  const [panel, setPanel] = useState<"tables" | "sql" | "database">("tables");
   const query = search.trim().toLowerCase();
   const match = (n: string) => !query || n.toLowerCase().includes(query);
 
-  const tableList = (tables.data ?? []).filter(
-    (t) =>
-      (t.kind === "table" ||
-        t.kind === "partitioned_table" ||
-        t.kind === "foreign_table") &&
-      match(t.name),
-  );
-  const viewList = (tables.data ?? []).filter(
-    (t) => t.kind === "view" && match(t.name),
-  );
-  const matviewList = (tables.data ?? []).filter(
-    (t) => t.kind === "materialized_view" && match(t.name),
-  );
-  const functionList = (objects.data?.functions ?? []).filter((f) =>
-    match(f.name),
-  );
-  const sequenceList = (objects.data?.sequences ?? []).filter((s) =>
-    match(s.name),
-  );
-  const enumList = (objects.data?.enums ?? []).filter((e) => match(e.name));
+  // Tables and views share one list, like Supabase; the icon tells them apart
+  const tableList = (tables.data ?? []).filter((t) => match(t.name));
+  const counts: Record<ObjectGroup, number | undefined> = {
+    functions: objects.data?.functions.length,
+    triggers: objects.data?.triggers.length,
+    enums: objects.data?.enums.length,
+    sequences: objects.data?.sequences.length,
+  };
 
   const open = (
     n: string,
@@ -138,6 +135,13 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
       view: "data",
     });
 
+  const activeTab = ws.tabs.find((t) => t.id === ws.activeTabId);
+  const isActive = (n: string) =>
+    activeTab?.type === "table" &&
+    activeTab.database === database &&
+    activeTab.schema === schema &&
+    activeTab.name === n;
+
   const openDialog = (d: Dialog, initialName = "") => {
     setName(initialName);
     setCascade(false);
@@ -153,380 +157,232 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   const systemSchemas = (schemas.data ?? []).filter((s) => s.isSystem);
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-surface">
-      {/* Location */}
-      <div className="flex flex-col gap-1.5 border-b border-border p-2">
-        <div className="flex items-center gap-1">
-          <Database className="size-3.5 shrink-0 text-fg-subtle" />
-          <NativeSelect
-            aria-label="Database"
-            className="h-7 font-mono text-xs"
-            value={database}
-            onChange={(e) =>
-              ws.setLocation({ database: e.target.value, schema: null })
-            }
-          >
-            {(
-              databases.data ?? [{ name: database, allowConnections: true }]
-            ).map((d) => (
-              <option
-                key={d.name}
-                value={d.name}
-                disabled={!d.allowConnections}
-              >
-                {d.name}
-                {"sizeBytes" in d && d.sizeBytes
-                  ? `  (${formatBytes(d.sizeBytes)})`
-                  : ""}
-              </option>
-            ))}
-          </NativeSelect>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton
-                size="sm"
-                label="Database actions"
-                icon={<MoreHorizontal />}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Database</DropdownMenuLabel>
-              <DropdownMenuItem
-                icon={<Plus />}
-                onSelect={() => openDialog({ kind: "create-db" })}
-              >
-                New database…
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                icon={<Pencil />}
-                onSelect={() => openDialog({ kind: "rename-db" }, database)}
-              >
-                Rename {database}…
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                icon={<Blocks />}
-                onSelect={() => ws.openTab({ type: "extensions", database })}
-              >
-                Extensions
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                icon={<DatabaseBackup />}
-                onSelect={() =>
-                  useBackupDialogs.getState().openBackup({ serverId, database })
-                }
-              >
-                Back up {database}…
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                icon={<ArchiveRestore />}
-                onSelect={() =>
-                  useBackupDialogs
-                    .getState()
-                    .openRestore({ serverId, database })
-                }
-              >
-                Restore a backup…
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                icon={<Trash2 />}
-                danger
-                onSelect={() => openDialog({ kind: "drop-db" })}
-              >
-                Drop {database}…
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className="flex items-center gap-1">
-          <FolderTree className="size-3.5 shrink-0 text-fg-subtle" />
-          <NativeSelect
-            aria-label="Schema"
-            className="h-7 font-mono text-xs"
-            value={schema ?? ""}
-            onChange={(e) => ws.setLocation({ schema: e.target.value })}
-          >
-            {userSchemas.map((s) => (
-              <option key={s.name} value={s.name}>
-                {s.name} ({s.tableCount})
-              </option>
-            ))}
-            {systemSchemas.length > 0 && (
-              <optgroup label="System">
-                {systemSchemas.map((s) => (
-                  <option key={s.name} value={s.name}>
-                    {s.name}
-                  </option>
-                ))}
-              </optgroup>
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-clip border-r border-border bg-surface">
+      {/* Like Supabase: table editor, SQL editor, database objects */}
+      <div className="flex shrink-0 gap-1 border-b border-border p-2">
+        {(["tables", "sql", "database"] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPanel(p)}
+            className={cn(
+              "h-7 flex-1 cursor-pointer rounded-control text-xs transition-colors",
+              panel === p
+                ? "bg-surface-hover text-fg"
+                : "text-fg-muted hover:text-fg",
             )}
-          </NativeSelect>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton
-                size="sm"
-                label="Schema actions"
-                icon={<MoreHorizontal />}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Schema</DropdownMenuLabel>
-              <DropdownMenuItem
-                icon={<Plus />}
-                onSelect={() => openDialog({ kind: "create-schema" })}
-              >
-                New schema…
-              </DropdownMenuItem>
-              {schema && (
-                <>
-                  <DropdownMenuItem
-                    icon={<Network />}
-                    onSelect={() =>
-                      ws.openTab({ type: "diagram", database, schema })
-                    }
-                  >
-                    ER diagram
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    icon={<Pencil />}
-                    onSelect={() =>
-                      openDialog({ kind: "rename-schema" }, schema)
-                    }
-                  >
-                    Rename {schema}…
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    icon={<Trash2 />}
-                    danger
-                    onSelect={() => openDialog({ kind: "drop-schema" })}
-                  >
-                    Drop {schema}…
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          >
+            {p === "tables" ? "Tables" : p === "sql" ? "SQL" : "Database"}
+          </button>
+        ))}
       </div>
 
-      {/* Search + quick actions */}
-      <div className="flex items-center gap-1 border-b border-border p-2">
-        <div className="relative flex-1">
-          <Search className="absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-fg-subtle" />
-          <Input
-            className="h-7 pl-7 text-xs"
-            placeholder="Filter objects"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <IconButton
-          size="sm"
-          label="New query"
-          icon={<TerminalSquare />}
-          onClick={() => ws.newQuery(database)}
-        />
-        <IconButton
-          size="sm"
-          label="Refresh"
-          icon={<RefreshCw />}
-          onClick={() => void refresh()}
-        />
-      </div>
-
-      {/* Objects */}
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
-        {schemas.isError && (
-          <p className="p-3 text-xs text-danger">
-            {describeError(schemas.error).message}
-          </p>
-        )}
-        {tables.isPending && schema ? (
-          <div className="flex flex-col gap-1.5 p-2">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-6" />
-            ))}
+      {panel !== "sql" && (
+        <div className="flex flex-col gap-2 border-b border-border p-2">
+          {/* Schema */}
+          <div className="flex items-center gap-1">
+            <SchemaPicker
+              schema={schema}
+              userSchemas={userSchemas.map((x) => x.name)}
+              systemSchemas={systemSchemas.map((x) => x.name)}
+              onSelect={(next) => ws.setLocation({ schema: next })}
+              onCreate={() => openDialog("create-schema")}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton
+                  size="sm"
+                  label="Schema actions"
+                  icon={<MoreHorizontal />}
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Schema</DropdownMenuLabel>
+                {schema && (
+                  <>
+                    <DropdownMenuItem
+                      icon={<Network />}
+                      onSelect={() =>
+                        ws.openTab({ type: "diagram", database, schema })
+                      }
+                    >
+                      ER diagram
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      icon={<Pencil />}
+                      onSelect={() => openDialog("rename-schema", schema)}
+                    >
+                      Rename {schema}…
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      icon={<Trash2 />}
+                      danger
+                      onSelect={() => openDialog("drop-schema")}
+                    >
+                      Drop {schema}…
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        ) : (
-          <>
-            <Group
-              title="Tables"
-              icon={<Table2 />}
-              count={tableList.length}
-              defaultOpen
-              action={
-                schema && (
-                  <IconButton
-                    size="sm"
-                    label="New table"
-                    icon={<Plus />}
-                    onClick={() =>
-                      ws.openTab({ type: "create-table", database, schema })
-                    }
-                  />
-                )
-              }
-            >
-              {tableList.map((t) => (
-                <Item
-                  key={t.name}
-                  icon={<Table2 />}
-                  label={t.name}
-                  meta={formatCount(t.rowEstimate)}
-                  title={`${t.name} · ~${Math.round(t.rowEstimate ?? 0).toLocaleString()} rows · ${formatBytes(t.sizeBytes)}${t.comment ? ` · ${t.comment}` : ""}`}
-                  onClick={() => open(t.name, t.kind)}
-                />
-              ))}
-            </Group>
-            <Group title="Views" icon={<Eye />} count={viewList.length}>
-              {viewList.map((t) => (
-                <Item
-                  key={t.name}
-                  icon={<Eye />}
-                  label={t.name}
-                  onClick={() => open(t.name, "view")}
-                />
-              ))}
-            </Group>
-            <Group
-              title="Materialized views"
-              icon={<Layers />}
-              count={matviewList.length}
-            >
-              {matviewList.map((t) => (
-                <Item
-                  key={t.name}
-                  icon={<Layers />}
-                  label={t.name}
-                  onClick={() => open(t.name, "materialized_view")}
-                />
-              ))}
-            </Group>
-            <Group
-              title="Functions"
-              icon={<FunctionSquare />}
-              count={functionList.length}
-            >
-              {functionList.map((f) => (
-                <Item
-                  key={f.id}
-                  icon={<FunctionSquare />}
-                  label={`${f.name}(${f.arguments})`}
-                  title={`${f.kind} ${f.name}(${f.arguments}) → ${f.returns} · ${f.language}`}
-                  onClick={() =>
-                    schema &&
-                    ws.openTab({
-                      type: "definition",
-                      database,
-                      schema,
-                      kind: "function",
-                      name: f.id,
-                      title: `${f.name}()`,
-                    })
-                  }
-                />
-              ))}
-            </Group>
-            <Group
-              title="Sequences"
-              icon={<Hash />}
-              count={sequenceList.length}
-            >
-              {sequenceList.map((s) => (
-                <Item
-                  key={s.name}
-                  icon={<Hash />}
-                  label={s.name}
-                  meta={s.lastValue ?? undefined}
-                  onClick={() =>
-                    schema &&
-                    ws.openTab({
-                      type: "definition",
-                      database,
-                      schema,
-                      kind: "sequence",
-                      name: s.name,
-                      title: s.name,
-                    })
-                  }
-                />
-              ))}
-            </Group>
-            <Group title="Enums" icon={<Type />} count={enumList.length}>
-              {enumList.map((e) => (
-                <Item
-                  key={e.name}
-                  icon={<Type />}
-                  label={e.name}
-                  title={e.values.join(", ")}
-                  meta={`${e.values.length}`}
-                />
-              ))}
-            </Group>
-          </>
-        )}
-      </div>
 
-      {/* Database & schema dialogs */}
-      {dialog?.kind === "create-db" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(o) => !o && setDialog(null)}
-          title="New database"
-          sql={name.trim() ? createDatabase(name.trim()) : "-- type a name"}
-          database={database}
-          confirmLabel="Create database"
-          successMessage={`Database ${name.trim()} created`}
-          refreshAll
-          onDone={() => ws.setLocation({ database: name.trim(), schema: null })}
-        >
-          <NameField value={name} onChange={setName} placeholder="my_app" />
-        </RunSqlDialog>
+          {panel === "tables" && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                iconLeft={<Plus />}
+                className="w-full justify-start"
+                disabled={!schema}
+                onClick={() =>
+                  schema &&
+                  useCreateTableSheet
+                    .getState()
+                    .open({ serverId, database, schema })
+                }
+              >
+                New table
+              </Button>
+
+              <div className="flex items-center gap-1">
+                <div className="relative flex-1">
+                  <Search className="absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-fg-subtle" />
+                  <Input
+                    className="h-7 pl-7 text-xs"
+                    placeholder="Search tables"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <IconButton
+                  size="sm"
+                  label="Refresh"
+                  icon={<RefreshCw />}
+                  onClick={() => void refresh()}
+                />
+              </div>
+            </>
+          )}
+        </div>
       )}
-      {dialog?.kind === "rename-db" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(o) => !o && setDialog(null)}
-          title={`Rename ${database}`}
-          description="Open connections to this database are closed first."
-          sql={
-            name.trim() && name.trim() !== database
-              ? renameDatabase(database, name.trim())
-              : "-- type a new name"
-          }
-          database={
-            database === defaultDatabase ? "template1" : defaultDatabase
-          }
-          confirmLabel="Rename"
-          successMessage={`Renamed to ${name.trim()}`}
-          refreshAll
-          onDone={() => ws.setLocation({ database: name.trim(), schema: null })}
-        >
-          <NameField value={name} onChange={setName} />
-        </RunSqlDialog>
+
+      {panel === "sql" ? (
+        <SqlPanel database={database} />
+      ) : panel === "database" ? (
+        <nav className="min-h-0 flex-1 overflow-y-auto py-1">
+          <ul className="flex flex-col">
+            {DATABASE_PAGES.map(({ group, label, icon }) => (
+              <Item
+                key={group}
+                icon={icon}
+                label={label}
+                meta={counts[group]?.toString()}
+                plain
+                active={
+                  activeTab?.type === "objects" &&
+                  activeTab.group === group &&
+                  activeTab.database === database &&
+                  activeTab.schema === schema
+                }
+                onClick={() =>
+                  schema &&
+                  ws.openTab({ type: "objects", database, schema, group })
+                }
+              />
+            ))}
+            <Item
+              icon={<Blocks />}
+              label="Extensions"
+              plain
+              active={
+                activeTab?.type === "extensions" &&
+                activeTab.database === database
+              }
+              onClick={() => ws.openTab({ type: "extensions", database })}
+            />
+          </ul>
+        </nav>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+          {schemas.isError && (
+            <p className="p-3 text-xs text-danger">
+              {describeError(schemas.error).message}
+            </p>
+          )}
+          {tables.isPending && schema ? (
+            <div className="flex flex-col gap-1.5 p-2">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-6" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="flex h-7 items-center gap-1.5 px-3 text-[11px] font-medium text-fg-subtle">
+                Tables & views <span>{tableList.length}</span>
+              </div>
+              {tableList.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-fg-subtle">
+                  {query
+                    ? "Nothing matches."
+                    : `No tables in ${schema ?? "this schema"} yet.`}
+                </p>
+              ) : (
+                <ul className="flex flex-col pb-1">
+                  {tableList.map((t) => (
+                    <Item
+                      key={t.name}
+                      icon={
+                        t.kind === "view" ? (
+                          <Eye />
+                        ) : t.kind === "materialized_view" ? (
+                          <Layers />
+                        ) : (
+                          <Table2 />
+                        )
+                      }
+                      label={t.name}
+                      meta={
+                        t.kind === "view" ? "view" : formatCount(t.rowEstimate)
+                      }
+                      active={isActive(t.name)}
+                      title={`${t.name} · ~${Math.round(t.rowEstimate ?? 0).toLocaleString()} rows · ${formatBytes(t.sizeBytes)}${t.comment ? ` · ${t.comment}` : ""}`}
+                      onClick={() => open(t.name, t.kind)}
+                      menu={
+                        schema && (
+                          <TableMenu
+                            name={t.name}
+                            isView={
+                              t.kind === "view" ||
+                              t.kind === "materialized_view"
+                            }
+                            select={`SELECT *\nFROM ${qualified(schema, t.name)}\nLIMIT 100;`}
+                            onView={(view) =>
+                              ws.openTab({
+                                type: "table",
+                                database,
+                                schema,
+                                name: t.name,
+                                kind: t.kind,
+                                view,
+                              })
+                            }
+                            onQuery={(sql) => ws.newQuery(database, sql)}
+                            onRefresh={() => void refresh()}
+                          />
+                        )
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
       )}
-      {dialog?.kind === "drop-db" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(o) => !o && setDialog(null)}
-          title={`Drop database ${database}?`}
-          description="Permanently deletes the database and everything in it. Open connections are closed."
-          sql={dropDatabase(database)}
-          database={
-            database === defaultDatabase ? "template1" : defaultDatabase
-          }
-          confirmLabel="Drop database"
-          destructive
-          successMessage={`Database ${database} dropped`}
-          refreshAll
-          onDone={() =>
-            ws.setLocation({ database: defaultDatabase, schema: null })
-          }
-        />
-      )}
-      {dialog?.kind === "create-schema" && (
+
+      {dialog === "create-schema" && (
         <RunSqlDialog
           open
           onOpenChange={(o) => !o && setDialog(null)}
@@ -540,7 +396,7 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
           <NameField value={name} onChange={setName} placeholder="analytics" />
         </RunSqlDialog>
       )}
-      {dialog?.kind === "rename-schema" && schema && (
+      {dialog === "rename-schema" && schema && (
         <RunSqlDialog
           open
           onOpenChange={(o) => !o && setDialog(null)}
@@ -564,7 +420,7 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
           <NameField value={name} onChange={setName} />
         </RunSqlDialog>
       )}
-      {dialog?.kind === "drop-schema" && schema && (
+      {dialog === "drop-schema" && schema && (
         <RunSqlDialog
           open
           onOpenChange={(o) => !o && setDialog(null)}
@@ -593,68 +449,81 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   );
 }
 
-function NameField({
-  value,
-  onChange,
-  placeholder,
+/** Schema dropdown like Supabase's: "schema  public", a search box, the schemas, then "Create a new schema". */
+function SchemaPicker({
+  schema,
+  userSchemas,
+  systemSchemas,
+  onSelect,
+  onCreate,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
+  schema: string | null;
+  userSchemas: string[];
+  systemSchemas: string[];
+  onSelect: (schema: string) => void;
+  onCreate: () => void;
 }) {
-  return (
-    <Field label="Name" hint="Lowercase names never need quotes in SQL.">
-      {(p) => (
-        <Input
-          {...p}
-          className="font-mono"
-          autoFocus
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-    </Field>
+  const [filter, setFilter] = useState("");
+  const q = filter.trim().toLowerCase();
+  const item = (name: string) => (
+    <DropdownMenuItem
+      key={name}
+      icon={<Check className={name === schema ? "text-accent" : "invisible"} />}
+      onSelect={() => onSelect(name)}
+    >
+      <span className="font-mono">{name}</span>
+    </DropdownMenuItem>
   );
-}
-
-function Group({
-  title,
-  icon,
-  count,
-  defaultOpen = false,
-  action,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  count: number;
-  defaultOpen?: boolean;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  if (count === 0 && !action) return null;
+  const users = userSchemas.filter((n) => n.includes(q));
+  const system = systemSchemas.filter((n) => n.includes(q));
   return (
-    <div className="flex flex-col">
-      <div className="group flex h-7 items-center pr-1">
+    <DropdownMenu onOpenChange={(o) => !o && setFilter("")}>
+      <DropdownMenuTrigger asChild>
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex h-full flex-1 cursor-pointer items-center gap-1.5 px-2 text-[11px] font-medium text-fg-muted hover:text-fg [&_svg]:size-3.5"
-          aria-expanded={open}
+          className="flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-control border border-border-strong bg-bg px-2 text-xs hover:border-fg-subtle data-[state=open]:border-fg-subtle"
         >
-          <ChevronRight
-            className={cn("transition-transform", open && "rotate-90")}
-          />
-          {icon}
-          <span>{title}</span>
-          <span className="text-fg-subtle">{count}</span>
+          <span className="shrink-0 text-fg-subtle">schema</span>
+          <span className="min-w-0 flex-1 truncate text-left font-mono text-fg">
+            {schema ?? "…"}
+          </span>
+          <ChevronsUpDown className="size-3.5 shrink-0 text-fg-subtle" />
         </button>
-        {action}
-      </div>
-      {open && <ul className="flex flex-col pb-1">{children}</ul>}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-60 p-0">
+        <div className="relative border-b border-border p-1">
+          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-fg-subtle" />
+          <input
+            autoFocus
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            // Keep typing in the box instead of the menu's type-to-select
+            onKeyDown={(e) => e.key !== "Escape" && e.stopPropagation()}
+            placeholder="Find schema…"
+            className="h-7 w-full bg-transparent pr-2 pl-7 text-xs text-fg outline-none placeholder:text-fg-subtle"
+          />
+        </div>
+        <div className="max-h-72 overflow-y-auto p-1">
+          {users.map(item)}
+          {system.length > 0 && (
+            <>
+              <DropdownMenuLabel>System</DropdownMenuLabel>
+              {system.map(item)}
+            </>
+          )}
+          {users.length + system.length === 0 && (
+            <p className="px-2 py-1.5 text-xs text-fg-subtle">
+              No schemas found
+            </p>
+          )}
+        </div>
+        <div className="border-t border-border p-1">
+          <DropdownMenuItem icon={<Plus />} onSelect={onCreate}>
+            Create a new schema
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -663,31 +532,112 @@ function Item({
   label,
   meta,
   title,
+  active,
+  plain,
   onClick,
+  menu,
 }: {
   icon: ReactNode;
   label: string;
   meta?: string;
   title?: string;
+  active?: boolean;
+  /** Regular text instead of monospace, for page names rather than object names. */
+  plain?: boolean;
   onClick?: () => void;
+  /** Right-click menu. */
+  menu?: ReactNode;
 }) {
+  const button = (
+    <button
+      type="button"
+      title={title ?? label}
+      onClick={onClick}
+      disabled={!onClick}
+      className={cn(
+        "flex h-7 w-full cursor-pointer items-center gap-2 pr-2 pl-4 text-left text-xs text-fg-muted hover:bg-surface-hover hover:text-fg disabled:cursor-default disabled:hover:bg-transparent [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-subtle",
+        active && "bg-surface-hover text-fg [&_svg]:text-accent",
+      )}
+    >
+      {icon}
+      <span className={cn("min-w-0 flex-1 truncate", !plain && "font-mono")}>
+        {label}
+      </span>
+      {meta && (
+        <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
+          {meta}
+        </span>
+      )}
+    </button>
+  );
   return (
     <li>
-      <button
-        type="button"
-        title={title ?? label}
-        onClick={onClick}
-        disabled={!onClick}
-        className="flex h-6 w-full cursor-pointer items-center gap-2 pr-2 pl-8 text-left text-xs text-fg-muted hover:bg-surface-hover hover:text-fg disabled:cursor-default disabled:hover:bg-transparent [&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:text-fg-subtle"
-      >
-        {icon}
-        <span className="min-w-0 flex-1 truncate font-mono">{label}</span>
-        {meta && (
-          <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
-            {meta}
-          </span>
-        )}
-      </button>
+      {menu ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
+          {menu}
+        </ContextMenu>
+      ) : (
+        button
+      )}
     </li>
+  );
+}
+
+/** Right-click menu of a table or view in the sidebar. */
+function TableMenu({
+  name,
+  isView,
+  select,
+  onView,
+  onQuery,
+  onRefresh,
+}: {
+  name: string;
+  isView: boolean;
+  select: string;
+  onView: (view: "data" | "structure" | "definition") => void;
+  onQuery: (sql: string) => void;
+  onRefresh: () => void;
+}) {
+  const copy = (text: string, what: string) =>
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => toast.success(`${what} copied`));
+  return (
+    <ContextMenuContent>
+      <ContextMenuLabel>{name}</ContextMenuLabel>
+      <ContextMenuItem icon={<Table2 />} onSelect={() => onView("data")}>
+        View data
+      </ContextMenuItem>
+      <ContextMenuItem icon={<Layers />} onSelect={() => onView("structure")}>
+        View structure
+      </ContextMenuItem>
+      {isView && (
+        <ContextMenuItem icon={<Code />} onSelect={() => onView("definition")}>
+          View definition
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem
+        icon={<TerminalSquare />}
+        onSelect={() => onQuery(select)}
+      >
+        Query in SQL editor
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem icon={<Copy />} onSelect={() => copy(name, "Name")}>
+        Copy name
+      </ContextMenuItem>
+      <ContextMenuItem
+        icon={<Copy />}
+        onSelect={() => copy(select, "SELECT statement")}
+      >
+        Copy SELECT statement
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem icon={<RefreshCw />} onSelect={onRefresh}>
+        Refresh list
+      </ContextMenuItem>
+    </ContextMenuContent>
   );
 }

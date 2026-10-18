@@ -34,6 +34,7 @@ import { connectionString } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import { useWorkspaceStore } from "../explorer/workspace-store";
+import { DatabaseList } from "./database-list";
 
 const STATUS_TEXT: Record<Status, string> = {
   running: "Running",
@@ -232,6 +233,15 @@ export function DatabaseCard({
           </DropdownMenu>
         </div>
       </div>
+
+      {actions.running && (
+        <div className="flex flex-col border-t border-border pt-2">
+          <span className="px-4 pb-1 text-[11px] font-medium text-fg-subtle">
+            Databases inside
+          </span>
+          <DatabaseList server={server} />
+        </div>
+      )}
 
       <div className="flex items-center gap-2 border-t border-border px-4 py-2.5">
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-fg-muted">

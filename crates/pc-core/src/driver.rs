@@ -207,12 +207,25 @@ pub struct EnumInfo {
     pub values: Vec<String>,
 }
 
+/// A trigger anywhere in a schema, with the table it fires on.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SchemaTriggerInfo {
+    pub name: String,
+    pub table: String,
+    pub enabled: bool,
+    /// The function the trigger runs, e.g. `public.set_updated_at`
+    pub function: String,
+    pub definition: String,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SchemaObjects {
     pub functions: Vec<FunctionInfo>,
     pub sequences: Vec<SequenceInfo>,
     pub enums: Vec<EnumInfo>,
+    pub triggers: Vec<SchemaTriggerInfo>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]

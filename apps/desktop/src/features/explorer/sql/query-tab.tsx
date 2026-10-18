@@ -8,23 +8,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
   EmptyState,
   Field,
   IconButton,
   Input,
-  Kbd,
-  NativeSelect,
   toast,
 } from "@repo/ui";
 import { useMutation } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Bookmark,
+  Check,
   ChevronDown,
+  ChevronsUpDown,
   Clock,
   Copy,
+  Database,
   Gauge,
+  ListTree,
   History,
   Play,
   Square,
@@ -33,10 +36,16 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExecuteResult, ExplainResult } from "../../../lib/bindings";
+import { formatBytes } from "../../../lib/format";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { DataGrid, type GridColumn } from "../data/data-grid";
 import { type ExportFormat, exportRows } from "../data/export";
-import { newRunId, useDatabases, useExplorer, useSchemaGraph } from "../explorer-context";
+import {
+  newRunId,
+  useDatabases,
+  useExplorer,
+  useSchemaGraph,
+} from "../explorer-context";
 import { type Tab, useQueryLibrary, useWorkspace } from "../workspace-store";
 import { ExplainView } from "./explain-view";
 import { SqlEditor, type SqlEditorHandle } from "./sql-editor";
@@ -64,7 +73,13 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
 
   // Autocomplete: tables and columns of the current schema
   const completion = useMemo(
-    () => Object.fromEntries((graph.data?.tables ?? []).map((t) => [t.name, t.columns.map((c) => c.name)])),
+    () =>
+      Object.fromEntries(
+        (graph.data?.tables ?? []).map((t) => [
+          t.name,
+          t.columns.map((c) => c.name),
+        ]),
+      ),
     [graph.data],
   );
 
@@ -73,7 +88,9 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
       const id = newRunId();
       setRunId(id);
       try {
-        return await unwrap(commands.executeSql(connectionId, tab.database, text, id));
+        return await unwrap(
+          commands.executeSql(connectionId, tab.database, text, id),
+        );
       } finally {
         setRunId(null);
       }
@@ -92,7 +109,12 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
     execute.mutate(text, {
       onSuccess: (result) => {
         setOutput({ kind: "result", result, offset });
-        setActiveResult(Math.max(0, result.statements.findIndex((s) => s.type === "rows")));
+        setActiveResult(
+          Math.max(
+            0,
+            result.statements.findIndex((s) => s.type === "rows"),
+          ),
+        );
         addHistory(serverId, {
           sql: text.trim(),
           database: tab.database,
@@ -101,7 +123,8 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
           ok: !result.error,
         });
       },
-      onError: (e) => setOutput({ kind: "failed", message: describeError(e).message }),
+      onError: (e) =>
+        setOutput({ kind: "failed", message: describeError(e).message }),
     });
   };
 
@@ -114,7 +137,8 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
       { text, analyze },
       {
         onSuccess: (plan) => setOutput({ kind: "plan", plan }),
-        onError: (e) => setOutput({ kind: "failed", message: describeError(e).message }),
+        onError: (e) =>
+          setOutput({ kind: "failed", message: describeError(e).message }),
       },
     );
   };
@@ -123,9 +147,16 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
 
   const startResize = (event: React.MouseEvent) => {
     event.preventDefault();
-    const container = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const container = (
+      event.currentTarget.parentElement as HTMLElement
+    ).getBoundingClientRect();
     const move = (e: MouseEvent) =>
-      setEditorHeight(Math.min(80, Math.max(15, ((e.clientY - container.top) / container.height) * 100)));
+      setEditorHeight(
+        Math.min(
+          80,
+          Math.max(15, ((e.clientY - container.top) / container.height) * 100),
+        ),
+      );
     const up = () => {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
@@ -139,47 +170,100 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
   return (
     <div className="flex h-full min-h-0">
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Toolbar */}
-        <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border px-2">
-          {execute.isPending ? (
-            <Button size="sm" variant="danger" iconLeft={<Square />} onClick={cancel}>
-              Cancel
-            </Button>
-          ) : (
-            <Button size="sm" variant="primary" iconLeft={<Play />} disabled={busy} onClick={runCurrent}>
-              Run
-            </Button>
-          )}
-          <span className="hidden items-center gap-0.5 text-[10px] text-fg-subtle lg:flex">
-            <Kbd>Ctrl</Kbd>
-            <Kbd>↵</Kbd>
-          </span>
+        {/* Toolbar: where it runs and how on the left, actions on the right */}
+        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" iconLeft={<Gauge />} iconRight={<ChevronDown />} disabled={busy}>
+              <button
+                type="button"
+                title="Database this query runs in"
+                className="flex h-7 max-w-56 cursor-pointer items-center gap-2 rounded-control border border-border-strong bg-bg px-2 text-xs hover:border-fg-subtle data-[state=open]:border-fg-subtle"
+              >
+                <Database className="size-3.5 shrink-0 text-accent" />
+                <span className="truncate font-mono text-fg">
+                  {tab.database}
+                </span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-fg-subtle" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64">
+              <DropdownMenuLabel>Run in database</DropdownMenuLabel>
+              <div className="max-h-72 overflow-y-auto">
+                {(
+                  databases.data ?? [
+                    {
+                      name: tab.database,
+                      sizeBytes: null,
+                      allowConnections: true,
+                    },
+                  ]
+                )
+                  .filter((d) => d.allowConnections)
+                  .map((d) => (
+                    <DropdownMenuItem
+                      key={d.name}
+                      icon={
+                        <Check
+                          className={
+                            d.name === tab.database
+                              ? "text-accent"
+                              : "invisible"
+                          }
+                        />
+                      }
+                      onSelect={() => updateTab(tab.id, { database: d.name })}
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="truncate font-mono">{d.name}</span>
+                        {d.sizeBytes ? (
+                          <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
+                            {formatBytes(d.sizeBytes)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                iconLeft={<Gauge />}
+                iconRight={<ChevronDown />}
+                disabled={busy}
+              >
                 Explain
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onSelect={() => runExplain(false)}>Explain (estimate only)</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => runExplain(true)}>Explain analyze (runs, then rolls back)</DropdownMenuItem>
+            <DropdownMenuContent className="w-72">
+              <DropdownMenuLabel>Show how Postgres runs it</DropdownMenuLabel>
+              <ExplainOption
+                icon={<ListTree />}
+                title="Explain"
+                description="The plan with estimated costs. The query doesn't run."
+                onSelect={() => runExplain(false)}
+              />
+              <ExplainOption
+                icon={<Gauge />}
+                title="Explain analyze"
+                description="Runs it for real timings, then rolls back. Nothing is changed."
+                onSelect={() => runExplain(true)}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="mx-1 h-4 w-px bg-border" />
-          <NativeSelect
-            aria-label="Database"
-            className="h-7 w-44 font-mono text-xs"
-            value={tab.database}
-            onChange={(e) => updateTab(tab.id, { database: e.target.value })}
-          >
-            {(databases.data ?? [{ name: tab.database }]).map((d) => (
-              <option key={d.name} value={d.name}>
-                {d.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <div className="ml-auto flex items-center gap-0.5">
-            <IconButton size="sm" label="Save query" icon={<Bookmark />} onClick={() => setSaveOpen(true)} disabled={!tab.sql.trim()} />
+
+          <div className="ml-auto flex items-center gap-1">
+            <IconButton
+              size="sm"
+              label="Save query"
+              icon={<Bookmark />}
+              onClick={() => setSaveOpen(true)}
+              disabled={!tab.sql.trim()}
+            />
             <IconButton
               size="sm"
               label="History & saved queries"
@@ -187,6 +271,31 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
               className={sidebar ? "text-accent" : undefined}
               onClick={() => setSidebar((s) => (s ? null : "history"))}
             />
+            <span className="mx-1 h-4 w-px bg-border" />
+            {execute.isPending ? (
+              <Button
+                size="sm"
+                variant="danger"
+                iconLeft={<Square />}
+                onClick={cancel}
+              >
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                iconLeft={<Play />}
+                disabled={busy}
+                onClick={runCurrent}
+                title="Run (Ctrl+Enter). Runs only the selected text if there is a selection."
+              >
+                Run
+                <span className="ml-1 font-mono text-[10px] font-normal opacity-60">
+                  Ctrl ↵
+                </span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -214,7 +323,9 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
               busy={busy}
               activeResult={activeResult}
               onActiveResult={setActiveResult}
-              onRevealError={(position) => editor.current?.revealPosition(position)}
+              onRevealError={(position) =>
+                editor.current?.revealPosition(position)
+              }
             />
           </div>
         </div>
@@ -231,8 +342,40 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
         />
       )}
 
-      <SaveQueryDialog open={saveOpen} onOpenChange={setSaveOpen} sql={tab.sql} />
+      <SaveQueryDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        sql={tab.sql}
+      />
     </div>
+  );
+}
+
+/** A two-line Explain menu entry: what it is and what it does. */
+function ExplainOption({
+  icon,
+  title,
+  description,
+  onSelect,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onSelect: () => void;
+}) {
+  return (
+    <DropdownMenuItem
+      icon={icon}
+      className="h-auto items-start py-2 [&_svg]:mt-0.5"
+      onSelect={onSelect}
+    >
+      <span className="flex flex-col gap-0.5">
+        <span className="text-fg">{title}</span>
+        <span className="text-[11px] leading-snug text-fg-subtle">
+          {description}
+        </span>
+      </span>
+    </DropdownMenuItem>
   );
 }
 
@@ -267,13 +410,24 @@ function OutputPanel({
     );
   }
   if (!output) {
-    return <EmptyState icon={<Terminal />} title="Run a query to see results" description="Results, messages and errors show up here." />;
+    return (
+      <EmptyState
+        icon={<Terminal />}
+        title="Run a query to see results"
+        description="Results, messages and errors show up here."
+      />
+    );
   }
   if (output.kind === "failed") {
     return <p className="p-4 text-sm text-danger">{output.message}</p>;
   }
   if (output.kind === "plan") {
-    return <ExplainView planJson={output.plan.planJson} analyzed={output.plan.analyzed} />;
+    return (
+      <ExplainView
+        planJson={output.plan.planJson}
+        analyzed={output.plan.analyzed}
+      />
+    );
   }
 
   const { result, offset } = output;
@@ -290,7 +444,9 @@ function OutputPanel({
             onClick={() => onActiveResult(i)}
             className={cn(
               "h-7 cursor-pointer rounded-control px-2.5",
-              i === activeResult ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg",
+              i === activeResult
+                ? "bg-surface-hover text-fg"
+                : "text-fg-muted hover:text-fg",
             )}
           >
             {s.type === "rows" ? `Result ${i + 1}` : `Statement ${i + 1}`}
@@ -300,8 +456,10 @@ function OutputPanel({
           {current?.type === "rows" && (
             <>
               <span className="font-mono">
-                {(current.rowCount ?? 0).toLocaleString()} row{current.rowCount === 1 ? "" : "s"}
-                {current.truncated && ` (showing first ${current.rows.length.toLocaleString()})`}
+                {(current.rowCount ?? 0).toLocaleString()} row
+                {current.rowCount === 1 ? "" : "s"}
+                {current.truncated &&
+                  ` (showing first ${current.rows.length.toLocaleString()})`}
               </span>
               <ResultCopy columns={current.columns} rows={current.rows} />
             </>
@@ -320,17 +478,29 @@ function OutputPanel({
             <span className="font-medium text-fg">
               {result.cancelled ? "Query cancelled" : result.error.message}
               {result.error.code && !result.cancelled && (
-                <span className="ml-2 font-mono text-fg-subtle">{result.error.code}</span>
+                <span className="ml-2 font-mono text-fg-subtle">
+                  {result.error.code}
+                </span>
               )}
             </span>
-            {result.error.detail && <span className="text-fg-muted">{result.error.detail}</span>}
-            {result.error.hint && <span className="text-fg-muted">Hint: {result.error.hint}</span>}
+            {result.error.detail && (
+              <span className="text-fg-muted">{result.error.detail}</span>
+            )}
+            {result.error.hint && (
+              <span className="text-fg-muted">Hint: {result.error.hint}</span>
+            )}
             {statements.length > 0 && (
-              <span className="text-fg-subtle">{statements.length} statement(s) before the error completed.</span>
+              <span className="text-fg-subtle">
+                {statements.length} statement(s) before the error completed.
+              </span>
             )}
           </div>
           {result.error.position !== null && (
-            <Button size="sm" variant="ghost" onClick={() => onRevealError(result.error!.position! + offset)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onRevealError(result.error!.position! + offset)}
+            >
               Go to error
             </Button>
           )}
@@ -339,11 +509,16 @@ function OutputPanel({
 
       <div className="min-h-0 flex-1">
         {!current ? (
-          !result.error && <p className="p-4 text-sm text-fg-muted">Done. No results.</p>
+          !result.error && (
+            <p className="p-4 text-sm text-fg-muted">Done. No results.</p>
+          )
         ) : current.type === "command" ? (
           <p className="p-4 text-sm text-fg-muted">
-            Statement completed. <span className="font-mono text-fg">{(current.rowsAffected ?? 0).toLocaleString()}</span> row(s)
-            affected.
+            Statement completed.{" "}
+            <span className="font-mono text-fg">
+              {(current.rowsAffected ?? 0).toLocaleString()}
+            </span>{" "}
+            row(s) affected.
           </p>
         ) : (
           <ResultGrid columns={current.columns} rows={current.rows} />
@@ -353,29 +528,62 @@ function OutputPanel({
   );
 }
 
-function ResultGrid({ columns, rows }: { columns: string[]; rows: (string | null)[][] }) {
+function ResultGrid({
+  columns,
+  rows,
+}: {
+  columns: string[];
+  rows: (string | null)[][];
+}) {
   // Duplicate column names (e.g. two "id"s from a join) need unique ids
-  const gridColumns: GridColumn[] = useMemo(() => columns.map((name, i) => ({ id: `${i}:${name}`, name })), [columns]);
-  const gridRows = useMemo(() => rows.map((cells, i) => ({ id: String(i), cells })), [rows]);
-  return <DataGrid columns={gridColumns} rows={gridRows} emptyText="The query returned no rows" />;
+  const gridColumns: GridColumn[] = useMemo(
+    () => columns.map((name, i) => ({ id: `${i}:${name}`, name })),
+    [columns],
+  );
+  const gridRows = useMemo(
+    () => rows.map((cells, i) => ({ id: String(i), cells })),
+    [rows],
+  );
+  return (
+    <DataGrid
+      columns={gridColumns}
+      rows={gridRows}
+      emptyText="The query returned no rows"
+    />
+  );
 }
 
-function ResultCopy({ columns, rows }: { columns: string[]; rows: (string | null)[][] }) {
+function ResultCopy({
+  columns,
+  rows,
+}: {
+  columns: string[];
+  rows: (string | null)[][];
+}) {
   const copy = (format: ExportFormat) =>
     void navigator.clipboard
       .writeText(exportRows(format, columns, rows))
-      .then(() => toast.success(`Copied ${rows.length} rows as ${format.toUpperCase()}`));
+      .then(() =>
+        toast.success(`Copied ${rows.length} rows as ${format.toUpperCase()}`),
+      );
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="flex cursor-pointer items-center gap-1 hover:text-fg">
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-1 hover:text-fg"
+        >
           <Copy className="size-3" /> Copy
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => copy("csv")}>As CSV</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => copy("json")}>As JSON</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => copy("sql")}>As SQL INSERT</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => copy("json")}>
+          As JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => copy("sql")}>
+          As SQL INSERT
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -405,20 +613,32 @@ function LibrarySidebar({
             onClick={() => onMode(m)}
             className={cn(
               "h-7 cursor-pointer rounded-control px-2.5 capitalize",
-              mode === m ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg",
+              mode === m
+                ? "bg-surface-hover text-fg"
+                : "text-fg-muted hover:text-fg",
             )}
           >
-            {m === "history" ? `History (${history.length})` : `Saved (${saved.length})`}
+            {m === "history"
+              ? `History (${history.length})`
+              : `Saved (${saved.length})`}
           </button>
         ))}
         {mode === "history" && history.length > 0 && (
-          <IconButton size="sm" label="Clear history" icon={<Trash2 />} className="ml-auto" onClick={() => clearHistory(serverId)} />
+          <IconButton
+            size="sm"
+            label="Clear history"
+            icon={<Trash2 />}
+            className="ml-auto"
+            onClick={() => clearHistory(serverId)}
+          />
         )}
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto p-1">
         {mode === "history" &&
           (history.length === 0 ? (
-            <li className="p-3 text-xs text-fg-subtle">Queries you run show up here.</li>
+            <li className="p-3 text-xs text-fg-subtle">
+              Queries you run show up here.
+            </li>
           ) : (
             history.map((h) => (
               <li key={`${h.at}`}>
@@ -427,9 +647,13 @@ function LibrarySidebar({
                   onClick={() => onLoad(h.sql)}
                   className="flex w-full cursor-pointer flex-col gap-1 rounded-control px-2 py-1.5 text-left hover:bg-surface-hover"
                 >
-                  <span className="line-clamp-2 font-mono text-[11px] text-fg">{h.sql}</span>
+                  <span className="line-clamp-2 font-mono text-[11px] text-fg">
+                    {h.sql}
+                  </span>
                   <span className="flex gap-2 text-[10px] text-fg-subtle">
-                    <span className={h.ok ? "" : "text-danger"}>{h.ok ? "ok" : "error"}</span>
+                    <span className={h.ok ? "" : "text-danger"}>
+                      {h.ok ? "ok" : "error"}
+                    </span>
                     <span>{h.durationMs} ms</span>
                     <span>{h.database}</span>
                     <span>{new Date(h.at).toLocaleString()}</span>
@@ -440,13 +664,24 @@ function LibrarySidebar({
           ))}
         {mode === "saved" &&
           (saved.length === 0 ? (
-            <li className="p-3 text-xs text-fg-subtle">Save queries with the bookmark button to reuse them.</li>
+            <li className="p-3 text-xs text-fg-subtle">
+              Save queries with the bookmark button to reuse them.
+            </li>
           ) : (
             saved.map((q) => (
-              <li key={q.id} className="group flex items-start gap-1 rounded-control hover:bg-surface-hover">
-                <button type="button" onClick={() => onLoad(q.sql)} className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5 px-2 py-1.5 text-left">
+              <li
+                key={q.id}
+                className="group flex items-start gap-1 rounded-control hover:bg-surface-hover"
+              >
+                <button
+                  type="button"
+                  onClick={() => onLoad(q.sql)}
+                  className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5 px-2 py-1.5 text-left"
+                >
                   <span className="text-xs font-medium text-fg">{q.name}</span>
-                  <span className="line-clamp-2 font-mono text-[11px] text-fg-subtle">{q.sql}</span>
+                  <span className="line-clamp-2 font-mono text-[11px] text-fg-subtle">
+                    {q.sql}
+                  </span>
                 </button>
                 <IconButton
                   size="sm"
@@ -463,7 +698,15 @@ function LibrarySidebar({
   );
 }
 
-function SaveQueryDialog({ open, onOpenChange, sql }: { open: boolean; onOpenChange: (open: boolean) => void; sql: string }) {
+function SaveQueryDialog({
+  open,
+  onOpenChange,
+  sql,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sql: string;
+}) {
   const { serverId } = useExplorer();
   const saveQuery = useQueryLibrary((s) => s.saveQuery);
   const [name, setName] = useState("");
@@ -482,7 +725,15 @@ function SaveQueryDialog({ open, onOpenChange, sql }: { open: boolean; onOpenCha
           }}
         >
           <Field label="Name">
-            {(p) => <Input {...p} autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Monthly revenue" />}
+            {(p) => (
+              <Input
+                {...p}
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Monthly revenue"
+              />
+            )}
           </Field>
           <DialogFooter>
             <DialogClose asChild>

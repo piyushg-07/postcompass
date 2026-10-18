@@ -35,6 +35,7 @@ import type {
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import { useBackupDialogs } from "../backup/backup-store";
+import { useCreateTableSheet } from "../explorer/create-table-sheet";
 import {
   useQueryLibrary,
   useWorkspaceStore,
@@ -345,11 +346,9 @@ function useCommands(): Command[] {
           `New table in ${schema}`,
           <Plus key="t" />,
           () =>
-            ws.openTab(openServerId, {
-              type: "create-table",
-              database,
-              schema,
-            }),
+            useCreateTableSheet
+              .getState()
+              .open({ serverId: openServerId, database, schema }),
         ],
         [
           "diagram",

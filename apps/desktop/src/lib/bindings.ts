@@ -414,6 +414,17 @@ export type SchemaObjects = {
 	functions: FunctionInfo[],
 	sequences: SequenceInfo[],
 	enums: EnumInfo[],
+	triggers: SchemaTriggerInfo[],
+};
+
+/**  A trigger anywhere in a schema, with the table it fires on. */
+export type SchemaTriggerInfo = {
+	name: string,
+	table: string,
+	enabled: boolean,
+	/**  The function the trigger runs, e.g. `public.set_updated_at` */
+	function: string,
+	definition: string,
 };
 
 export type SequenceInfo = {

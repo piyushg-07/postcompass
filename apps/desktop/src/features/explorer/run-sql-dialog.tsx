@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogClose, DialogContent, DialogFooter, toast } from "@repo/ui";
+import { Button, Dialog, DialogClose, DialogContent, DialogFooter, Field, Input, toast } from "@repo/ui";
 import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 import { describeError } from "../../lib/ipc";
@@ -82,5 +82,31 @@ export function RunSqlDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Name input for create/rename dialogs. */
+export function NameField({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <Field label="Name" hint="Lowercase names never need quotes in SQL.">
+      {(p) => (
+        <Input
+          {...p}
+          className="font-mono"
+          autoFocus
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </Field>
   );
 }

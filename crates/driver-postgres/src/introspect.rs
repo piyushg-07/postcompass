@@ -4,7 +4,8 @@ use std::collections::HashMap;
 
 use pc_core::driver::{
     ColumnInfo, ConstraintInfo, ConstraintKind, DatabaseInfo, EnumInfo, ExtensionInfo, ForeignKeyInfo, FunctionInfo,
-    GraphColumn, GraphRelation, GraphTable, IndexInfo, SchemaGraph, SchemaInfo, SchemaObjects, SequenceInfo,
+    GraphColumn, GraphRelation, GraphTable, IndexInfo, SchemaGraph, SchemaInfo, SchemaObjects, SchemaTriggerInfo,
+    SequenceInfo,
     TableInfo, TableKind, TableStructure, TriggerInfo,
 };
 use pc_core::{CoreError, CoreResult};
@@ -288,7 +289,7 @@ pub async fn structure(client: &Client, schema: &str, name: &str) -> CoreResult<
 }
 
 pub async fn schema_objects(client: &Client, schema: &str) -> CoreResult<SchemaObjects> {
-    let (functions, sequences, enums) = tokio::try_join!(
+    let (functions, sequences, enums, triggers) = tokio::try_join!(
         async {
             client
                 .query(
@@ -337,6 +338,21 @@ pub async fn schema_objects(client: &Client, schema: &str) -> CoreResult<SchemaO
                 .await
                 .map_err(map_error)
         },
+        async {
+            client
+                .query(
+                    "select t.tgname::text, c.relname::text, t.tgenabled::text <> 'D',
+                            t.tgfoid::regproc::text, pg_get_triggerdef(t.oid, true)
+                       from pg_trigger t
+                       join pg_class c on c.oid = t.tgrelid
+                       join pg_namespace n on n.oid = c.relnamespace
+                      where n.nspname = $1 and not t.tgisinternal
+                      order by 1, 2",
+                    &[&schema],
+                )
+                .await
+                .map_err(map_error)
+        },
     )?;
 
     Ok(SchemaObjects {
@@ -371,6 +387,16 @@ pub async fn schema_objects(client: &Client, schema: &str) -> CoreResult<SchemaO
             .map(|row| EnumInfo {
                 name: row.get(0),
                 values: row.get(1),
+            })
+            .collect(),
+        triggers: triggers
+            .iter()
+            .map(|row| SchemaTriggerInfo {
+                name: row.get(0),
+                table: row.get(1),
+                enabled: row.get(2),
+                function: row.get(3),
+                definition: row.get(4),
             })
             .collect(),
     })

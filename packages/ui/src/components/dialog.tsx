@@ -52,6 +52,54 @@ export function DialogContent({
   );
 }
 
+/** A panel that slides in from the right edge, for forms that need more room than a dialog. */
+export function SheetContent({
+  title,
+  description,
+  children,
+  footer,
+  className,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  /** Pinned to the bottom, below the scrolling body. */
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-fade-in" />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex w-[720px] max-w-[calc(100vw-48px)] flex-col border-l border-border-strong bg-surface-raised shadow-2xl shadow-black/60 data-[state=open]:animate-sheet-in",
+          className,
+        )}
+        {...(description ? {} : { "aria-describedby": undefined })}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <DialogPrimitive.Title className="text-base font-semibold text-fg">{title}</DialogPrimitive.Title>
+            {description && (
+              <DialogPrimitive.Description className="text-sm text-fg-muted">{description}</DialogPrimitive.Description>
+            )}
+          </div>
+          <DialogPrimitive.Close
+            aria-label="Close"
+            className="cursor-pointer rounded p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg"
+          >
+            <X className="size-4" />
+          </DialogPrimitive.Close>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer && (
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+}
+
 export function DialogFooter({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("flex justify-end gap-2 pt-1", className)}>{children}</div>;
 }
