@@ -11,6 +11,14 @@ export { Switch, Checkbox, RadioCardGroup, RadioCard } from "./components/contro
 export { Stepper, TaskSteps, type TaskStepState } from "./components/stepper";
 export { LogViewer } from "./components/log-viewer";
 export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "./components/dropdown-menu";
+export {
   Card,
   CardHeader,
   CardTitle,

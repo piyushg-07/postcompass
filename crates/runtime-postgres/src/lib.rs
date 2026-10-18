@@ -7,6 +7,7 @@ mod install;
 mod platform;
 mod process;
 mod server;
+pub mod tools;
 mod versions;
 
 use std::path::PathBuf;

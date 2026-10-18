@@ -32,21 +32,39 @@ pub async fn open_server(
     id: String,
 ) -> Result<OpenedConnection, CoreError> {
     let server = store.server(&id)?;
-    let config = ConnectionConfig {
+    let mut config = ConnectionConfig {
         host: server.host.clone(),
         port: server.port,
         user: server.superuser.clone(),
         password: secrets::server_password(&server.id)?,
         database: "postgres".into(),
     };
+    let driver = connections.driver(server.kind)?;
 
     let started = Instant::now();
-    let session: Arc<dyn DriverSession> = connections.driver(server.kind)?.connect(config).await?.into();
+    let session: Arc<dyn DriverSession> = match driver.connect(config.clone()).await {
+        // The "postgres" database can be renamed or dropped; find another one through template1
+        Err(CoreError::NotFound(_)) => {
+            config.database = "template1".into();
+            let probe = driver.connect(config.clone()).await?;
+            let first_usable = probe
+                .databases()
+                .await?
+                .into_iter()
+                .find(|d| d.allow_connections)
+                .map(|d| d.name);
+            if let Some(name) = first_usable {
+                config.database = name;
+            }
+            driver.connect(config.clone()).await?.into()
+        }
+        other => other?.into(),
+    };
     let opened = OpenedConnection {
         connection_id: server_connection_id(&id),
         server_version: session.server_version().to_owned(),
         latency_ms: started.elapsed().as_millis().min(u32::MAX as u128) as u32,
-        database: "postgres".into(),
+        database: config.database.clone(),
     };
     connections.insert(opened.connection_id.clone(), session).await;
     Ok(opened)

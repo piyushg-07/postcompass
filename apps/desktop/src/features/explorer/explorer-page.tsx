@@ -1,334 +1,98 @@
-import { Badge, Button, cn, EmptyState, Skeleton, StatusDot } from "@repo/ui";
-import { ChevronRight, Database, Eye, FolderTree, Layers, RefreshCw, Table2, Unplug } from "lucide-react";
-import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
+import { Button, EmptyState, StatusDot } from "@repo/ui";
+import { useHotkey } from "@tanstack/react-hotkeys";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Unplug } from "lucide-react";
 import { useAppState } from "../../app/app-state";
-import type { TableInfo, TableKind } from "../../lib/bindings";
-import { formatBytes, formatCount } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
+import { ExplorerProvider } from "./explorer-context";
+import { ObjectTree } from "./object-tree";
+import { Workspace } from "./workspace";
+import { useWorkspaceStore } from "./workspace-store";
 
-type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
-
-function toLoad<T>(query: UseQueryResult<T>): Load<T> {
-  if (query.isError) return { status: "error", message: describeError(query.error).message };
-  if (query.isSuccess) return { status: "ready", data: query.data };
-  return { status: "loading" };
-}
-
-/** Browse a connected server: databases → schemas → tables. */
+/** A connected server: object tree on the left, tabs (tables, queries, diagrams…) on the right. */
 export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const { state } = useAppState();
   const queryClient = useQueryClient();
   const server = state.servers.find((s) => s.id === serverId);
-  const [database, setDatabase] = useState<string | null>(null);
-  const [schema, setSchema] = useState<string | null>(null);
 
-  // The session lives in Rust; this query just opens it once and remembers the result
-  const connectionQuery = useQuery({
+  // The session lives in Rust; this query opens it once and remembers the result
+  const connection = useQuery({
     queryKey: queryKeys.connection(serverId),
     queryFn: () => unwrap(commands.openServer(serverId)),
     staleTime: Infinity,
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const connection = connectionQuery.data;
-  const connectionId = connection?.connectionId ?? null;
-  const activeDatabase = database ?? connection?.database ?? null;
 
-  const databases = useQuery({
-    queryKey: queryKeys.explorer.databases(connectionId ?? ""),
-    queryFn: () => unwrap(commands.listDatabases(connectionId!)),
-    enabled: connectionId !== null,
-  });
-  const schemas = useQuery({
-    queryKey: queryKeys.explorer.schemas(connectionId ?? "", activeDatabase ?? ""),
-    queryFn: () => unwrap(commands.listSchemas(connectionId!, activeDatabase!)),
-    enabled: connectionId !== null && activeDatabase !== null,
-  });
-  const tables = useQuery({
-    queryKey: queryKeys.explorer.tables(connectionId ?? "", activeDatabase ?? "", schema ?? ""),
-    queryFn: () => unwrap(commands.listTables(connectionId!, activeDatabase!, schema!)),
-    enabled: connectionId !== null && activeDatabase !== null && schema !== null,
-  });
+  const database = useWorkspaceStore((s) => s.workspaces[serverId]?.database) ?? connection.data?.database ?? "postgres";
 
-  // Default to the "public" schema (or the first user schema) when a database is picked
-  useEffect(() => {
-    if (!schemas.data) return;
-    if (schema && schemas.data.some((s) => s.name === schema)) return;
-    setSchema(
-      schemas.data.find((s) => s.name === "public")?.name ?? schemas.data.find((s) => !s.isSystem)?.name ?? null,
-    );
-  }, [schemas.data, schema]);
-
-  const refresh = () => {
-    if (connectionId) void queryClient.invalidateQueries({ queryKey: queryKeys.explorer.all(connectionId) });
-  };
+  useHotkey("Mod+T", () => useWorkspaceStore.getState().newQuery(serverId, database), {
+    enabled: connection.isSuccess,
+  });
+  useHotkey("Mod+W", () => {
+    const ws = useWorkspaceStore.getState().workspaces[serverId];
+    if (ws?.activeTabId) useWorkspaceStore.getState().closeTab(serverId, ws.activeTabId);
+  });
 
   const disconnect = async () => {
-    if (connectionId) {
-      await commands.closeConnection(connectionId);
-      queryClient.removeQueries({ queryKey: queryKeys.explorer.all(connectionId) });
+    const id = connection.data?.connectionId;
+    if (id) {
+      await commands.closeConnection(id);
+      queryClient.removeQueries({ queryKey: queryKeys.explorer.all(id) });
     }
     queryClient.removeQueries({ queryKey: queryKeys.connection(serverId) });
     onClose();
   };
 
-  const connectionError = connectionQuery.isError ? describeError(connectionQuery.error) : null;
+  if (!server) return <EmptyState title="Server not found" description="It may have been removed." />;
 
-  if (!server) {
-    return <EmptyState title="Server not found" description="It may have been removed." />;
-  }
+  const error = connection.isError ? describeError(connection.error) : null;
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-6">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-border px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="truncate text-sm font-semibold">{server.name}</span>
-          {connection && (
+          {connection.data && (
             <span className="flex items-center gap-2 text-xs text-fg-muted">
               <StatusDot status="running" />
-              Connected · PostgreSQL {connection.serverVersion} · {connection.latencyMs} ms
+              PostgreSQL {connection.data.serverVersion} · {server.host}:{server.port}
             </span>
           )}
-          {connectionQuery.isPending && <span className="text-xs text-fg-subtle">Connecting…</span>}
+          {connection.isPending && <span className="text-xs text-fg-subtle">Connecting…</span>}
         </div>
-        <div className="flex items-center gap-2">
-          {connection && (
-            <Button size="sm" variant="ghost" iconLeft={<RefreshCw />} onClick={refresh}>
-              Refresh
-            </Button>
-          )}
-          <Button size="sm" iconLeft={<Unplug />} onClick={() => void disconnect()}>
-            Disconnect
-          </Button>
-        </div>
+        <Button size="sm" iconLeft={<Unplug />} onClick={() => void disconnect()}>
+          Disconnect
+        </Button>
       </header>
 
-      {connectionError ? (
+      {error ? (
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
             icon={<Unplug />}
             title="Couldn't open this server"
-            description={connectionError.hint ? `${connectionError.message}. ${connectionError.hint}` : connectionError.message}
+            description={error.hint ? `${error.message}. ${error.hint}` : error.message}
             actions={
               <>
                 <Button onClick={onClose}>Back</Button>
-                <Button variant="primary" loading={connectionQuery.isFetching} onClick={() => void connectionQuery.refetch()}>
+                <Button variant="primary" loading={connection.isFetching} onClick={() => void connection.refetch()}>
                   Try again
                 </Button>
               </>
             }
           />
         </div>
-      ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[220px_240px_1fr]">
-          <Pane title="Databases" icon={<Database />}>
-            <List
-              load={toLoad(databases)}
-              empty="No databases"
-              items={(data) =>
-                data.map((db) => (
-                  <Item
-                    key={db.name}
-                    active={db.name === activeDatabase}
-                    disabled={!db.allowConnections}
-                    onClick={() => {
-                      setDatabase(db.name);
-                      setSchema(null);
-                    }}
-                    label={db.name}
-                    meta={formatBytes(db.sizeBytes)}
-                  />
-                ))
-              }
-            />
-          </Pane>
-
-          <Pane title="Schemas" icon={<FolderTree />}>
-            <List
-              load={activeDatabase ? toLoad(schemas) : { status: "ready", data: [] }}
-              empty="No schemas"
-              items={(data) => {
-                const user = data.filter((s) => !s.isSystem);
-                const system = data.filter((s) => s.isSystem);
-                return [
-                  ...user.map((s) => (
-                    <Item
-                      key={s.name}
-                      active={s.name === schema}
-                      onClick={() => setSchema(s.name)}
-                      label={s.name}
-                      meta={String(s.tableCount)}
-                    />
-                  )),
-                  system.length > 0 && (
-                    <li key="__system" className="px-3 pt-3 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
-                      System
-                    </li>
-                  ),
-                  ...system.map((s) => (
-                    <Item
-                      key={s.name}
-                      active={s.name === schema}
-                      onClick={() => setSchema(s.name)}
-                      label={s.name}
-                      meta={String(s.tableCount)}
-                      muted
-                    />
-                  )),
-                ];
-              }}
-            />
-          </Pane>
-
-          <section className="flex min-w-0 flex-col overflow-hidden">
-            <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border px-4 text-xs text-fg-muted">
-              <span>{activeDatabase ?? "—"}</span>
-              <ChevronRight className="size-3 text-fg-subtle" />
-              <span className="text-fg">{schema ?? "—"}</span>
+      ) : connection.data ? (
+        <ExplorerProvider value={{ serverId, connectionId: connection.data.connectionId }}>
+          <div className="flex min-h-0 flex-1">
+            <ObjectTree defaultDatabase={connection.data.database} />
+            <div className="min-w-0 flex-1">
+              <Workspace />
             </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              <TablesView load={schema ? toLoad<TableInfo[]>(tables) : null} schema={schema} />
-            </div>
-          </section>
-        </div>
-      )}
+          </div>
+        </ExplorerProvider>
+      ) : null}
     </div>
-  );
-}
-
-const KIND_LABELS: Record<TableKind, string> = {
-  table: "Table",
-  partitioned_table: "Partitioned",
-  view: "View",
-  materialized_view: "Materialized view",
-  foreign_table: "Foreign table",
-};
-
-function TablesView({ load, schema }: { load: Load<TableInfo[]> | null; schema: string | null }) {
-  if (!load) {
-    return <EmptyState icon={<Layers />} title="Pick a schema" description="Choose a schema to see its tables." />;
-  }
-  if (load.status === "loading") {
-    return (
-      <div className="flex flex-col gap-2 p-4">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-8" />
-        ))}
-      </div>
-    );
-  }
-  if (load.status === "error") {
-    return <p className="p-4 text-sm text-danger">{load.message}</p>;
-  }
-  if (load.data.length === 0) {
-    return (
-      <EmptyState
-        icon={<Table2 />}
-        title={`${schema} is empty`}
-        description="Tables and views you create in this schema will show up here."
-      />
-    );
-  }
-  return (
-    <table className="w-full text-sm">
-      <thead className="sticky top-0 bg-bg text-left text-xs text-fg-subtle">
-        <tr className="border-b border-border">
-          <th className="px-4 py-2 font-medium">Name</th>
-          <th className="px-4 py-2 font-medium">Type</th>
-          <th className="px-4 py-2 text-right font-medium">Rows (est.)</th>
-          <th className="px-4 py-2 text-right font-medium">Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {load.data.map((t) => (
-          <tr key={t.name} className="border-b border-border/60 hover:bg-surface-hover">
-            <td className="px-4 py-2">
-              <span className="flex items-center gap-2">
-                {t.kind === "view" || t.kind === "materialized_view" ? (
-                  <Eye className="size-3.5 text-fg-subtle" />
-                ) : (
-                  <Table2 className="size-3.5 text-fg-subtle" />
-                )}
-                <span className="font-mono text-xs text-fg">{t.name}</span>
-              </span>
-            </td>
-            <td className="px-4 py-2">
-              <Badge>{KIND_LABELS[t.kind]}</Badge>
-            </td>
-            <td className="px-4 py-2 text-right font-mono text-xs text-fg-muted">{formatCount(t.rowEstimate)}</td>
-            <td className="px-4 py-2 text-right font-mono text-xs text-fg-muted">{formatBytes(t.sizeBytes)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function Pane({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
-  return (
-    <section className="flex min-h-0 flex-col border-r border-border">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3 text-xs font-medium text-fg-muted [&_svg]:size-3.5">
-        {icon}
-        {title}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">{children}</div>
-    </section>
-  );
-}
-
-function List<T>({ load, items, empty }: { load: Load<T>; items: (data: T) => ReactNode; empty: string }) {
-  if (load.status === "loading") {
-    return (
-      <div className="flex flex-col gap-1.5 p-2">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-7" />
-        ))}
-      </div>
-    );
-  }
-  if (load.status === "error") {
-    return <p className="p-3 text-xs text-danger">{load.message}</p>;
-  }
-  const rendered = items(load.data);
-  if (Array.isArray(rendered) && rendered.filter(Boolean).length === 0) {
-    return <p className="p-3 text-xs text-fg-subtle">{empty}</p>;
-  }
-  return <ul className="flex flex-col">{rendered}</ul>;
-}
-
-function Item({
-  label,
-  meta,
-  active,
-  disabled,
-  muted,
-  onClick,
-}: {
-  label: string;
-  meta?: string;
-  active: boolean;
-  disabled?: boolean;
-  muted?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <li className="px-1.5">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onClick}
-        aria-current={active || undefined}
-        className={cn(
-          "relative flex h-7 w-full cursor-pointer items-center gap-2 rounded-control px-2 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-          active ? "bg-surface-hover text-fg" : muted ? "text-fg-subtle hover:bg-surface-hover/60" : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
-        )}
-      >
-        {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />}
-        <span className="min-w-0 flex-1 truncate font-mono">{label}</span>
-        {meta && <span className="shrink-0 font-mono text-[10px] text-fg-subtle">{meta}</span>}
-      </button>
-    </li>
   );
 }

@@ -1,7 +1,17 @@
 //! PostgreSQL implementation of [`DatabaseDriver`] on top of `tokio-postgres`.
 //!
-//! A session keeps one client per database: PostgreSQL connections are bound to a single
-//! database, so inspecting another database opens (and caches) another connection.
+//! PostgreSQL connections are bound to one database, so a session keeps connections per database:
+//! - a **browse** connection for catalog queries and table pages,
+//! - an **editor** connection for the SQL editor, so its session state (`SET`, `BEGIN`, temp tables)
+//!   persists between runs and a long query never blocks browsing,
+//! - a fresh, short-lived connection for each transaction (row edits, `EXPLAIN ANALYZE`).
+
+mod ddl;
+mod edit;
+mod execute;
+mod introspect;
+mod rows;
+mod sql;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -9,7 +19,9 @@ use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use pc_core::driver::{
-    ConnectionConfig, DatabaseDriver, DatabaseInfo, DriverSession, SchemaInfo, TableInfo, TableKind, TestResult,
+    ApplyResult, CancellationToken, ConnectionConfig, DatabaseDriver, DatabaseInfo, DriverSession, ExecuteResult,
+    ExplainResult, ExtensionInfo, ObjectKind, RowChange, RowsPage, RowsRequest, SchemaGraph, SchemaInfo, SchemaObjects,
+    TableInfo, TableStructure, TestResult,
 };
 use pc_core::{CoreError, CoreResult, DatabaseKind};
 use tokio::sync::Mutex;
@@ -42,12 +54,27 @@ impl DatabaseDriver for PostgresDriver {
         let client = open(&config, &config.database).await?;
         let version = server_version(&client).await?;
         let mut clients = HashMap::new();
-        clients.insert(config.database.clone(), Arc::new(client));
+        clients.insert(Purpose::Browse.key(&config.database), Arc::new(client));
         Ok(Box::new(PostgresSession {
             config,
             version,
             clients: Mutex::new(clients),
         }))
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Purpose {
+    Browse,
+    Editor,
+}
+
+impl Purpose {
+    fn key(self, database: &str) -> String {
+        match self {
+            Purpose::Browse => format!("browse:{database}"),
+            Purpose::Editor => format!("editor:{database}"),
+        }
     }
 }
 
@@ -59,16 +86,21 @@ struct PostgresSession {
 
 impl PostgresSession {
     /// A live client for `database`, reconnecting if the cached one was closed (e.g. server restart).
-    async fn client(&self, database: &str) -> CoreResult<Arc<Client>> {
+    async fn client(&self, database: &str, purpose: Purpose) -> CoreResult<Arc<Client>> {
+        let key = purpose.key(database);
         let mut clients = self.clients.lock().await;
-        if let Some(client) = clients.get(database)
+        if let Some(client) = clients.get(&key)
             && !client.is_closed()
         {
             return Ok(client.clone());
         }
         let client = Arc::new(open(&self.config, database).await?);
-        clients.insert(database.to_owned(), client.clone());
+        clients.insert(key, client.clone());
         Ok(client)
+    }
+
+    async fn browse(&self, database: &str) -> CoreResult<Arc<Client>> {
+        self.client(database, Purpose::Browse).await
     }
 }
 
@@ -79,83 +111,91 @@ impl DriverSession for PostgresSession {
     }
 
     async fn databases(&self) -> CoreResult<Vec<DatabaseInfo>> {
-        let client = self.client(&self.config.database).await?;
-        let rows = client
-            .query(
-                "select datname,
-                        case when has_database_privilege(datname, 'CONNECT')
-                             then pg_database_size(datname)::float8 end,
-                        datallowconn
-                   from pg_database
-                  where not datistemplate
-                  order by datname",
-                &[],
-            )
-            .await
-            .map_err(map_error)?;
-        Ok(rows
-            .iter()
-            .map(|row| DatabaseInfo {
-                name: row.get(0),
-                size_bytes: row.get(1),
-                allow_connections: row.get(2),
-            })
-            .collect())
+        introspect::databases(&*self.browse(&self.config.database).await?).await
     }
 
     async fn schemas(&self, database: &str) -> CoreResult<Vec<SchemaInfo>> {
-        let client = self.client(database).await?;
-        let rows = client
-            .query(
-                "select n.nspname,
-                        pg_get_userbyid(n.nspowner),
-                        (select count(*) from pg_class c
-                          where c.relnamespace = n.oid and c.relkind in ('r', 'p', 'v', 'm', 'f'))::int4,
-                        n.nspname in ('pg_catalog', 'information_schema') as is_system
-                   from pg_namespace n
-                  where n.nspname not like 'pg\\_toast%' and n.nspname not like 'pg\\_temp\\_%'
-                  order by is_system, n.nspname",
-                &[],
-            )
-            .await
-            .map_err(map_error)?;
-        Ok(rows
-            .iter()
-            .map(|row| SchemaInfo {
-                name: row.get(0),
-                owner: row.get(1),
-                table_count: row.get::<_, i32>(2).max(0) as u32,
-                is_system: row.get(3),
-            })
-            .collect())
+        introspect::schemas(&*self.browse(database).await?).await
     }
 
     async fn tables(&self, database: &str, schema: &str) -> CoreResult<Vec<TableInfo>> {
-        let client = self.client(database).await?;
-        let rows = client
-            .query(
-                "select c.relname,
-                        c.relkind::text,
-                        greatest(c.reltuples, 0)::float8,
-                        pg_total_relation_size(c.oid)::float8
-                   from pg_class c
-                   join pg_namespace n on n.oid = c.relnamespace
-                  where n.nspname = $1 and c.relkind in ('r', 'p', 'v', 'm', 'f')
-                  order by c.relname",
-                &[&schema],
-            )
-            .await
-            .map_err(map_error)?;
-        Ok(rows
-            .iter()
-            .map(|row| TableInfo {
-                schema: schema.to_owned(),
-                name: row.get(0),
-                kind: table_kind(row.get(1)),
-                row_estimate: row.get(2),
-                size_bytes: row.get(3),
-            })
-            .collect())
+        introspect::tables(&*self.browse(database).await?, schema).await
+    }
+
+    async fn schema_objects(&self, database: &str, schema: &str) -> CoreResult<SchemaObjects> {
+        introspect::schema_objects(&*self.browse(database).await?, schema).await
+    }
+
+    async fn table_structure(&self, database: &str, schema: &str, table: &str) -> CoreResult<TableStructure> {
+        introspect::structure(&*self.browse(database).await?, schema, table).await
+    }
+
+    async fn definition(&self, database: &str, schema: &str, kind: ObjectKind, name: &str) -> CoreResult<String> {
+        let client = self.browse(database).await?;
+        match kind {
+            ObjectKind::Table => Ok(ddl::create_table(&introspect::structure(&client, schema, name).await?)),
+            ObjectKind::View => introspect::view_definition(&client, schema, name, false).await,
+            ObjectKind::MaterializedView => introspect::view_definition(&client, schema, name, true).await,
+            ObjectKind::Function => introspect::function_definition(&client, name).await,
+            ObjectKind::Sequence => introspect::sequence_definition(&client, schema, name).await,
+        }
+    }
+
+    async fn schema_graph(&self, database: &str, schema: &str) -> CoreResult<SchemaGraph> {
+        introspect::schema_graph(&*self.browse(database).await?, schema).await
+    }
+
+    async fn extensions(&self, database: &str) -> CoreResult<Vec<ExtensionInfo>> {
+        introspect::extensions(&*self.browse(database).await?).await
+    }
+
+    async fn rows(&self, database: &str, schema: &str, table: &str, request: RowsRequest) -> CoreResult<RowsPage> {
+        rows::rows(&*self.browse(database).await?, schema, table, request).await
+    }
+
+    async fn preview_changes(
+        &self,
+        database: &str,
+        schema: &str,
+        table: &str,
+        changes: &[RowChange],
+    ) -> CoreResult<Vec<String>> {
+        let statements = edit::build(&*self.browse(database).await?, schema, table, changes).await?;
+        Ok(statements.into_iter().map(|s| s.display).collect())
+    }
+
+    async fn apply_changes(
+        &self,
+        database: &str,
+        schema: &str,
+        table: &str,
+        changes: &[RowChange],
+    ) -> CoreResult<ApplyResult> {
+        let statements = edit::build(&*self.browse(database).await?, schema, table, changes).await?;
+        // A transaction needs exclusive use of a connection, so use a fresh one
+        let mut client = open(&self.config, database).await?;
+        edit::apply(&mut client, &statements).await
+    }
+
+    async fn execute(
+        &self,
+        database: &str,
+        sql: &str,
+        max_rows: u32,
+        cancel: CancellationToken,
+    ) -> CoreResult<ExecuteResult> {
+        let client = self.client(database, Purpose::Editor).await?;
+        execute::execute(&client, sql, max_rows, cancel).await
+    }
+
+    async fn explain(&self, database: &str, sql: &str, analyze: bool) -> CoreResult<ExplainResult> {
+        if analyze {
+            // Runs inside BEGIN … ROLLBACK, which must not touch the editor's own transaction
+            let client = open(&self.config, database).await?;
+            execute::explain(&client, sql, true).await
+        } else {
+            execute::explain(&*self.client(database, Purpose::Editor).await?, sql, false).await
+        }
     }
 }
 
@@ -188,18 +228,8 @@ async fn server_version(client: &Client) -> CoreResult<String> {
     Ok(full.split_whitespace().next().unwrap_or(&full).to_owned())
 }
 
-fn table_kind(relkind: &str) -> TableKind {
-    match relkind {
-        "p" => TableKind::PartitionedTable,
-        "v" => TableKind::View,
-        "m" => TableKind::MaterializedView,
-        "f" => TableKind::ForeignTable,
-        _ => TableKind::Table,
-    }
-}
-
 /// Turns driver errors into the app's error codes, with the server's own message where there is one.
-fn map_error(error: tokio_postgres::Error) -> CoreError {
+pub(crate) fn map_error(error: tokio_postgres::Error) -> CoreError {
     if let Some(db) = error.as_db_error() {
         let code = db.code();
         if *code == SqlState::INVALID_PASSWORD || *code == SqlState::INVALID_AUTHORIZATION_SPECIFICATION {
@@ -208,7 +238,11 @@ fn map_error(error: tokio_postgres::Error) -> CoreError {
         if *code == SqlState::INVALID_CATALOG_NAME {
             return CoreError::NotFound(db.message().to_owned());
         }
-        return CoreError::QueryFailed(db.message().to_owned());
+        let mut message = db.message().to_owned();
+        if let Some(detail) = db.detail() {
+            message.push_str(&format!(" ({detail})"));
+        }
+        return CoreError::QueryFailed(message);
     }
     // No server response: refused, unreachable, closed, timed out
     CoreError::ConnectionFailed(error.to_string())
@@ -217,15 +251,6 @@ fn map_error(error: tokio_postgres::Error) -> CoreError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn maps_relkinds() {
-        assert_eq!(table_kind("r"), TableKind::Table);
-        assert_eq!(table_kind("p"), TableKind::PartitionedTable);
-        assert_eq!(table_kind("v"), TableKind::View);
-        assert_eq!(table_kind("m"), TableKind::MaterializedView);
-        assert_eq!(table_kind("f"), TableKind::ForeignTable);
-    }
 
     #[tokio::test]
     async fn unreachable_server_is_a_connection_error() {

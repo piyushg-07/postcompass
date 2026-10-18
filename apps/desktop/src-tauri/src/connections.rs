@@ -4,13 +4,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use driver_postgres::PostgresDriver;
-use pc_core::driver::{DatabaseDriver, DriverSession};
+use pc_core::driver::{CancellationToken, DatabaseDriver, DriverSession};
 use pc_core::{CoreError, CoreResult, DatabaseKind};
 use tokio::sync::RwLock;
 
 pub struct Connections {
     drivers: HashMap<DatabaseKind, Arc<dyn DatabaseDriver>>,
     sessions: RwLock<HashMap<String, Arc<dyn DriverSession>>>,
+    /// Cancellation tokens of running SQL editor queries, by run id.
+    runs: RwLock<HashMap<String, CancellationToken>>,
 }
 
 impl Connections {
@@ -21,6 +23,7 @@ impl Connections {
         Self {
             drivers,
             sessions: RwLock::new(HashMap::new()),
+            runs: RwLock::new(HashMap::new()),
         }
     }
 
@@ -42,6 +45,22 @@ impl Connections {
             .get(id)
             .cloned()
             .ok_or_else(|| CoreError::NotFound("this connection was closed, open it again".into()))
+    }
+
+    pub async fn begin_run(&self, run_id: &str) -> CancellationToken {
+        let token = CancellationToken::new();
+        self.runs.write().await.insert(run_id.to_owned(), token.clone());
+        token
+    }
+
+    pub async fn end_run(&self, run_id: &str) {
+        self.runs.write().await.remove(run_id);
+    }
+
+    pub async fn cancel_run(&self, run_id: &str) {
+        if let Some(token) = self.runs.read().await.get(run_id) {
+            token.cancel();
+        }
     }
 
     /// Drops the session; its connections close once in-flight requests finish.

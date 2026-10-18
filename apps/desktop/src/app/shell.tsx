@@ -1,16 +1,29 @@
-import { cn } from "@repo/ui";
+import { cn, Spinner } from "@repo/ui";
 import { Database, Home, Palette, Server, Settings } from "lucide-react";
-import type { ReactNode } from "react";
-import { ExplorerPage } from "../features/explorer/explorer-page";
+import { lazy, type ReactNode, Suspense } from "react";
 import { HomePage } from "../features/home/home-page";
 import { ServersPage } from "../features/servers/servers-page";
+import { BackupDialog, RestoreDialog } from "../features/backup/backup-dialogs";
+import { CommandPalette } from "../features/palette/command-palette";
 import { SettingsPage } from "../features/settings/settings-page";
 import { Playground } from "../playground/playground";
 import { useAppState } from "./app-state";
 import { CompassMark } from "./compass-mark";
 import { type Section, useNavigation } from "./navigation";
 
-const NAV: { id: Section; label: string; icon: ReactNode; devOnly?: boolean }[] = [
+// The explorer pulls in the SQL editor and data grid; load it when a server is first opened
+const ExplorerPage = lazy(() =>
+  import("../features/explorer/explorer-page").then((m) => ({
+    default: m.ExplorerPage,
+  })),
+);
+
+const NAV: {
+  id: Section;
+  label: string;
+  icon: ReactNode;
+  devOnly?: boolean;
+}[] = [
   { id: "home", label: "Home", icon: <Home /> },
   { id: "servers", label: "Servers", icon: <Server /> },
   { id: "settings", label: "Settings", icon: <Settings /> },
@@ -27,25 +40,34 @@ export function Shell() {
 
   return (
     <div className="flex h-full">
-      <nav className="flex w-56 shrink-0 flex-col border-r border-border bg-surface" aria-label="Main">
+      <nav
+        className="flex w-56 shrink-0 flex-col border-r border-border bg-surface"
+        aria-label="Main"
+      >
         <div className="flex h-14 items-center gap-2.5 px-4">
           <CompassMark size={22} />
-          <span className="text-sm font-semibold tracking-tight">PostCompass</span>
+          <span className="text-sm font-semibold tracking-tight">
+            PostCompass
+          </span>
         </div>
         <ul className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-          {NAV.filter((item) => !item.devOnly || import.meta.env.DEV).map((item) => (
-            <li key={item.id}>
-              <NavButton
-                active={section === item.id}
-                icon={item.icon}
-                label={item.label}
-                onClick={() => goTo(item.id)}
-              />
-            </li>
-          ))}
+          {NAV.filter((item) => !item.devOnly || import.meta.env.DEV).map(
+            (item) => (
+              <li key={item.id}>
+                <NavButton
+                  active={section === item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  onClick={() => goTo(item.id)}
+                />
+              </li>
+            ),
+          )}
           {openServer && (
             <>
-              <li className="px-2.5 pt-4 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">Open</li>
+              <li className="px-2.5 pt-4 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
+                Open
+              </li>
               <li>
                 <NavButton
                   active={section === "explorer"}
@@ -57,12 +79,26 @@ export function Shell() {
             </>
           )}
         </ul>
-        <div className="px-4 py-3 font-mono text-[11px] text-fg-subtle">v{info.version}</div>
+        <div className="px-4 py-3 font-mono text-[11px] text-fg-subtle">
+          v{info.version}
+        </div>
       </nav>
 
       <main className="min-w-0 flex-1 overflow-y-auto">
         {section === "explorer" && openServerId ? (
-          <ExplorerPage key={openServerId} serverId={openServerId} onClose={closeServer} />
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center text-fg-subtle">
+                <Spinner />
+              </div>
+            }
+          >
+            <ExplorerPage
+              key={openServerId}
+              serverId={openServerId}
+              onClose={closeServer}
+            />
+          </Suspense>
         ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
             {section === "home" && <HomePage />}
@@ -72,6 +108,10 @@ export function Shell() {
           </div>
         )}
       </main>
+
+      <CommandPalette />
+      <BackupDialog />
+      <RestoreDialog />
     </div>
   );
 }
@@ -94,10 +134,14 @@ function NavButton({
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 text-sm transition-colors [&_svg]:size-4",
-        active ? "bg-surface-hover text-fg" : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
+        active
+          ? "bg-surface-hover text-fg"
+          : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
       )}
     >
-      {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />}
+      {active && (
+        <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />
+      )}
       <span className={active ? "text-accent" : undefined}>{icon}</span>
       <span className="truncate">{label}</span>
     </button>

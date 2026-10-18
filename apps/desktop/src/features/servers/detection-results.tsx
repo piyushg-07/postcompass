@@ -1,5 +1,6 @@
 import { Badge, Skeleton, StatusDot } from "@repo/ui";
 import { FolderOpen, Radio } from "lucide-react";
+import { useAppState } from "../../app/app-state";
 import type { DetectionReport, InstallSource } from "../../lib/bindings";
 import type { DetectionState } from "./use-detection";
 
@@ -27,6 +28,9 @@ export function DetectionResults({ state }: { state: DetectionState }) {
 }
 
 function ReportList({ report }: { report: DetectionReport }) {
+  const { state } = useAppState();
+  // A listening port that belongs to one of our own servers
+  const managedOn = (port: number) => state.servers.find((s) => s.port === port);
   if (report.installs.length === 0 && report.servers.length === 0) {
     return <p className="text-sm text-fg-muted">No PostgreSQL installs or running servers found on this computer.</p>;
   }
@@ -64,7 +68,11 @@ function ReportList({ report }: { report: DetectionReport }) {
             </span>
           </div>
           <StatusDot status="running" />
-          {server.source && <Badge>{sourceLabels[server.source]}</Badge>}
+          {managedOn(server.port) ? (
+            <Badge variant="accent">PostCompass · {managedOn(server.port)!.name}</Badge>
+          ) : (
+            server.source && <Badge>{sourceLabels[server.source]}</Badge>
+          )}
         </li>
       ))}
     </ul>

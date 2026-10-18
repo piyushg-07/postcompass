@@ -181,6 +181,73 @@ impl InstallContext {
     }
 }
 
+/* ── Backup & restore ─────────────────────────────────────────────────── */
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum BackupFormat {
+    /// Compressed archive (`pg_dump -Fc`); restores with `pg_restore`, can restore selectively.
+    Custom,
+    /// Plain SQL script (`pg_dump -Fp`); readable, restores with `psql`.
+    Plain,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum BackupContent {
+    All,
+    SchemaOnly,
+    DataOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupRequest {
+    pub database: String,
+    /// File to write, chosen by the user.
+    pub path: String,
+    pub format: BackupFormat,
+    pub content: BackupContent,
+    /// Leave out ownership and privileges, so the backup restores cleanly under another user.
+    pub no_owner: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupResult {
+    pub path: String,
+    pub size_bytes: f64,
+    pub duration_ms: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreRequest {
+    /// Target database. Created first when `create_database` is set.
+    pub database: String,
+    pub path: String,
+    pub create_database: bool,
+    /// Drop existing objects before recreating them (custom-format backups only).
+    pub clean: bool,
+    pub no_owner: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreResult {
+    pub format: BackupFormat,
+    pub duration_ms: u32,
+}
+
+/// How command-line tools reach the server.
+#[derive(Clone)]
+pub struct ToolConnection {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub password: String,
+}
+
 /* ── The interface ────────────────────────────────────────────────────── */
 
 #[async_trait]

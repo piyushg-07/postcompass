@@ -30,8 +30,10 @@ export function generatePassword(length = 24) {
   return Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
 }
 
-export function connectionString(server: { superuser: string; host: string; port: number }, password: string) {
-  return `postgresql://${server.superuser}:${encodeURIComponent(password)}@${server.host}:${server.port}/postgres`;
+/** `password: null` gives a display version with the password masked. */
+export function connectionString(server: { superuser: string; host: string; port: number }, password: string | null) {
+  const secret = password === null ? "••••••••" : encodeURIComponent(password);
+  return `postgresql://${server.superuser}:${secret}@${server.host}:${server.port}/postgres`;
 }
 
 export function greeting(name?: string | null) {

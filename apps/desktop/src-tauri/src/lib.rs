@@ -14,7 +14,7 @@ use crate::state::Store;
 /// Single source of truth for every command the UI can call.
 /// In debug builds this also regenerates `src/lib/bindings.ts`.
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, connections, servers, state};
+    use commands::{app, backup, connections, data, explorer, servers, state};
     Builder::<tauri::Wry>::new().commands(collect_commands![
         app::app_info,
         state::get_state,
@@ -38,6 +38,20 @@ fn specta_builder() -> Builder<tauri::Wry> {
         connections::list_databases,
         connections::list_schemas,
         connections::list_tables,
+        explorer::schema_objects,
+        explorer::table_structure,
+        explorer::object_definition,
+        explorer::schema_graph,
+        explorer::list_extensions,
+        data::table_rows,
+        data::preview_changes,
+        data::apply_changes,
+        data::execute_sql,
+        data::cancel_sql,
+        data::explain_sql,
+        backup::backup_database,
+        backup::restore_database,
+        backup::cancel_job,
     ])
 }
 
@@ -50,6 +64,7 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

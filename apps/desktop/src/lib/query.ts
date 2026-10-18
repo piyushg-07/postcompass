@@ -34,8 +34,25 @@ export const queryKeys = {
   explorer: {
     all: (connectionId: string) => ["explorer", connectionId] as const,
     databases: (connectionId: string) => ["explorer", connectionId, "databases"] as const,
-    schemas: (connectionId: string, database: string) => ["explorer", connectionId, "schemas", database] as const,
+    /** Everything inside one database; invalidate after schema changes. */
+    database: (connectionId: string, database: string) => ["explorer", connectionId, "db", database] as const,
+    schemas: (connectionId: string, database: string) => ["explorer", connectionId, "db", database, "schemas"] as const,
     tables: (connectionId: string, database: string, schema: string) =>
-      ["explorer", connectionId, "tables", database, schema] as const,
+      ["explorer", connectionId, "db", database, "tables", schema] as const,
+    objects: (connectionId: string, database: string, schema: string) =>
+      ["explorer", connectionId, "db", database, "objects", schema] as const,
+    graph: (connectionId: string, database: string, schema: string) =>
+      ["explorer", connectionId, "db", database, "graph", schema] as const,
+    extensions: (connectionId: string, database: string) =>
+      ["explorer", connectionId, "db", database, "extensions"] as const,
+    /** Everything about one table. */
+    table: (connectionId: string, database: string, schema: string, table: string) =>
+      ["explorer", connectionId, "db", database, "table", schema, table] as const,
+    structure: (connectionId: string, database: string, schema: string, table: string) =>
+      ["explorer", connectionId, "db", database, "table", schema, table, "structure"] as const,
+    rows: (connectionId: string, database: string, schema: string, table: string, request: unknown) =>
+      ["explorer", connectionId, "db", database, "table", schema, table, "rows", request] as const,
+    definition: (connectionId: string, database: string, schema: string, kind: string, name: string) =>
+      ["explorer", connectionId, "db", database, "definition", schema, kind, name] as const,
   },
 };

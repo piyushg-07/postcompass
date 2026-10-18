@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::{Output, Stdio};
 use std::time::Duration;
 
-use pc_core::runtime::InstallContext;
+use pc_core::runtime::{CancellationToken, InstallContext};
 use pc_core::{CoreError, CoreResult};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
@@ -64,7 +64,16 @@ pub async fn run(cmd: Command, timeout: Duration) -> CoreResult<String> {
 }
 
 /// Runs to completion, forwarding every output line to the install log. Honors cancellation.
-pub async fn run_logged(mut cmd: Command, ctx: &InstallContext) -> CoreResult<()> {
+pub async fn run_logged(cmd: Command, ctx: &InstallContext) -> CoreResult<()> {
+    run_streaming(cmd, &|line| ctx.log(line), &ctx.cancel).await
+}
+
+/// Runs to completion, passing every stdout/stderr line to `log`. Kills the process on cancel.
+pub async fn run_streaming(
+    mut cmd: Command,
+    log: &(dyn Fn(String) + Send + Sync),
+    cancel: &CancellationToken,
+) -> CoreResult<()> {
     let name = program_name(&cmd);
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = cmd.spawn().map_err(|e| CoreError::ProcessFailed {
@@ -85,13 +94,13 @@ pub async fn run_logged(mut cmd: Command, ctx: &InstallContext) -> CoreResult<()
     let mut last_lines: Vec<String> = Vec::new();
     loop {
         tokio::select! {
-            _ = ctx.cancel.cancelled() => {
+            _ = cancel.cancelled() => {
                 let _ = child.kill().await;
                 return Err(CoreError::Cancelled);
             }
             line = lines.recv() => match line {
                 Some(line) => {
-                    ctx.log(line.clone());
+                    log(line.clone());
                     if last_lines.len() == 8 {
                         last_lines.remove(0);
                     }

@@ -43,6 +43,26 @@ export const commands = {
 	listDatabases: (connectionId: string) => typedError<DatabaseInfo[], CoreError>(__TAURI_INVOKE("list_databases", { connectionId })),
 	listSchemas: (connectionId: string, database: string) => typedError<SchemaInfo[], CoreError>(__TAURI_INVOKE("list_schemas", { connectionId, database })),
 	listTables: (connectionId: string, database: string, schema: string) => typedError<TableInfo[], CoreError>(__TAURI_INVOKE("list_tables", { connectionId, database, schema })),
+	schemaObjects: (connectionId: string, database: string, schema: string) => typedError<SchemaObjects, CoreError>(__TAURI_INVOKE("schema_objects", { connectionId, database, schema })),
+	tableStructure: (connectionId: string, database: string, schema: string, table: string) => typedError<TableStructure, CoreError>(__TAURI_INVOKE("table_structure", { connectionId, database, schema, table })),
+	/**  SQL that recreates a table, view, function or sequence. `name` is the function id for functions. */
+	objectDefinition: (connectionId: string, database: string, schema: string, kind: ObjectKind, name: string) => typedError<string, CoreError>(__TAURI_INVOKE("object_definition", { connectionId, database, schema, kind, name })),
+	schemaGraph: (connectionId: string, database: string, schema: string) => typedError<SchemaGraph, CoreError>(__TAURI_INVOKE("schema_graph", { connectionId, database, schema })),
+	listExtensions: (connectionId: string, database: string) => typedError<ExtensionInfo[], CoreError>(__TAURI_INVOKE("list_extensions", { connectionId, database })),
+	tableRows: (connectionId: string, database: string, schema: string, table: string, request: RowsRequest) => typedError<RowsPage, CoreError>(__TAURI_INVOKE("table_rows", { connectionId, database, schema, table, request })),
+	/**  The SQL that `apply_changes` would run, for review before saving. */
+	previewChanges: (connectionId: string, database: string, schema: string, table: string, changes: RowChange[]) => typedError<string[], CoreError>(__TAURI_INVOKE("preview_changes", { connectionId, database, schema, table, changes })),
+	/**  Saves row changes in one transaction: all or nothing. */
+	applyChanges: (connectionId: string, database: string, schema: string, table: string, changes: RowChange[]) => typedError<ApplyResult, CoreError>(__TAURI_INVOKE("apply_changes", { connectionId, database, schema, table, changes })),
+	/**  Runs SQL from the editor. `run_id` lets `cancel_sql` stop it. */
+	executeSql: (connectionId: string, database: string, sql: string, runId: string) => typedError<ExecuteResult, CoreError>(__TAURI_INVOKE("execute_sql", { connectionId, database, sql, runId })),
+	cancelSql: (runId: string) => typedError<null, CoreError>(__TAURI_INVOKE("cancel_sql", { runId })),
+	explainSql: (connectionId: string, database: string, sql: string, analyze: boolean) => typedError<ExplainResult, CoreError>(__TAURI_INVOKE("explain_sql", { connectionId, database, sql, analyze })),
+	/**  Writes a backup of `request.database`. Progress lines stream over `on_log`; `job_id` lets `cancel_job` stop it. */
+	backupDatabase: (serverId: string, request: BackupRequest, jobId: string, onLog: Channel<string>) => typedError<BackupResult, CoreError>(__TAURI_INVOKE("backup_database", { serverId, request, jobId, onLog })),
+	/**  Restores a backup file (either format, detected automatically) in one transaction. */
+	restoreDatabase: (serverId: string, request: RestoreRequest, jobId: string, onLog: Channel<string>) => typedError<RestoreResult, CoreError>(__TAURI_INVOKE("restore_database", { serverId, request, jobId, onLog })),
+	cancelJob: (jobId: string) => typedError<null, CoreError>(__TAURI_INVOKE("cancel_job", { jobId })),
 };
 
 /* Types */
@@ -61,6 +81,55 @@ export type AppState = {
 	settings: Settings,
 };
 
+export type ApplyResult = {
+	inserted: number,
+	updated: number,
+	deleted: number,
+};
+
+export type BackupContent = "all" | "schema_only" | "data_only";
+
+export type BackupFormat = 
+/**  Compressed archive (`pg_dump -Fc`); restores with `pg_restore`, can restore selectively. */
+"custom" | 
+/**  Plain SQL script (`pg_dump -Fp`); readable, restores with `psql`. */
+"plain";
+
+export type BackupRequest = {
+	database: string,
+	/**  File to write, chosen by the user. */
+	path: string,
+	format: BackupFormat,
+	content: BackupContent,
+	/**  Leave out ownership and privileges, so the backup restores cleanly under another user. */
+	noOwner: boolean,
+};
+
+export type BackupResult = {
+	path: string,
+	sizeBytes: number | null,
+	durationMs: number,
+};
+
+export type ColumnInfo = {
+	name: string,
+	/**  Full type as the database prints it, e.g. `character varying(255)`. */
+	dataType: string,
+	nullable: boolean,
+	default: string | null,
+	isPrimaryKey: boolean,
+	/**  `always` / `by_default` for identity columns. */
+	identity: string | null,
+	/**  Expression of a generated column. */
+	generated: string | null,
+	comment: string | null,
+};
+
+export type ColumnValue = {
+	column: string,
+	value: string | null,
+};
+
 /**  Where and how to connect. Lives only in memory; passwords are never persisted here. */
 export type ConnectionConfig = {
 	host: string,
@@ -70,6 +139,14 @@ export type ConnectionConfig = {
 	/**  Database to connect to first. */
 	database: string,
 };
+
+export type ConstraintInfo = {
+	name: string,
+	kind: ConstraintKind,
+	definition: string,
+};
+
+export type ConstraintKind = "check" | "unique" | "exclusion";
 
 export type CoreError = {
 	code: ErrorCode,
@@ -105,10 +182,102 @@ export type DetectionReport = {
 	durationMs: number,
 };
 
+export type EnumInfo = {
+	name: string,
+	values: string[],
+};
+
 /**  Stable, machine-readable error codes. The UI maps these to messages and toasts. */
 export type ErrorCode = "internal" | "io" | "not_found" | "invalid_input" | "network" | "checksum_mismatch" | "cancelled" | "port_in_use" | "insufficient_disk_space" | "unsupported" | "process_failed" | "secrets" | "connection_failed" | "auth_failed" | "query_failed";
 
+export type ExecuteResult = {
+	/**  Results of the statements that completed, in order. */
+	statements: StatementResult[],
+	/**  Set when a statement failed; later statements did not run. */
+	error: SqlError | null,
+	cancelled: boolean,
+	durationMs: number,
+};
+
 export type Experience = "new" | "some" | "expert";
+
+export type ExplainResult = {
+	/**  The plan as returned by `EXPLAIN (FORMAT JSON)`. */
+	planJson: string,
+	analyzed: boolean,
+};
+
+export type ExtensionInfo = {
+	name: string,
+	defaultVersion: string | null,
+	installedVersion: string | null,
+	comment: string | null,
+};
+
+export type FilterOp = "equals" | "not_equals" | "contains" | "starts_with" | "greater_than" | "greater_or_equal" | "less_than" | "less_or_equal" | "is_null" | "is_not_null";
+
+export type FilterSpec = {
+	column: string,
+	op: FilterOp,
+	/**  Ignored for `is_null` / `is_not_null`. */
+	value: string | null,
+};
+
+export type ForeignKeyInfo = {
+	name: string,
+	columns: string[],
+	referencedSchema: string,
+	referencedTable: string,
+	referencedColumns: string[],
+	onUpdate: string,
+	onDelete: string,
+	definition: string,
+};
+
+export type FunctionInfo = {
+	/**  Stable identifier for fetching the definition (overloads share a name). */
+	id: string,
+	name: string,
+	arguments: string,
+	returns: string,
+	language: string,
+	/**  `function`, `procedure`, `aggregate` or `window` */
+	kind: string,
+};
+
+export type GraphColumn = {
+	name: string,
+	dataType: string,
+	nullable: boolean,
+	isPrimaryKey: boolean,
+	isForeignKey: boolean,
+};
+
+export type GraphRelation = {
+	name: string,
+	fromTable: string,
+	fromColumns: string[],
+	toSchema: string,
+	toTable: string,
+	toColumns: string[],
+};
+
+export type GraphTable = {
+	name: string,
+	kind: TableKind,
+	columns: GraphColumn[],
+};
+
+export type IndexInfo = {
+	name: string,
+	columns: string[],
+	isUnique: boolean,
+	isPrimary: boolean,
+	/**  e.g. `btree`, `gin` */
+	method: string,
+	sizeBytes: number | null,
+	definition: string,
+};
 
 /**  Streamed to the UI while an install runs. */
 export type InstallEvent = { type: "step"; step: InstallStep; state: StepState; detail: string | null } | { type: "download"; downloaded: number | null; total: number | null } | { type: "log"; line: string };
@@ -160,6 +329,8 @@ export type ManagedServer = {
 	createdAt: number | null,
 };
 
+export type ObjectKind = "table" | "view" | "materialized_view" | "function" | "sequence";
+
 export type OpenedConnection = {
 	connectionId: string,
 	serverVersion: string,
@@ -179,7 +350,42 @@ export type Profile = {
 	completedAt: number | null,
 };
 
+export type RestoreRequest = {
+	/**  Target database. Created first when `create_database` is set. */
+	database: string,
+	path: string,
+	createDatabase: boolean,
+	/**  Drop existing objects before recreating them (custom-format backups only). */
+	clean: boolean,
+	noOwner: boolean,
+};
+
+export type RestoreResult = {
+	format: BackupFormat,
+	durationMs: number,
+};
+
 export type Role = "developer" | "analyst" | "dba" | "student" | "other";
+
+export type RowChange = { type: "insert"; values: ColumnValue[] } | { type: "update"; key: ColumnValue[]; values: ColumnValue[] } | { type: "delete"; key: ColumnValue[] };
+
+export type RowsPage = {
+	columns: ColumnInfo[],
+	rows: ((string | null)[])[],
+	/**  Columns that identify a row for editing. Empty means the table is read-only here. */
+	keyColumns: string[],
+	hasMore: boolean,
+	total: number | null,
+	/**  `total` came from planner statistics instead of `count(*)` (large tables). */
+	totalIsEstimate: boolean,
+};
+
+export type RowsRequest = {
+	offset: number,
+	limit: number,
+	sort: SortSpec[],
+	filters: FilterSpec[],
+};
 
 export type RuntimeVersion = {
 	/**  Full version, e.g. `18.6.0`. */
@@ -191,12 +397,30 @@ export type RuntimeVersion = {
 	downloadMb: number | null,
 };
 
+export type SchemaGraph = {
+	tables: GraphTable[],
+	relations: GraphRelation[],
+};
+
 export type SchemaInfo = {
 	name: string,
 	owner: string,
 	tableCount: number,
 	/**  Built-in schemas such as `pg_catalog` and `information_schema`. */
 	isSystem: boolean,
+};
+
+export type SchemaObjects = {
+	functions: FunctionInfo[],
+	sequences: SequenceInfo[],
+	enums: EnumInfo[],
+};
+
+export type SequenceInfo = {
+	name: string,
+	dataType: string,
+	lastValue: string | null,
+	increment: string,
 };
 
 export type ServerStatus = "running" | "stopped" | 
@@ -212,6 +436,25 @@ export type Settings = {
 	/**  Stop PostCompass-managed servers when the app quits. */
 	stopServersOnQuit: boolean,
 };
+
+export type SortSpec = {
+	column: string,
+	descending: boolean,
+};
+
+export type SqlError = {
+	message: string,
+	detail: string | null,
+	hint: string | null,
+	/**  1-based character offset in the submitted SQL. */
+	position: number | null,
+	/**  SQLSTATE, e.g. `42P01`. */
+	code: string | null,
+};
+
+export type StatementResult = { type: "rows"; columns: string[]; rows: ((string | null)[])[]; 
+/**  Row cap reached; more rows exist. */
+truncated: boolean; rowCount: number | null } | { type: "command"; rowsAffected: number | null };
 
 export type StepState = "active" | "done" | "skipped" | "failed";
 
@@ -229,15 +472,35 @@ export type TableInfo = {
 	rowEstimate: number | null,
 	/**  Total size including indexes and TOAST. */
 	sizeBytes: number | null,
+	comment: string | null,
 };
 
 export type TableKind = "table" | "partitioned_table" | "view" | "materialized_view" | "foreign_table";
+
+export type TableStructure = {
+	schema: string,
+	name: string,
+	kind: TableKind,
+	comment: string | null,
+	columns: ColumnInfo[],
+	primaryKey: string[],
+	foreignKeys: ForeignKeyInfo[],
+	indexes: IndexInfo[],
+	constraints: ConstraintInfo[],
+	triggers: TriggerInfo[],
+};
 
 export type TestResult = {
 	/**  e.g. `18.6` */
 	serverVersion: string,
 	/**  Time to connect and run a trivial query. */
 	latencyMs: number,
+};
+
+export type TriggerInfo = {
+	name: string,
+	enabled: boolean,
+	definition: string,
 };
 
 export type UseCase = "local_dev" | "remote" | "both" | "learning";

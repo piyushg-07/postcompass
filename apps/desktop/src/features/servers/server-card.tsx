@@ -116,7 +116,7 @@ export function ServerCard({
         <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
           <Row label="Connection">
             <span className="truncate font-mono text-xs text-fg-muted">
-              {password ? connectionString(server, password) : connectionString(server, "••••••••")}
+              {connectionString(server, password)}
             </span>
             <IconButton
               size="sm"

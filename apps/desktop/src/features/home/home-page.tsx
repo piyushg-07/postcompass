@@ -25,7 +25,7 @@ export function HomePage() {
           <span className="flex items-center gap-1.5 text-xs text-fg-subtle">
             <Kbd>Ctrl</Kbd>
             <Kbd>K</Kbd>
-            <span>Command palette (coming soon)</span>
+            <span>Command palette</span>
           </span>
         }
       />
