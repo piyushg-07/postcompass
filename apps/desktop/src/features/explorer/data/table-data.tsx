@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   IconButton,
   Input,
-  NativeSelect,
+  Select,
   Spinner,
   toast,
   Tooltip,
@@ -29,7 +29,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { FilterOp, FilterSpec, RowChange, RowsPage, SortSpec } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
@@ -74,7 +74,18 @@ function pendingCount(p: Pending) {
 }
 
 /** Browse and edit a table's rows: server-side paging, sorting and filtering. */
-export function TableData({ database, schema, table }: { database: string; schema: string; table: string }) {
+export function TableData({
+  database,
+  schema,
+  table,
+  footerRight,
+}: {
+  database: string;
+  schema: string;
+  table: string;
+  /** Shown on the right of the bottom bar (view switch, table actions). */
+  footerRight?: ReactNode;
+}) {
   const { connectionId } = useExplorer();
   const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState(100);
@@ -247,6 +258,10 @@ export function TableData({ database, schema, table }: { database: string; schem
   const total =
     data.total === null ? null : `${data.totalIsEstimate ? "~" : ""}${Math.round(data.total).toLocaleString()}`;
   const locked = changes > 0;
+  const pages =
+    data.total === null
+      ? null
+      : `${data.totalIsEstimate ? "~" : ""}${Math.max(1, Math.ceil(data.total / pageSize)).toLocaleString()}`;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -298,42 +313,6 @@ export function TableData({ database, schema, table }: { database: string; schem
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="ml-auto flex items-center gap-2 text-xs text-fg-muted">
-          <span className="font-mono">
-            {from.toLocaleString()}–{to.toLocaleString()}
-            {total !== null && ` of ${total}`}
-          </span>
-          <IconButton
-            size="sm"
-            label={locked ? "Save or discard changes first" : "Previous page"}
-            icon={<ChevronLeft />}
-            disabled={page === 0 || locked}
-            onClick={() => setPage((p) => p - 1)}
-          />
-          <IconButton
-            size="sm"
-            label={locked ? "Save or discard changes first" : "Next page"}
-            icon={<ChevronRight />}
-            disabled={!data.hasMore || locked}
-            onClick={() => setPage((p) => p + 1)}
-          />
-          <NativeSelect
-            aria-label="Rows per page"
-            className="h-7 w-20 text-xs"
-            value={pageSize}
-            disabled={locked}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(0);
-            }}
-          >
-            {[50, 100, 500, 1000].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
       </div>
 
       {showFilters && (
@@ -390,6 +369,50 @@ export function TableData({ database, schema, table }: { database: string; schem
           </div>
         </div>
       )}
+
+      {/* Bottom bar, like Supabase: pagination left, views right */}
+      <TableFooter right={footerRight}>
+        <IconButton
+          size="sm"
+          label={locked ? "Save or discard changes first" : "Previous page"}
+          icon={<ChevronLeft />}
+          disabled={page === 0 || locked}
+          onClick={() => setPage((p) => p - 1)}
+        />
+        <span className="text-xs text-fg-muted">
+          Page <span className="font-mono text-fg">{(page + 1).toLocaleString()}</span>
+          {pages !== null && (
+            <>
+              {" "}
+              of <span className="font-mono">{pages}</span>
+            </>
+          )}
+        </span>
+        <IconButton
+          size="sm"
+          label={locked ? "Save or discard changes first" : "Next page"}
+          icon={<ChevronRight />}
+          disabled={!data.hasMore || locked}
+          onClick={() => setPage((p) => p + 1)}
+        />
+        <span className="mx-1 h-4 w-px bg-border" />
+        <Select
+          aria-label="Rows per page"
+          size="sm"
+          side="top"
+          className="w-[104px]"
+          value={String(pageSize)}
+          disabled={locked}
+          onValueChange={(v) => {
+            setPageSize(Number(v));
+            setPage(0);
+          }}
+          options={[50, 100, 500, 1000].map((n) => ({ value: String(n), label: `${n} rows` }))}
+        />
+        <span className="ml-1 font-mono text-xs text-fg-subtle">
+          {total !== null ? `${total} records` : `${from.toLocaleString()}–${to.toLocaleString()}`}
+        </span>
+      </TableFooter>
 
       <ReviewDialog
         open={reviewOpen}
@@ -487,30 +510,23 @@ function FilterBar({
         return (
           <div key={index} className="flex items-center gap-1.5">
             <span className="w-10 text-right text-[11px] text-fg-subtle">{index === 0 ? "where" : "and"}</span>
-            <NativeSelect
+            <Select
               aria-label="Column"
-              className="h-7 w-44 font-mono text-xs"
+              size="sm"
+              mono
+              className="w-44"
               value={filter.column}
-              onChange={(e) => update(index, { column: e.target.value })}
-            >
-              {columns.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </NativeSelect>
-            <NativeSelect
+              onValueChange={(column) => update(index, { column })}
+              options={columns.map((c) => ({ value: c, label: c }))}
+            />
+            <Select
               aria-label="Condition"
-              className="h-7 w-32 text-xs"
+              size="sm"
+              className="w-32"
               value={filter.op}
-              onChange={(e) => update(index, { op: e.target.value as FilterOp })}
-            >
-              {FILTER_OPS.map((o) => (
-                <option key={o.op} value={o.op}>
-                  {o.label}
-                </option>
-              ))}
-            </NativeSelect>
+              onValueChange={(op) => update(index, { op: op as FilterOp })}
+              options={FILTER_OPS.map((o) => ({ value: o.op, label: o.label }))}
+            />
             {needsValue && (
               <Input
                 aria-label="Value"
@@ -556,6 +572,16 @@ function FilterBar({
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The table tab's bottom bar. `children` go on the left. */
+export function TableFooter({ children, right }: { children?: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="flex h-10 shrink-0 items-center gap-1 border-t border-border bg-surface px-2">
+      {children}
+      <div className="ml-auto flex items-center gap-1">{right}</div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import {
   Field,
   Input,
   LogViewer,
-  NativeSelect,
+  Select,
   PasswordInput,
   Progress,
   Switch,
@@ -434,11 +434,10 @@ function InstallForm({
           }
         >
           {(p) => (
-            <NativeSelect
+            <Select
               {...p}
               value={values.version}
-              onChange={(e) => {
-                const version = e.target.value;
+              onValueChange={(version) => {
                 setValues((v) => ({
                   ...v,
                   version,
@@ -447,14 +446,12 @@ function InstallForm({
                     : `Local PostgreSQL ${version.split(".")[0]}`,
                 }));
               }}
-            >
-              {versions.map((v) => (
-                <option key={v.version} value={v.version}>
-                  PostgreSQL {v.version}
-                  {v.recommended ? " (recommended)" : ""}
-                </option>
-              ))}
-            </NativeSelect>
+              options={versions.map((v) => ({
+                value: v.version,
+                label: `PostgreSQL ${v.version}`,
+                hint: v.recommended ? "recommended" : undefined,
+              }))}
+            />
           )}
         </Field>
         <Field

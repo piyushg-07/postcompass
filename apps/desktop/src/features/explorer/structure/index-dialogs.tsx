@@ -1,4 +1,4 @@
-import { Checkbox, Field, Input, NativeSelect, Switch } from "@repo/ui";
+import { Checkbox, Field, Input, Select, Switch } from "@repo/ui";
 import { useState } from "react";
 import type { TableStructure } from "../../../lib/bindings";
 import { addForeignKey, createIndex, suggestIdentifier } from "../../../lib/sql";
@@ -84,13 +84,13 @@ export function IndexDialog({
           </Field>
           <Field label="Method">
             {(p) => (
-              <NativeSelect {...p} value={method} onChange={(e) => setMethod(e.target.value)}>
-                {METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </NativeSelect>
+              <Select
+                {...p}
+                mono
+                value={method}
+                onValueChange={setMethod}
+                options={METHODS.map((m) => ({ value: m, label: m }))}
+              />
             )}
           </Field>
           <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -147,23 +147,19 @@ export function ForeignKeyDialog({
         <div className="flex flex-col gap-3">
           <Field label="References table">
             {(p) => (
-              <NativeSelect
+              <Select
                 {...p}
+                mono
+                placeholder="Choose a table…"
                 value={refTable}
-                onChange={(e) => {
-                  setRefTable(e.target.value);
+                onValueChange={(table) => {
+                  setRefTable(table);
                   setRefColumns([]);
                 }}
-              >
-                <option value="">Choose a table…</option>
-                {(tables.data ?? [])
+                options={(tables.data ?? [])
                   .filter((t) => t.kind === "table" || t.kind === "partitioned_table")
-                  .map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-              </NativeSelect>
+                  .map((t) => ({ value: t.name, label: t.name }))}
+              />
             )}
           </Field>
           {refTable && (
@@ -173,11 +169,12 @@ export function ForeignKeyDialog({
           )}
           <Field label="On delete">
             {(p) => (
-              <NativeSelect {...p} value={onDelete} onChange={(e) => setOnDelete(e.target.value)}>
-                {ACTIONS.map((a) => (
-                  <option key={a}>{a}</option>
-                ))}
-              </NativeSelect>
+              <Select
+                {...p}
+                value={onDelete}
+                onValueChange={setOnDelete}
+                options={ACTIONS.map((a) => ({ value: a, label: a }))}
+              />
             )}
           </Field>
         </div>
