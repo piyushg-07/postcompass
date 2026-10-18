@@ -1,11 +1,7 @@
 import {
-  Badge,
   Button,
   cn,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
+  ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,7 +35,6 @@ import {
   RefreshCw,
   Rows3,
   Trash2,
-  Undo2,
   X,
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
@@ -53,16 +48,10 @@ import type {
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer, useStructure } from "../explorer-context";
-import { SqlBlock } from "../sql/sql-editor";
 import { ColumnSheet } from "../structure/add-column-sheet";
 import { RunSqlDialog } from "../run-sql-dialog";
 import { dropColumn } from "../../../lib/sql";
-import {
-  DataGrid,
-  type GridCell,
-  type GridColumn,
-  type GridRow,
-} from "./data-grid";
+import { DataGrid, type GridColumn, type GridRow } from "./data-grid";
 import { FilterBar } from "./filter-bar";
 import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
@@ -77,23 +66,6 @@ const EMPTY_PAGE: RowsPage = {
   total: null,
   totalIsEstimate: false,
 };
-
-interface Pending {
-  /** rowId → column index → new value */
-  edits: Map<string, Map<number, string | null>>;
-  inserts: { id: string; cells: GridCell[] }[];
-  deletes: Set<string>;
-}
-
-const NO_CHANGES: Pending = {
-  edits: new Map(),
-  inserts: [],
-  deletes: new Set(),
-};
-
-function pendingCount(p: Pending) {
-  return p.edits.size + p.inserts.length + p.deletes.size;
-}
 
 /** Browse and edit a table's rows: server-side paging, sorting and filtering. */
 export function TableData({
@@ -139,8 +111,11 @@ export function TableData({
   const [editColumn, setEditColumn] = useState<ColumnInfo | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [pending, setPending] = useState<Pending>(NO_CHANGES);
-  const [reviewOpen, setReviewOpen] = useState(false);
+  /** Cell edits being saved right now, shown in place until the table reloads. */
+  const [saving, setSaving] = useState<Map<string, Map<number, string | null>>>(
+    new Map(),
+  );
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const request = { offset: page * pageSize, limit: pageSize, sort, filters };
   const rowsQuery = useQuery({
@@ -159,7 +134,6 @@ export function TableData({
   });
   const data = rowsQuery.data ?? EMPTY_PAGE;
   const editable = data.keyColumns.length > 0;
-  const changes = pendingCount(pending);
 
   const columns: GridColumn[] = useMemo(
     () =>
@@ -188,23 +162,19 @@ export function TableData({
   const gridRows: GridRow[] = useMemo(() => {
     const existing = data.rows.map((cells, index) => {
       const id = rowId(cells, index);
-      const edits = pending.edits.get(id);
+      const edits = saving.get(id);
       return {
         id,
         cells: edits
           ? cells.map((v, i) => (edits.has(i) ? edits.get(i)! : v))
           : cells,
         modified: edits ? new Set(edits.keys()) : undefined,
-        state: pending.deletes.has(id) ? ("deleted" as const) : undefined,
       };
     });
-    return [
-      ...pending.inserts.map((r) => ({ ...r, state: "new" as const })),
-      ...existing,
-    ];
+    return existing;
     // rowId depends on page/keyIndexes, both covered by data
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, pending]);
+  }, [data, saving]);
 
   const originalRows = useMemo(
     () =>
@@ -215,83 +185,65 @@ export function TableData({
 
   /* ── Editing ── */
 
-  const editCell = (id: string, col: number, value: string | null) => {
-    setPending((p) => {
-      const insertIndex = p.inserts.findIndex((r) => r.id === id);
-      if (insertIndex >= 0) {
-        const inserts = [...p.inserts];
-        inserts[insertIndex] = {
-          id,
-          cells: inserts[insertIndex]!.cells.map((v, i) =>
-            i === col ? value : v,
-          ),
-        };
-        return { ...p, inserts };
-      }
-      const original = originalRows.get(id);
-      const edits = new Map(p.edits);
-      const rowEdits = new Map(edits.get(id));
-      if (original && original[col] === value) rowEdits.delete(col);
-      else rowEdits.set(col, value);
-      if (rowEdits.size) edits.set(id, rowEdits);
-      else edits.delete(id);
-      return { ...p, edits };
-    });
-  };
-
-  const deleteSelected = () => {
-    setPending((p) => {
-      const inserts = p.inserts.filter((r) => !selected.has(r.id));
-      const deletes = new Set(p.deletes);
-      for (const id of selected) if (originalRows.has(id)) deletes.add(id);
-      return { ...p, inserts, deletes };
-    });
-    setSelected(new Set());
-  };
-
-  const discard = () => {
-    setPending(NO_CHANGES);
-    setReviewOpen(false);
-  };
-
   const keyOf = (id: string) =>
     data.keyColumns.map((column, i) => ({
       column,
       value: originalRows.get(id)![keyIndexes[i]!] ?? null,
     }));
 
-  const rowChanges: RowChange[] = useMemo(() => {
-    const out: RowChange[] = [];
-    for (const insert of pending.inserts) {
-      out.push({
-        type: "insert",
-        values: insert.cells
-          .map((value, i) => ({ column: data.columns[i]!.name, value }))
-          .filter(
-            (cv): cv is { column: string; value: string | null } =>
-              cv.value !== undefined,
-          ),
-      });
-    }
-    for (const [id, edits] of pending.edits) {
-      if (pending.deletes.has(id)) continue;
-      out.push({
-        type: "update",
-        key: keyOf(id),
-        values: [...edits].map(([i, value]) => ({
-          column: data.columns[i]!.name,
-          value,
-        })),
-      });
-    }
-    for (const id of pending.deletes)
-      out.push({ type: "delete", key: keyOf(id) });
-    return out;
-    // keyOf reads data, covered below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending, data]);
+  const reload = () =>
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.explorer.table(
+          connectionId,
+          database,
+          schema,
+          table,
+        ),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.explorer.tables(connectionId, database, schema),
+      }),
+    ]);
 
-  const apply = useMutation({
+  const setSavingCell = (
+    id: string,
+    col: number,
+    value: string | null | undefined,
+  ) =>
+    setSaving((current) => {
+      const next = new Map(current);
+      const row = new Map(next.get(id));
+      if (value === undefined) row.delete(col);
+      else row.set(col, value);
+      if (row.size) next.set(id, row);
+      else next.delete(id);
+      return next;
+    });
+
+  /** Saves a cell as soon as it's edited; no review step. */
+  const editCell = (id: string, col: number, value: string | null) => {
+    const original = originalRows.get(id);
+    if (!original || original[col] === value) return;
+    const change: RowChange = {
+      type: "update",
+      key: keyOf(id),
+      values: [{ column: data.columns[col]!.name, value }],
+    };
+    setSavingCell(id, col, value);
+    unwrap(
+      commands.applyChanges(connectionId, database, schema, table, [change]),
+    )
+      .then(() => reload())
+      .catch((e: unknown) =>
+        toast.error(`Couldn't save ${data.columns[col]!.name}`, {
+          description: describeError(e).message,
+        }),
+      )
+      .finally(() => setSavingCell(id, col, undefined));
+  };
+
+  const removeRows = useMutation({
     mutationFn: () =>
       unwrap(
         commands.applyChanges(
@@ -299,34 +251,21 @@ export function TableData({
           database,
           schema,
           table,
-          rowChanges,
+          [...selected]
+            .filter((id) => originalRows.has(id))
+            .map((id) => ({ type: "delete" as const, key: keyOf(id) })),
         ),
       ),
     onSuccess: (result) => {
-      const parts = [
-        result.inserted && `${result.inserted} added`,
-        result.updated && `${result.updated} updated`,
-        result.deleted && `${result.deleted} deleted`,
-      ].filter(Boolean);
-      toast.success("Changes saved", { description: parts.join(", ") });
-      setPending(NO_CHANGES);
-      setReviewOpen(false);
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.explorer.table(
-          connectionId,
-          database,
-          schema,
-          table,
-        ),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.explorer.tables(connectionId, database, schema),
-      });
+      toast.success(
+        `Deleted ${result.deleted} row${result.deleted === 1 ? "" : "s"}`,
+      );
+      setSelected(new Set());
+      setConfirmDelete(false);
+      void reload();
     },
     onError: (e) =>
-      toast.error("Nothing was saved", {
-        description: describeError(e).message,
-      }),
+      toast.error("Couldn't delete", { description: describeError(e).message }),
   });
 
   /* ── Sorting, paging, copying ── */
@@ -382,7 +321,8 @@ export function TableData({
     data.total === null
       ? null
       : `${data.totalIsEstimate ? "~" : ""}${Math.round(data.total).toLocaleString()}`;
-  const locked = changes > 0;
+  // Paging, sorting and filtering wait until in-flight saves land
+  const locked = saving.size > 0;
   const pages =
     data.total === null
       ? null
@@ -498,7 +438,7 @@ export function TableData({
               size="sm"
               variant="danger"
               iconLeft={<Trash2 />}
-              onClick={deleteSelected}
+              onClick={() => setConfirmDelete(true)}
             >
               Delete {selected.size} row{selected.size === 1 ? "" : "s"}
             </Button>
@@ -572,40 +512,11 @@ export function TableData({
         )}
       </div>
 
-      {/* Pending changes */}
-      {changes > 0 && (
-        <div className="flex h-11 shrink-0 items-center justify-between border-t border-border bg-surface px-3">
-          <span className="flex items-center gap-2 text-xs text-fg-muted">
-            <Badge variant="warning">{changes} unsaved</Badge>
-            {pending.inserts.length > 0 && `${pending.inserts.length} new · `}
-            {pending.edits.size > 0 && `${pending.edits.size} edited · `}
-            {pending.deletes.size > 0 && `${pending.deletes.size} to delete`}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              iconLeft={<Undo2 />}
-              onClick={discard}
-            >
-              Discard
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setReviewOpen(true)}
-            >
-              Review & save
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Bottom bar, like Supabase: pagination left, views right */}
       <TableFooter right={footerRight}>
         <IconButton
           size="sm"
-          label={locked ? "Save or discard changes first" : "Previous page"}
+          label={locked ? "Saving…" : "Previous page"}
           icon={<ChevronLeft />}
           disabled={page === 0 || locked}
           onClick={() => setPage((p) => p - 1)}
@@ -624,7 +535,7 @@ export function TableData({
         </span>
         <IconButton
           size="sm"
-          label={locked ? "Save or discard changes first" : "Next page"}
+          label={locked ? "Saving…" : "Next page"}
           icon={<ChevronRight />}
           disabled={!data.hasMore || locked}
           onClick={() => setPage((p) => p + 1)}
@@ -668,6 +579,16 @@ export function TableData({
         row={editRow}
         references={references}
       />
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete ${selected.size} row${selected.size === 1 ? "" : "s"}?`}
+        description="This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={removeRows.isPending}
+        onConfirm={() => removeRows.mutate()}
+      />
       <ReferenceSheet
         database={database}
         target={reference}
@@ -699,92 +620,7 @@ export function TableData({
           successMessage={`Column ${dropTarget} deleted`}
         />
       )}
-
-      <ReviewDialog
-        open={reviewOpen}
-        onOpenChange={setReviewOpen}
-        changes={rowChanges}
-        database={database}
-        schema={schema}
-        table={table}
-        saving={apply.isPending}
-        onSave={() => apply.mutate()}
-      />
     </div>
-  );
-}
-
-function ReviewDialog({
-  open,
-  onOpenChange,
-  changes,
-  database,
-  schema,
-  table,
-  saving,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  changes: RowChange[];
-  database: string;
-  schema: string;
-  table: string;
-  saving: boolean;
-  onSave: () => void;
-}) {
-  const { connectionId } = useExplorer();
-  const preview = useQuery({
-    queryKey: [
-      "preview-changes",
-      connectionId,
-      database,
-      schema,
-      table,
-      changes,
-    ],
-    queryFn: () =>
-      unwrap(
-        commands.previewChanges(connectionId, database, schema, table, changes),
-      ),
-    enabled: open,
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        title="Review changes"
-        description="These statements run in one transaction. If any fails, nothing is saved."
-        className="w-[720px]"
-      >
-        {preview.isPending ? (
-          <div className="flex h-32 items-center justify-center text-fg-subtle">
-            <Spinner />
-          </div>
-        ) : preview.isError ? (
-          <p className="text-sm text-danger">
-            {describeError(preview.error).message}
-          </p>
-        ) : (
-          <SqlBlock sql={preview.data.join("\n")} className="h-64" />
-        )}
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="ghost">Keep editing</Button>
-          </DialogClose>
-          <Button
-            variant="primary"
-            loading={saving}
-            disabled={!preview.isSuccess}
-            onClick={onSave}
-          >
-            Save {changes.length} change{changes.length === 1 ? "" : "s"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
