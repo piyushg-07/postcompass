@@ -5,6 +5,7 @@ import {
   Home,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   Settings,
   Table2,
 } from "lucide-react";
@@ -14,7 +15,6 @@ import { HomePage } from "../features/home/home-page";
 import { CommandPalette } from "../features/palette/command-palette";
 import { DatabasesPage } from "../features/servers/databases-page";
 import { SettingsPage } from "../features/settings/settings-page";
-import { Playground } from "../playground/playground";
 import { useAppState } from "./app-state";
 import { CompassMark } from "./compass-mark";
 import { ErrorBoundary } from "./error-boundary";
@@ -39,6 +39,7 @@ export function Shell() {
   const openServerId = useNavigation((s) => s.openServerId);
   const goTo = useNavigation((s) => s.goTo);
   const closeServer = useNavigation((s) => s.closeServer);
+  const setPaletteOpen = useNavigation((s) => s.setPaletteOpen);
   const openServer = state.servers.find((s) => s.id === openServerId);
   const collapsed = useUiPrefs((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
@@ -81,6 +82,16 @@ export function Shell() {
               />
             </li>
           ))}
+          <li>
+            <NavButton
+              active={false}
+              icon={<Search />}
+              label="Search"
+              shortcut={["Ctrl", "K"]}
+              collapsed={collapsed}
+              onClick={() => setPaletteOpen(true)}
+            />
+          </li>
         </ul>
 
         {openServer && (
@@ -173,7 +184,6 @@ export function Shell() {
               {section === "home" && <HomePage />}
               {section === "databases" && <DatabasesPage />}
               {section === "settings" && <SettingsPage />}
-              {section === "playground" && <Playground />}
             </div>
           )}
         </ErrorBoundary>
@@ -191,12 +201,15 @@ function NavButton({
   icon,
   label,
   collapsed,
+  shortcut,
   onClick,
 }: {
   active: boolean;
   icon: ReactNode;
   label: string;
   collapsed: boolean;
+  /** Keys shown on the right when expanded, e.g. ["Ctrl", "K"]. */
+  shortcut?: string[];
   onClick: () => void;
 }) {
   const button = (
@@ -219,7 +232,16 @@ function NavButton({
       {collapsed ? (
         <span className="sr-only">{label}</span>
       ) : (
-        <span className="truncate whitespace-nowrap">{label}</span>
+        <span className="flex-1 truncate text-left whitespace-nowrap">
+          {label}
+        </span>
+      )}
+      {!collapsed && shortcut && (
+        <span className="flex shrink-0 gap-0.5">
+          {shortcut.map((key) => (
+            <Kbd key={key}>{key}</Kbd>
+          ))}
+        </span>
       )}
     </button>
   );

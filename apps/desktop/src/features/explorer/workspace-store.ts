@@ -5,15 +5,43 @@ import type { ObjectKind, TableKind } from "../../lib/bindings";
 export type TableView = "data" | "structure" | "definition";
 
 export type Tab =
-  | { id: string; type: "table"; database: string; schema: string; name: string; kind: TableKind; view: TableView }
+  | {
+      id: string;
+      type: "table";
+      database: string;
+      schema: string;
+      name: string;
+      kind: TableKind;
+      view: TableView;
+    }
   | { id: string; type: "query"; database: string; title: string; sql: string }
-  | { id: string; type: "definition"; database: string; schema: string; kind: ObjectKind; name: string; title: string }
+  | {
+      id: string;
+      type: "definition";
+      database: string;
+      schema: string;
+      kind: ObjectKind;
+      name: string;
+      title: string;
+    }
   | { id: string; type: "diagram"; database: string; schema: string }
   | { id: string; type: "extensions"; database: string }
   | { id: string; type: "create-table"; database: string; schema: string };
 
 /** Tab without an id; ids are derived so opening the same object twice focuses the existing tab. */
-export type NewTab = Tab extends infer T ? (T extends Tab ? Omit<T, "id"> : never) : never;
+export type NewTab = Tab extends infer T
+  ? T extends Tab
+    ? Omit<T, "id">
+    : never
+  : never;
+
+export interface RecentTable {
+  database: string;
+  schema: string;
+  name: string;
+  kind: TableKind;
+  at: number;
+}
 
 interface ServerWorkspace {
   database: string | null;
@@ -22,9 +50,42 @@ interface ServerWorkspace {
   activeTabId: string | null;
   /** Counter for "Query 1", "Query 2" … */
   queryCount: number;
+  /** Recently opened tables, newest first; kept even after their tab is closed. */
+  recentTables?: RecentTable[];
 }
 
-const EMPTY: ServerWorkspace = { database: null, schema: null, tabs: [], activeTabId: null, queryCount: 0 };
+const MAX_RECENT_TABLES = 10;
+
+const EMPTY: ServerWorkspace = {
+  database: null,
+  schema: null,
+  tabs: [],
+  activeTabId: null,
+  queryCount: 0,
+};
+
+function rememberTable(
+  ws: ServerWorkspace,
+  tab: NewTab,
+): RecentTable[] | undefined {
+  if (tab.type !== "table") return ws.recentTables;
+  const entry: RecentTable = {
+    database: tab.database,
+    schema: tab.schema,
+    name: tab.name,
+    kind: tab.kind,
+    at: Date.now(),
+  };
+  const rest = (ws.recentTables ?? []).filter(
+    (t) =>
+      !(
+        t.database === entry.database &&
+        t.schema === entry.schema &&
+        t.name === entry.name
+      ),
+  );
+  return [entry, ...rest].slice(0, MAX_RECENT_TABLES);
+}
 
 function tabId(tab: NewTab, queryCount: number) {
   switch (tab.type) {
@@ -45,7 +106,10 @@ function tabId(tab: NewTab, queryCount: number) {
 
 interface WorkspaceState {
   workspaces: Record<string, ServerWorkspace>;
-  setLocation: (serverId: string, location: { database?: string | null; schema?: string | null }) => void;
+  setLocation: (
+    serverId: string,
+    location: { database?: string | null; schema?: string | null },
+  ) => void;
   openTab: (serverId: string, tab: NewTab) => void;
   newQuery: (serverId: string, database: string, sql?: string) => void;
   updateTab: (serverId: string, id: string, patch: Partial<Tab>) => void;
@@ -60,10 +124,18 @@ interface WorkspaceState {
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set) => {
-      const update = (serverId: string, change: (ws: ServerWorkspace) => Partial<ServerWorkspace>) =>
+      const update = (
+        serverId: string,
+        change: (ws: ServerWorkspace) => Partial<ServerWorkspace>,
+      ) =>
         set((state) => {
           const ws = state.workspaces[serverId] ?? EMPTY;
-          return { workspaces: { ...state.workspaces, [serverId]: { ...ws, ...change(ws) } } };
+          return {
+            workspaces: {
+              ...state.workspaces,
+              [serverId]: { ...ws, ...change(ws) },
+            },
+          };
         });
 
       return {
@@ -71,7 +143,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         setLocation: (serverId, location) =>
           update(serverId, (ws) => ({
-            database: location.database !== undefined ? location.database : ws.database,
+            database:
+              location.database !== undefined ? location.database : ws.database,
             schema: location.schema !== undefined ? location.schema : ws.schema,
           })),
 
@@ -83,23 +156,45 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               // Re-opening a table on a different view switches the view
               const tabs =
                 tab.type === "table"
-                  ? ws.tabs.map((t) => (t.id === id ? ({ ...t, view: tab.view } as Tab) : t))
+                  ? ws.tabs.map((t) =>
+                      t.id === id ? ({ ...t, view: tab.view } as Tab) : t,
+                    )
                   : ws.tabs;
-              return { tabs, activeTabId: id };
+              return {
+                tabs,
+                activeTabId: id,
+                recentTables: rememberTable(ws, tab),
+              };
             }
-            return { tabs: [...ws.tabs, { ...tab, id } as Tab], activeTabId: id };
+            return {
+              tabs: [...ws.tabs, { ...tab, id } as Tab],
+              activeTabId: id,
+              recentTables: rememberTable(ws, tab),
+            };
           }),
 
         newQuery: (serverId, database, sql = "") =>
           update(serverId, (ws) => {
             const count = ws.queryCount + 1;
-            const tab: Tab = { id: tabId({ type: "query", database, title: "", sql }, count), type: "query", database, title: `Query ${count}`, sql };
-            return { tabs: [...ws.tabs, tab], activeTabId: tab.id, queryCount: count };
+            const tab: Tab = {
+              id: tabId({ type: "query", database, title: "", sql }, count),
+              type: "query",
+              database,
+              title: `Query ${count}`,
+              sql,
+            };
+            return {
+              tabs: [...ws.tabs, tab],
+              activeTabId: tab.id,
+              queryCount: count,
+            };
           }),
 
         updateTab: (serverId, id, patch) =>
           update(serverId, (ws) => ({
-            tabs: ws.tabs.map((t) => (t.id === id ? ({ ...t, ...patch } as Tab) : t)),
+            tabs: ws.tabs.map((t) =>
+              t.id === id ? ({ ...t, ...patch } as Tab) : t,
+            ),
           })),
 
         closeTab: (serverId, id) =>
@@ -107,23 +202,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const index = ws.tabs.findIndex((t) => t.id === id);
             const tabs = ws.tabs.filter((t) => t.id !== id);
             const activeTabId =
-              ws.activeTabId === id ? (tabs[Math.min(index, tabs.length - 1)]?.id ?? null) : ws.activeTabId;
+              ws.activeTabId === id
+                ? (tabs[Math.min(index, tabs.length - 1)]?.id ?? null)
+                : ws.activeTabId;
             return { tabs, activeTabId };
           }),
 
         closeOtherTabs: (serverId, id) =>
-          update(serverId, (ws) => ({ tabs: ws.tabs.filter((t) => t.id === id), activeTabId: id })),
+          update(serverId, (ws) => ({
+            tabs: ws.tabs.filter((t) => t.id === id),
+            activeTabId: id,
+          })),
 
         closeTabsFor: (serverId, predicate) =>
           update(serverId, (ws) => {
             const tabs = ws.tabs.filter((t) => !predicate(t));
             return {
               tabs,
-              activeTabId: tabs.some((t) => t.id === ws.activeTabId) ? ws.activeTabId : (tabs.at(-1)?.id ?? null),
+              activeTabId: tabs.some((t) => t.id === ws.activeTabId)
+                ? ws.activeTabId
+                : (tabs.at(-1)?.id ?? null),
             };
           }),
 
-        setActive: (serverId, id) => update(serverId, () => ({ activeTabId: id })),
+        setActive: (serverId, id) =>
+          update(serverId, () => ({ activeTabId: id })),
       };
     },
     { name: "postcompass-workspaces", version: 1 },
@@ -141,14 +244,19 @@ export function useWorkspace(serverId: string) {
     schema: ws?.schema ?? null,
     tabs: ws?.tabs ?? EMPTY_TABS,
     activeTabId: ws?.activeTabId ?? null,
-    setLocation: (location: { database?: string | null; schema?: string | null }) =>
-      actions.setLocation(serverId, location),
+    setLocation: (location: {
+      database?: string | null;
+      schema?: string | null;
+    }) => actions.setLocation(serverId, location),
     openTab: (tab: NewTab) => actions.openTab(serverId, tab),
-    newQuery: (database: string, sql?: string) => actions.newQuery(serverId, database, sql),
-    updateTab: (id: string, patch: Partial<Tab>) => actions.updateTab(serverId, id, patch),
+    newQuery: (database: string, sql?: string) =>
+      actions.newQuery(serverId, database, sql),
+    updateTab: (id: string, patch: Partial<Tab>) =>
+      actions.updateTab(serverId, id, patch),
     closeTab: (id: string) => actions.closeTab(serverId, id),
     closeOtherTabs: (id: string) => actions.closeOtherTabs(serverId, id),
-    closeTabsFor: (predicate: (tab: Tab) => boolean) => actions.closeTabsFor(serverId, predicate),
+    closeTabsFor: (predicate: (tab: Tab) => boolean) =>
+      actions.closeTabsFor(serverId, predicate),
     setActive: (id: string) => actions.setActive(serverId, id),
   };
 }
@@ -188,19 +296,35 @@ export const useQueryLibrary = create<QueryLibraryState>()(
         set((s) => {
           const list = s.history[serverId] ?? [];
           // Re-running the same SQL moves it to the top instead of duplicating it
-          const rest = list.filter((h) => h.sql !== entry.sql || h.database !== entry.database);
-          return { history: { ...s.history, [serverId]: [entry, ...rest].slice(0, MAX_HISTORY) } };
+          const rest = list.filter(
+            (h) => h.sql !== entry.sql || h.database !== entry.database,
+          );
+          return {
+            history: {
+              ...s.history,
+              [serverId]: [entry, ...rest].slice(0, MAX_HISTORY),
+            },
+          };
         }),
-      clearHistory: (serverId) => set((s) => ({ history: { ...s.history, [serverId]: [] } })),
+      clearHistory: (serverId) =>
+        set((s) => ({ history: { ...s.history, [serverId]: [] } })),
       saveQuery: (serverId, name, sql) =>
         set((s) => ({
           saved: {
             ...s.saved,
-            [serverId]: [{ id: `${Date.now()}`, name, sql }, ...(s.saved[serverId] ?? [])],
+            [serverId]: [
+              { id: `${Date.now()}`, name, sql },
+              ...(s.saved[serverId] ?? []),
+            ],
           },
         })),
       deleteSaved: (serverId, id) =>
-        set((s) => ({ saved: { ...s.saved, [serverId]: (s.saved[serverId] ?? []).filter((q) => q.id !== id) } })),
+        set((s) => ({
+          saved: {
+            ...s.saved,
+            [serverId]: (s.saved[serverId] ?? []).filter((q) => q.id !== id),
+          },
+        })),
     }),
     { name: "postcompass-queries", version: 1 },
   ),

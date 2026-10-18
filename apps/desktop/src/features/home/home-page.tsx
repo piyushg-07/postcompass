@@ -1,15 +1,8 @@
-import { Button, cn, EmptyState, Kbd } from "@repo/ui";
-import {
-  ArrowRight,
-  Database,
-  Eye,
-  Plus,
-  Search,
-  Table2,
-  TerminalSquare,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { Button, EmptyState } from "@repo/ui";
+import { ArrowRight, Eye, Plus, Table2, TerminalSquare } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import { useAppState } from "../../app/app-state";
+import { DataStreams, Mascot } from "../../app/mascot";
 import { useNavigation } from "../../app/navigation";
 import { greeting } from "../../lib/format";
 import {
@@ -19,7 +12,7 @@ import {
 import { DatabaseRow } from "../servers/database-card";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
-/** Start page: quick actions, your databases, where you left off, recent queries. */
+/** Start page: a friendly banner, your databases, and where you left off. */
 export function HomePage() {
   const { state } = useAppState();
   const nav = useNavigation();
@@ -31,22 +24,16 @@ export function HomePage() {
 
   const serverName = (id: string) =>
     state.servers.find((s) => s.id === id)?.name;
-  const firstRunning = state.servers.find((s) => statuses[s.id] === "running");
-  const runningCount = state.servers.filter(
-    (s) => statuses[s.id] === "running",
-  ).length;
+  const running = state.servers.filter((s) => statuses[s.id] === "running");
+  const hasDatabases = state.servers.length > 0;
 
-  // Tables open in each database's explorer; newest tabs are last, so reverse
   const recentTables = Object.entries(workspaces)
     .filter(([id]) => serverName(id))
     .flatMap(([id, ws]) =>
-      ws.tabs.flatMap((tab) =>
-        tab.type === "table" ? [{ serverId: id, tab }] : [],
-      ),
+      (ws.recentTables ?? []).map((table) => ({ serverId: id, table })),
     )
-    .reverse()
-    .slice(0, 6);
-
+    .sort((a, b) => b.table.at - a.table.at)
+    .slice(0, 5);
   const recentQueries = Object.entries(history)
     .filter(([id]) => serverName(id))
     .flatMap(([id, entries]) =>
@@ -55,74 +42,24 @@ export function HomePage() {
     .sort((a, b) => b.entry.at - a.entry.at)
     .slice(0, 5);
 
-  const newQuery = () => {
-    if (!firstRunning) return;
-    const database = workspaces[firstRunning.id]?.database ?? "postgres";
-    useWorkspaceStore.getState().newQuery(firstRunning.id, database);
-    nav.openServer(firstRunning.id);
-  };
+  const summary = !hasDatabases
+    ? "Let's set up your first database. It takes about a minute."
+    : running.length === 0
+      ? "Your databases are resting. Start one to get going."
+      : `${running.length} of ${state.servers.length} database${state.servers.length === 1 ? " is" : "s are"} running and ready.`;
 
   return (
     <>
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">
-          {greeting(state.profile?.name)}
-        </h1>
-        <p className="text-sm text-fg-muted">
-          {state.servers.length === 0
-            ? "Let's create your first database."
-            : `${runningCount} of ${state.servers.length} database${state.servers.length === 1 ? "" : "s"} running.`}
-        </p>
-      </header>
+      <Hero
+        title={greeting(state.profile?.name)}
+        summary={summary}
+        sleepy={hasDatabases && running.length === 0}
+      />
 
-      <section className="grid grid-cols-3 gap-3">
-        <QuickAction
-          icon={<TerminalSquare />}
-          title="New query"
-          description={
-            firstRunning ? `In ${firstRunning.name}` : "Start a database first"
-          }
-          disabled={!firstRunning}
-          onClick={newQuery}
-        />
-        <QuickAction
-          icon={<Plus />}
-          title="New local database"
-          description="Install PostgreSQL in one click"
-          onClick={nav.startInstall}
-        />
-        <QuickAction
-          icon={<Search />}
-          title="Search everything"
-          description={
-            <span className="flex items-center gap-1">
-              Tables and actions <Kbd>Ctrl</Kbd>
-              <Kbd>K</Kbd>
-            </span>
-          }
-          onClick={() => nav.setPaletteOpen(true)}
-        />
-      </section>
-
-      <Section
-        title="Your databases"
-        action={
-          state.servers.length > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              iconRight={<ArrowRight />}
-              onClick={() => nav.goTo("databases")}
-            >
-              Manage
-            </Button>
-          )
-        }
-      >
-        {state.servers.length === 0 ? (
+      {!hasDatabases ? (
+        <Section title="Your databases" delay={100}>
           <div className="rounded-card border border-dashed border-border-strong">
             <EmptyState
-              icon={<Database />}
               title="No databases yet"
               description="Create a local PostgreSQL database. It runs only on this computer and needs no admin rights."
               actions={
@@ -136,7 +73,22 @@ export function HomePage() {
               }
             />
           </div>
-        ) : (
+        </Section>
+      ) : (
+        <Section
+          title="Your databases"
+          delay={100}
+          action={
+            <Button
+              size="sm"
+              variant="ghost"
+              iconRight={<ArrowRight />}
+              onClick={() => nav.goTo("databases")}
+            >
+              Manage
+            </Button>
+          }
+        >
           <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">
             {state.servers.map((server) => (
               <DatabaseRow
@@ -147,31 +99,43 @@ export function HomePage() {
               />
             ))}
           </ul>
-        )}
-      </Section>
+        </Section>
+      )}
 
       {(recentTables.length > 0 || recentQueries.length > 0) && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Section title="Jump back in">
+          <Section title="Jump back in" delay={160}>
             {recentTables.length === 0 ? (
               <Muted>Tables you open show up here.</Muted>
             ) : (
               <ul className="overflow-hidden rounded-card border border-border bg-surface">
-                {recentTables.map(({ serverId, tab }) => (
+                {recentTables.map(({ serverId, table }) => (
                   <ListItem
-                    key={`${serverId}:${tab.id}`}
+                    key={`${serverId}:${table.database}.${table.schema}.${table.name}`}
                     icon={
-                      tab.kind === "view" ||
-                      tab.kind === "materialized_view" ? (
+                      table.kind === "view" ||
+                      table.kind === "materialized_view" ? (
                         <Eye />
                       ) : (
                         <Table2 />
                       )
                     }
-                    title={tab.name}
-                    meta={`${serverName(serverId)} · ${tab.database}.${tab.schema}`}
+                    title={table.name}
+                    meta={`${serverName(serverId)} · ${table.database}.${table.schema} · ${timeAgo(table.at)}`}
                     onClick={() => {
-                      useWorkspaceStore.getState().setActive(serverId, tab.id);
+                      const ws = useWorkspaceStore.getState();
+                      ws.setLocation(serverId, {
+                        database: table.database,
+                        schema: table.schema,
+                      });
+                      ws.openTab(serverId, {
+                        type: "table",
+                        database: table.database,
+                        schema: table.schema,
+                        name: table.name,
+                        kind: table.kind,
+                        view: "data",
+                      });
                       nav.openServer(serverId);
                     }}
                   />
@@ -179,7 +143,7 @@ export function HomePage() {
               </ul>
             )}
           </Section>
-          <Section title="Recent queries">
+          <Section title="Recent queries" delay={220}>
             {recentQueries.length === 0 ? (
               <Muted>Queries you run show up here.</Muted>
             ) : (
@@ -211,52 +175,60 @@ export function HomePage() {
   );
 }
 
-function QuickAction({
-  icon,
+/** Greeting banner with Compi. */
+function Hero({
   title,
-  description,
-  disabled,
-  onClick,
+  summary,
+  sleepy,
 }: {
-  icon: ReactNode;
   title: string;
-  description: ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
+  summary: string;
+  sleepy: boolean;
 }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "group flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface p-4 text-left transition-colors",
-        "hover:border-border-strong hover:bg-surface-hover",
-        "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-surface",
-      )}
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-control border border-border bg-bg text-fg-muted transition-colors group-enabled:group-hover:text-accent [&_svg]:size-4">
-        {icon}
-      </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-medium text-fg">{title}</span>
-        <span className="truncate text-xs text-fg-muted">{description}</span>
-      </span>
-    </button>
+    <section className="pc-rise relative overflow-hidden rounded-[14px] border border-border bg-surface">
+      <div
+        className="pc-grid pointer-events-none absolute inset-0"
+        aria-hidden
+      />
+      <DataStreams className="pointer-events-none absolute top-0 right-[80px] h-full w-[45%] opacity-70" />
+      <div
+        className="pointer-events-none absolute -top-24 -right-16 size-80 rounded-full bg-accent/10 blur-3xl"
+        aria-hidden
+      />
+
+      <div className="relative flex items-center gap-6 px-8 py-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-fg">
+            {title}
+          </h1>
+          <p className="max-w-md text-sm text-fg-muted">{summary}</p>
+        </div>
+
+        <div className="relative hidden shrink-0 flex-col items-center md:flex">
+          <Mascot size={156} mood={sleepy ? "sleepy" : "happy"} />
+        </div>
+      </div>
+    </section>
   );
 }
 
 function Section({
   title,
   action,
+  delay = 0,
   children,
 }: {
   title: string;
   action?: ReactNode;
+  delay?: number;
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section
+      className="pc-rise flex flex-col gap-3"
+      style={{ "--pc-delay": `${delay}ms` } as CSSProperties}
+    >
       <div className="flex h-7 items-center justify-between">
         <h2 className="text-sm font-semibold text-fg">{title}</h2>
         {action}
@@ -282,13 +254,16 @@ function ListItem({
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-hover [&_svg]:size-4"
+        className="group flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-hover [&_svg]:size-4"
       >
-        <span className="shrink-0 text-fg-subtle">{icon}</span>
+        <span className="shrink-0 text-fg-subtle transition-colors group-hover:text-accent">
+          {icon}
+        </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm text-fg">{title}</span>
           <span className="truncate text-xs text-fg-subtle">{meta}</span>
         </span>
+        <ArrowRight className="size-3.5 shrink-0 text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" />
       </button>
     </li>
   );

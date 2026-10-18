@@ -12,7 +12,6 @@ import {
   Home,
   Layers,
   Network,
-  Palette,
   PanelLeft,
   Play,
   Plus,
@@ -469,13 +468,6 @@ function useCommands(): Command[] {
         () => nav.goTo("settings"),
       ],
     ];
-    if (import.meta.env.DEV)
-      pages.push([
-        "components",
-        "Go to Components",
-        <Palette key="c" />,
-        () => nav.goTo("playground"),
-      ]);
     for (const [id, label, icon, run] of pages)
       list.push({ id: `nav:${id}`, group: "Navigation", label, icon, run });
     list.push({

@@ -1,7 +1,6 @@
 import { create } from "zustand";
 
-export type Section =
-  "home" | "databases" | "settings" | "playground" | "explorer";
+export type Section = "home" | "databases" | "settings" | "explorer";
 
 interface NavigationState {
   section: Section;
