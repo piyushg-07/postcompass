@@ -52,15 +52,45 @@ const ROW_NUMBER_WIDTH = 52;
 const features = tableFeatures({});
 const helper = createColumnHelper<typeof features, GridRow>();
 
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+/** Width of `text` in the given CSS font, measured like the browser renders it. */
+function textWidth(text: string, font: string, fallbackPerChar: number) {
+  if (measureCtx === undefined)
+    measureCtx = document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return text.length * fallbackPerChar;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
+}
+
+/** Space for everything in a header besides the two labels: padding, gaps, menu button, resize handle. */
+const HEADER_CHROME = 8 + 6 + 6 + 20 + 14;
+
+/** The full header (name + type) always fits; long cell values are capped so one column can't hog the grid. */
 function initialWidth(column: GridColumn, rows: GridRow[], index: number) {
   const header =
-    column.name.length * 7.5 +
-    (column.dataType ? column.dataType.length * 5.5 : 0) +
-    40;
+    textWidth(
+      column.name,
+      "500 12px 'Inter Variable', Inter, sans-serif",
+      7.2,
+    ) +
+    (column.dataType
+      ? textWidth(
+          column.dataType,
+          "10px 'Source Code Pro Variable', monospace",
+          6.1,
+        )
+      : 0) +
+    (column.isKey ? 18 : 0) +
+    HEADER_CHROME;
   let widest = 0;
   for (const row of rows.slice(0, 50))
     widest = Math.max(widest, row.cells[index]?.length ?? 4);
-  return Math.round(Math.min(360, Math.max(90, header, widest * 7.2 + 24)));
+  const content = Math.min(
+    360,
+    widest * 7.2 + 24 + (column.references ? 26 : 0),
+  );
+  return Math.ceil(Math.max(90, header, content));
 }
 
 export interface DataGridProps {
