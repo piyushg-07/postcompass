@@ -15,7 +15,10 @@ export function useServerStatuses(serverIds: string[]) {
     queryKey: queryKeys.serverStatuses,
     queryFn: async () => {
       const entries = await unwrap(commands.serverStatuses());
-      return Object.fromEntries(entries.map((e) => [e.id, e.status])) as Record<string, ServerStatus>;
+      return Object.fromEntries(entries.map((e) => [e.id, e.status])) as Record<
+        string,
+        ServerStatus
+      >;
     },
     enabled: serverIds.length > 0,
     refetchInterval: POLL_MS,
@@ -24,10 +27,13 @@ export function useServerStatuses(serverIds: string[]) {
 
   /** Apply a status a command just returned, without waiting for the next poll. */
   const setStatus = (id: string, status: ServerStatus) =>
-    queryClient.setQueryData<Record<string, ServerStatus>>(queryKeys.serverStatuses, (prev) => ({
-      ...prev,
-      [id]: status,
-    }));
+    queryClient.setQueryData<Record<string, ServerStatus>>(
+      queryKeys.serverStatuses,
+      (prev) => ({
+        ...prev,
+        [id]: status,
+      }),
+    );
 
   return { statuses: query.data ?? {}, setStatus };
 }

@@ -9,9 +9,15 @@ export function SettingsPage() {
 
   const save = async (stopServersOnQuit: boolean) => {
     try {
-      setState(await unwrap(commands.updateSettings({ ...state.settings, stopServersOnQuit })));
+      setState(
+        await unwrap(
+          commands.updateSettings({ ...state.settings, stopServersOnQuit }),
+        ),
+      );
     } catch (e) {
-      toast.error("Couldn't save settings", { description: describeError(e).message });
+      toast.error("Couldn't save settings", {
+        description: describeError(e).message,
+      });
     }
   };
 
@@ -19,7 +25,9 @@ export function SettingsPage() {
     try {
       setState(await unwrap(commands.resetOnboarding()));
     } catch (e) {
-      toast.error("Couldn't reset onboarding", { description: describeError(e).message });
+      toast.error("Couldn't reset onboarding", {
+        description: describeError(e).message,
+      });
     }
   };
 
@@ -29,17 +37,20 @@ export function SettingsPage() {
 
       <Card>
         <SettingRow
-          title="Stop servers when PostCompass quits"
-          description="Servers you installed with PostCompass stop when you close the app. Turn off to keep them running in the background."
+          title="Stop local databases when PostCompass quits"
+          description="Local databases stop when you close PostCompass, freeing memory. Turn off to keep them running in the background."
         >
           <Switch
             checked={state.settings.stopServersOnQuit}
             onCheckedChange={(checked) => void save(checked)}
-            aria-label="Stop servers when PostCompass quits"
+            aria-label="Stop local databases when PostCompass quits"
           />
         </SettingRow>
         <Separator />
-        <SettingRow title="Onboarding" description="Go through the welcome steps again. Your servers are kept.">
+        <SettingRow
+          title="Onboarding"
+          description="Go through the welcome steps again. Your databases are kept."
+        >
           <Button size="sm" onClick={() => void rerunOnboarding()}>
             Run again
           </Button>
@@ -56,14 +67,24 @@ export function SettingsPage() {
             {info.os} · {info.arch}
           </dd>
           <dt className="text-fg-subtle">Databases</dt>
-          <dd className="text-fg-muted">{info.supportedDatabases.map((db) => db.displayName).join(", ")}</dd>
+          <dd className="text-fg-muted">
+            {info.supportedDatabases.map((db) => db.displayName).join(", ")}
+          </dd>
         </dl>
       </Card>
     </>
   );
 }
 
-function SettingRow({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function SettingRow({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-6 p-4">
       <div className="flex flex-col gap-0.5">

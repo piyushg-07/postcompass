@@ -14,7 +14,10 @@ export function formatBytes(bytes: number | null | undefined) {
 /** 12345 → "12.3K", for row estimates */
 export function formatCount(count: number | null | undefined) {
   if (count === null || count === undefined) return "—";
-  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(count);
+  return new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(count);
 }
 
 export function formatMb(bytes: number) {
@@ -31,13 +34,18 @@ export function generatePassword(length = 24) {
 }
 
 /** `password: null` gives a display version with the password masked. */
-export function connectionString(server: { superuser: string; host: string; port: number }, password: string | null) {
+export function connectionString(
+  server: { superuser: string; host: string; port: number },
+  password: string | null,
+  database = "postgres",
+) {
   const secret = password === null ? "••••••••" : encodeURIComponent(password);
-  return `postgresql://${server.superuser}:${secret}@${server.host}:${server.port}/postgres`;
+  return `postgresql://${server.superuser}:${secret}@${server.host}:${server.port}/${encodeURIComponent(database)}`;
 }
 
 export function greeting(name?: string | null) {
   const hour = new Date().getHours();
-  const part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const part =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   return name ? `${part}, ${name}` : part;
 }

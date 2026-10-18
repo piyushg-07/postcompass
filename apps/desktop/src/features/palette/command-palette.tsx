@@ -17,7 +17,6 @@ import {
   Play,
   Plus,
   Search,
-  Server,
   Settings,
   Square,
   Table2,
@@ -58,7 +57,8 @@ const MAX_RESULTS = 60;
 
 /** Ctrl/⌘+K: jump anywhere and run any action. */
 export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+  const open = useNavigation((s) => s.paletteOpen);
+  const setOpen = useNavigation((s) => s.setPaletteOpen);
   useHotkey("Mod+K", () => setOpen((o) => !o), { ignoreInputs: false });
 
   return (
@@ -400,13 +400,13 @@ function useCommands(): Command[] {
       );
     }
 
-    // Servers
+    // Databases
     for (const server of state.servers) {
       const running = statuses[server.id] === "running";
       if (running) {
         list.push({
           id: `open:${server.id}`,
-          group: "Servers",
+          group: "Databases",
           label: `Open ${server.name}`,
           hint: `:${server.port}`,
           icon: <Database />,
@@ -415,7 +415,7 @@ function useCommands(): Command[] {
       }
       list.push({
         id: `toggle:${server.id}`,
-        group: "Servers",
+        group: "Databases",
         label: `${running ? "Stop" : "Start"} ${server.name}`,
         hint: `PostgreSQL ${server.version}`,
         icon: running ? <Square /> : <Play />,
@@ -446,9 +446,9 @@ function useCommands(): Command[] {
     }
     list.push({
       id: "install",
-      group: "Servers",
-      label: "Install PostgreSQL",
-      keywords: "new server local",
+      group: "Databases",
+      label: "New local database",
+      keywords: "install postgresql create server",
       icon: <Plus />,
       run: () => nav.startInstall(),
     });
@@ -457,10 +457,10 @@ function useCommands(): Command[] {
     const pages: [string, string, ReactNode, () => void][] = [
       ["home", "Go to Home", <Home key="h" />, () => nav.goTo("home")],
       [
-        "servers",
-        "Go to Servers",
-        <Server key="s" />,
-        () => nav.goTo("servers"),
+        "databases",
+        "Go to Databases",
+        <Database key="s" />,
+        () => nav.goTo("databases"),
       ],
       [
         "settings",

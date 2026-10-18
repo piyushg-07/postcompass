@@ -45,7 +45,7 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
     onClose();
   };
 
-  if (!server) return <EmptyState title="Server not found" description="It may have been removed." />;
+  if (!server) return <EmptyState title="Database not found" description="It may have been removed." />;
 
   const error = connection.isError ? describeError(connection.error) : null;
 
@@ -71,7 +71,7 @@ export function ExplorerPage({ serverId, onClose }: { serverId: string; onClose:
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
             icon={<Unplug />}
-            title="Couldn't open this server"
+            title="Couldn't open this database"
             description={error.hint ? `${error.message}. ${error.hint}` : error.message}
             actions={
               <>

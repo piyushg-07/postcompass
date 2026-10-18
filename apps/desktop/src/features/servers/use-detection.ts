@@ -31,5 +31,8 @@ export function useDetection() {
 
 /** Found anything not managed by PostCompass. */
 export function foundExternal(report: DetectionReport) {
-  return report.installs.some((i) => i.source !== "managed") || report.servers.length > 0;
+  return (
+    report.installs.some((i) => i.source !== "managed") ||
+    report.servers.length > 0
+  );
 }

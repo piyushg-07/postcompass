@@ -208,7 +208,7 @@ function PostgresStep({
 
   if (installing) {
     return (
-      <StepLayout title="Install PostgreSQL" description="A private PostgreSQL server for this computer.">
+      <StepLayout title="Install PostgreSQL" description="Installs PostgreSQL privately for this computer. No admin rights needed.">
         <InstallFlow onInstalled={onInstalled} onCancel={() => setInstalling(false)} cancelLabel="Back" />
       </StepLayout>
     );

@@ -11,7 +11,8 @@ export function fuzzyScore(query: string, text: string): number | null {
 
   // The exact phrase (spaces included) beats everything, earlier is better: "back up" → "Back up …"
   const phraseIndex = t.indexOf(phrase);
-  if (phraseIndex >= 0) return 2000 - phraseIndex * 2 - (t.length - phrase.length) * 0.1;
+  if (phraseIndex >= 0)
+    return 2000 - phraseIndex * 2 - (t.length - phrase.length) * 0.1;
 
   // Then the letters without spaces: "backup" → "pg_backup"
   const index = t.indexOf(q);

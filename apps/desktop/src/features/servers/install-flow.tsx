@@ -16,7 +16,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Channel } from "@tauri-apps/api/core";
 import { AlertTriangle, CheckCircle2, ChevronDown, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { InstallEvent, InstallStep, ManagedServer } from "../../lib/bindings";
+import type {
+  InstallEvent,
+  InstallStep,
+  ManagedServer,
+} from "../../lib/bindings";
 import { formatMb, generatePassword } from "../../lib/format";
 import { commands, describeError, isCancelled, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
@@ -83,10 +87,14 @@ export function InstallFlow({
         ),
       );
       setPhase({ kind: "done", server });
-      toast.success("PostgreSQL is running", { description: `${server.name} on port ${server.port}` });
+      toast.success("PostgreSQL is running", {
+        description: `${server.name} on port ${server.port}`,
+      });
     } catch (e) {
       if (isCancelled(e)) {
-        toast.info("Install cancelled", { description: "Everything was cleaned up." });
+        toast.info("Install cancelled", {
+          description: "Everything was cleaned up.",
+        });
         setPhase({ kind: "form" });
       } else {
         setPhase({ kind: "failed", ...describeError(e) });
@@ -97,24 +105,40 @@ export function InstallFlow({
   };
 
   if (phase.kind === "form") {
-    return <InstallForm initial={values} onSubmit={install} onCancel={onCancel} cancelLabel={cancelLabel} />;
+    return (
+      <InstallForm
+        initial={values}
+        onSubmit={install}
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
+      />
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <TaskSteps steps={progress.steps} />
-      {progress.download && phase.kind === "installing" && progress.activeStep === "download" && (
-        <div className="flex flex-col gap-1.5">
-          <Progress
-            label="Download progress"
-            value={progress.download.total ? (progress.download.downloaded / progress.download.total) * 100 : undefined}
-          />
-          <span className="font-mono text-xs text-fg-subtle">
-            {formatMb(progress.download.downloaded)}
-            {progress.download.total ? ` / ${formatMb(progress.download.total)}` : ""}
-          </span>
-        </div>
-      )}
+      {progress.download &&
+        phase.kind === "installing" &&
+        progress.activeStep === "download" && (
+          <div className="flex flex-col gap-1.5">
+            <Progress
+              label="Download progress"
+              value={
+                progress.download.total
+                  ? (progress.download.downloaded / progress.download.total) *
+                    100
+                  : undefined
+              }
+            />
+            <span className="font-mono text-xs text-fg-subtle">
+              {formatMb(progress.download.downloaded)}
+              {progress.download.total
+                ? ` / ${formatMb(progress.download.total)}`
+                : ""}
+            </span>
+          </div>
+        )}
 
       <Details lines={progress.log} defaultOpen={phase.kind === "failed"} />
 
@@ -132,9 +156,15 @@ export function InstallFlow({
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" />
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-sm font-medium text-fg">{phase.title}</span>
-              <span className="text-xs break-words whitespace-pre-wrap text-fg-muted">{phase.message}</span>
-              {phase.hint && <span className="text-xs text-fg">{phase.hint}</span>}
-              <span className="text-xs text-fg-subtle">Nothing was left behind. You can safely try again.</span>
+              <span className="text-xs break-words whitespace-pre-wrap text-fg-muted">
+                {phase.message}
+              </span>
+              {phase.hint && (
+                <span className="text-xs text-fg">{phase.hint}</span>
+              )}
+              <span className="text-xs text-fg-subtle">
+                Nothing was left behind. You can safely try again.
+              </span>
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -144,13 +174,19 @@ export function InstallFlow({
               iconLeft={<Copy />}
               onClick={() =>
                 void navigator.clipboard
-                  .writeText(`${phase.title}\n${phase.message}\n\n${progress.log.join("\n")}`)
+                  .writeText(
+                    `${phase.title}\n${phase.message}\n\n${progress.log.join("\n")}`,
+                  )
                   .then(() => toast.success("Error details copied"))
               }
             >
               Copy details
             </Button>
-            <Button size="sm" variant="primary" onClick={() => setPhase({ kind: "form" })}>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setPhase({ kind: "form" })}
+            >
               Try again
             </Button>
           </div>
@@ -162,15 +198,24 @@ export function InstallFlow({
           <div className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-fg">PostgreSQL {phase.server.version} is running</span>
-              <span className="font-mono text-xs text-fg-muted">
-                {phase.server.host}:{phase.server.port} · user {phase.server.superuser}
+              <span className="text-sm font-medium text-fg">
+                PostgreSQL {phase.server.version} is running
               </span>
-              <span className="text-xs text-fg-subtle">The password is saved in your system keychain.</span>
+              <span className="font-mono text-xs text-fg-muted">
+                {phase.server.host}:{phase.server.port} · user{" "}
+                {phase.server.superuser}
+              </span>
+              <span className="text-xs text-fg-subtle">
+                The password is saved in your system keychain.
+              </span>
             </div>
           </div>
           <div className="flex justify-end">
-            <Button size="sm" variant="primary" onClick={() => onInstalled(phase.server)}>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => onInstalled(phase.server)}
+            >
               Continue
             </Button>
           </div>
@@ -180,7 +225,13 @@ export function InstallFlow({
   );
 }
 
-function Details({ lines, defaultOpen }: { lines: string[]; defaultOpen: boolean }) {
+function Details({
+  lines,
+  defaultOpen,
+}: {
+  lines: string[];
+  defaultOpen: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     if (defaultOpen) setOpen(true);
@@ -194,7 +245,9 @@ function Details({ lines, defaultOpen }: { lines: string[]; defaultOpen: boolean
         className="flex w-fit cursor-pointer items-center gap-1 text-xs text-fg-muted hover:text-fg"
         aria-expanded={open}
       >
-        <ChevronDown className={`size-3.5 transition-transform ${open ? "" : "-rotate-90"}`} />
+        <ChevronDown
+          className={`size-3.5 transition-transform ${open ? "" : "-rotate-90"}`}
+        />
         {open ? "Hide details" : "Show details"}
       </button>
       {open && <LogViewer lines={lines} />}
@@ -205,8 +258,13 @@ function Details({ lines, defaultOpen }: { lines: string[]; defaultOpen: boolean
 /* ── Progress state ───────────────────────────────────────────────────── */
 
 function useInstallProgress() {
-  const [states, setStates] = useState<Partial<Record<InstallStep, { state: TaskStepState; detail?: string }>>>({});
-  const [download, setDownload] = useState<{ downloaded: number; total: number | null } | null>(null);
+  const [states, setStates] = useState<
+    Partial<Record<InstallStep, { state: TaskStepState; detail?: string }>>
+  >({});
+  const [download, setDownload] = useState<{
+    downloaded: number;
+    total: number | null;
+  } | null>(null);
   const [log, setLog] = useState<string[]>([]);
 
   const handle = (event: InstallEvent) => {
@@ -220,14 +278,19 @@ function useInstallProgress() {
               : event.state === "skipped"
                 ? "skipped"
                 : "error";
-        setStates((s) => ({ ...s, [event.step]: { state, detail: event.detail ?? undefined } }));
+        setStates((s) => ({
+          ...s,
+          [event.step]: { state, detail: event.detail ?? undefined },
+        }));
         break;
       }
       case "download":
         setDownload({ downloaded: event.downloaded ?? 0, total: event.total });
         break;
       case "log":
-        setLog((l) => (l.length > 500 ? [...l.slice(-400), event.line] : [...l, event.line]));
+        setLog((l) =>
+          l.length > 500 ? [...l.slice(-400), event.line] : [...l, event.line],
+        );
         break;
     }
   };
@@ -263,7 +326,13 @@ function InstallForm({
   cancelLabel: string;
 }) {
   const [values, setValues] = useState<FormValues>(
-    initial ?? { name: "", version: "", port: 5432, password: generatePassword(), autoStart: true },
+    initial ?? {
+      name: "",
+      version: "",
+      port: 5432,
+      password: generatePassword(),
+      autoStart: true,
+    },
   );
   const nameTouched = useRef(Boolean(initial));
 
@@ -285,20 +354,36 @@ function InstallForm({
     if (!versionsQuery.data) return;
     setValues((v) => {
       const version =
-        v.version || versionsQuery.data.find((x) => x.recommended)?.version || versionsQuery.data[0]?.version || "";
-      return { ...v, version, name: nameTouched.current ? v.name : `Local PostgreSQL ${version.split(".")[0]}` };
+        v.version ||
+        versionsQuery.data.find((x) => x.recommended)?.version ||
+        versionsQuery.data[0]?.version ||
+        "";
+      return {
+        ...v,
+        version,
+        name: nameTouched.current
+          ? v.name
+          : `Local PostgreSQL ${version.split(".")[0]}`,
+      };
     });
   }, [versionsQuery.data]);
   useEffect(() => {
-    if (suggestedPort.data) setValues((v) => ({ ...v, port: suggestedPort.data }));
+    if (suggestedPort.data)
+      setValues((v) => ({ ...v, port: suggestedPort.data }));
   }, [suggestedPort.data]);
   useEffect(() => {
     const error = versionsQuery.error ?? suggestedPort.error;
-    if (error) toast.error("Couldn't load install options", { description: describeError(error).message });
+    if (error)
+      toast.error("Couldn't load install options", {
+        description: describeError(error).message,
+      });
   }, [versionsQuery.error, suggestedPort.error]);
 
   // Live port check, debounced so typing doesn't fire a check per keystroke
-  const portValid = Number.isInteger(values.port) && values.port >= 1024 && values.port <= 65535;
+  const portValid =
+    Number.isInteger(values.port) &&
+    values.port >= 1024 &&
+    values.port <= 65535;
   const [debouncedPort] = useDebouncedValue(values.port, { wait: 250 });
   const portCheck = useQuery({
     queryKey: ["port-free", debouncedPort],
@@ -307,18 +392,28 @@ function InstallForm({
     staleTime: 0,
     gcTime: 0,
   });
-  const portFree = portValid && debouncedPort === values.port && portCheck.isSuccess ? portCheck.data : null;
+  const portFree =
+    portValid && debouncedPort === values.port && portCheck.isSuccess
+      ? portCheck.data
+      : null;
 
-  const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
+  const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) =>
+    setValues((v) => ({ ...v, [key]: value }));
 
   const portError = !portValid
     ? "Use a port between 1024 and 65535"
     : portFree === false
-        ? `Port ${values.port} is in use. Try ${values.port + 1}.`
-        : undefined;
-  const passwordError = values.password.length < 8 ? "At least 8 characters" : undefined;
+      ? `Port ${values.port} is in use. Try ${values.port + 1}.`
+      : undefined;
+  const passwordError =
+    values.password.length < 8 ? "At least 8 characters" : undefined;
   const nameError = values.name.trim() ? undefined : "Give the server a name";
-  const canSubmit = Boolean(values.version) && !portError && !passwordError && !nameError && portFree === true;
+  const canSubmit =
+    Boolean(values.version) &&
+    !portError &&
+    !passwordError &&
+    !nameError &&
+    portFree === true;
   const selected = versions.find((v) => v.version === values.version);
 
   return (
@@ -330,7 +425,14 @@ function InstallForm({
       }}
     >
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Version" hint={selected?.downloadMb ? `About ${selected.downloadMb} MB download` : undefined}>
+        <Field
+          label="Version"
+          hint={
+            selected?.downloadMb
+              ? `About ${selected.downloadMb} MB download`
+              : undefined
+          }
+        >
           {(p) => (
             <NativeSelect
               {...p}
@@ -340,7 +442,9 @@ function InstallForm({
                 setValues((v) => ({
                   ...v,
                   version,
-                  name: nameTouched.current ? v.name : `Local PostgreSQL ${version.split(".")[0]}`,
+                  name: nameTouched.current
+                    ? v.name
+                    : `Local PostgreSQL ${version.split(".")[0]}`,
                 }));
               }}
             >
@@ -353,7 +457,11 @@ function InstallForm({
             </NativeSelect>
           )}
         </Field>
-        <Field label="Port" error={portError} hint={portFree ? "Available" : undefined}>
+        <Field
+          label="Port"
+          error={portError}
+          hint={portFree ? "Available" : undefined}
+        >
           {(p) => (
             <Input
               {...p}
@@ -398,13 +506,19 @@ function InstallForm({
       <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
         <span className="flex flex-col">
           <span className="text-sm text-fg">Start with PostCompass</span>
-          <span className="text-xs text-fg-muted">Starts the server automatically when you open the app.</span>
+          <span className="text-xs text-fg-muted">
+            Starts the server automatically when you open the app.
+          </span>
         </span>
-        <Switch checked={values.autoStart} onCheckedChange={(checked) => set("autoStart", checked)} />
+        <Switch
+          checked={values.autoStart}
+          onCheckedChange={(checked) => set("autoStart", checked)}
+        />
       </label>
 
       <p className="text-xs text-fg-subtle">
-        Installed in PostCompass's own folder, listening only on this computer (127.0.0.1). No admin rights needed.
+        Installed in PostCompass's own folder, listening only on this computer
+        (127.0.0.1). No admin rights needed.
       </p>
 
       <div className="flex justify-end gap-2">

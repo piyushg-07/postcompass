@@ -49,7 +49,7 @@ export function describeError(error: unknown): { title: string; message: string;
     case "auth_failed":
       return { title: "Password rejected", message, hint: "The saved password no longer matches the server." };
     case "connection_failed":
-      return { title: "Couldn't connect", message, hint: "Check that the server is running." };
+      return { title: "Couldn't connect", message, hint: "Check that the database is running." };
     case "query_failed":
       return { title: "The server returned an error", message };
     case "secrets":

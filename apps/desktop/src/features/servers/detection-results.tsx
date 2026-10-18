@@ -30,29 +30,49 @@ export function DetectionResults({ state }: { state: DetectionState }) {
 function ReportList({ report }: { report: DetectionReport }) {
   const { state } = useAppState();
   // A listening port that belongs to one of our own servers
-  const managedOn = (port: number) => state.servers.find((s) => s.port === port);
+  const managedOn = (port: number) =>
+    state.servers.find((s) => s.port === port);
   if (report.installs.length === 0 && report.servers.length === 0) {
-    return <p className="text-sm text-fg-muted">No PostgreSQL installs or running servers found on this computer.</p>;
+    return (
+      <p className="text-sm text-fg-muted">
+        No other PostgreSQL found on this computer.
+      </p>
+    );
   }
 
   return (
     <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">
       {report.installs.map((install) => (
-        <li key={install.binDir} className="flex items-center gap-3 px-3 py-2.5">
+        <li
+          key={install.binDir}
+          className="flex items-center gap-3 px-3 py-2.5"
+        >
           <FolderOpen className="size-4 shrink-0 text-fg-subtle" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="text-sm text-fg">
               PostgreSQL {install.version ?? "(unknown version)"}
-              {install.serviceName && <span className="text-fg-subtle"> · service {install.serviceName}</span>}
+              {install.serviceName && (
+                <span className="text-fg-subtle">
+                  {" "}
+                  · service {install.serviceName}
+                </span>
+              )}
             </span>
-            <span className="truncate font-mono text-xs text-fg-subtle" title={install.binDir}>
+            <span
+              className="truncate font-mono text-xs text-fg-subtle"
+              title={install.binDir}
+            >
               {install.binDir}
             </span>
           </div>
           {install.serviceRunning !== null && (
-            <StatusDot status={install.serviceRunning ? "running" : "stopped"} />
+            <StatusDot
+              status={install.serviceRunning ? "running" : "stopped"}
+            />
           )}
-          <Badge variant={install.source === "managed" ? "accent" : "neutral"}>{sourceLabels[install.source]}</Badge>
+          <Badge variant={install.source === "managed" ? "accent" : "neutral"}>
+            {sourceLabels[install.source]}
+          </Badge>
         </li>
       ))}
       {report.servers.map((server) => (
@@ -60,7 +80,8 @@ function ReportList({ report }: { report: DetectionReport }) {
           <Radio className="size-4 shrink-0 text-fg-subtle" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="text-sm text-fg">
-              Server accepting connections on port <span className="font-mono">{server.port}</span>
+              PostgreSQL running on port{" "}
+              <span className="font-mono">{server.port}</span>
             </span>
             <span className="font-mono text-xs text-fg-subtle">
               {server.host}:{server.port}
@@ -69,7 +90,9 @@ function ReportList({ report }: { report: DetectionReport }) {
           </div>
           <StatusDot status="running" />
           {managedOn(server.port) ? (
-            <Badge variant="accent">PostCompass · {managedOn(server.port)!.name}</Badge>
+            <Badge variant="accent">
+              PostCompass · {managedOn(server.port)!.name}
+            </Badge>
           ) : (
             server.source && <Badge>{sourceLabels[server.source]}</Badge>
           )}

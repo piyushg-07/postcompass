@@ -3,41 +3,34 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import {
   Database,
   Home,
-  Palette,
   PanelLeftClose,
   PanelLeftOpen,
-  Server,
   Settings,
+  Table2,
 } from "lucide-react";
 import { lazy, type ReactNode, Suspense } from "react";
-import { HomePage } from "../features/home/home-page";
-import { ServersPage } from "../features/servers/servers-page";
 import { BackupDialog, RestoreDialog } from "../features/backup/backup-dialogs";
+import { HomePage } from "../features/home/home-page";
 import { CommandPalette } from "../features/palette/command-palette";
+import { DatabasesPage } from "../features/servers/databases-page";
 import { SettingsPage } from "../features/settings/settings-page";
 import { Playground } from "../playground/playground";
 import { useAppState } from "./app-state";
 import { CompassMark } from "./compass-mark";
+import { ErrorBoundary } from "./error-boundary";
 import { type Section, useNavigation } from "./navigation";
 import { useUiPrefs } from "./ui-prefs";
 
-// The explorer pulls in the SQL editor and data grid; load it when a server is first opened
+// The explorer pulls in the SQL editor and data grid; load it when a database is first opened
 const ExplorerPage = lazy(() =>
   import("../features/explorer/explorer-page").then((m) => ({
     default: m.ExplorerPage,
   })),
 );
 
-const NAV: {
-  id: Section;
-  label: string;
-  icon: ReactNode;
-  devOnly?: boolean;
-}[] = [
+const MAIN_NAV: { id: Section; label: string; icon: ReactNode }[] = [
   { id: "home", label: "Home", icon: <Home /> },
-  { id: "servers", label: "Servers", icon: <Server /> },
-  { id: "settings", label: "Settings", icon: <Settings /> },
-  { id: "playground", label: "Components", icon: <Palette />, devOnly: true },
+  { id: "databases", label: "Databases", icon: <Database /> },
 ];
 
 export function Shell() {
@@ -62,8 +55,8 @@ export function Shell() {
       >
         <div
           className={cn(
-            "flex h-14 items-center gap-2.5",
-            collapsed ? "justify-center px-0" : "px-4",
+            "flex h-14 shrink-0 items-center gap-2.5",
+            collapsed ? "justify-center" : "px-4",
           )}
         >
           <span className="shrink-0">
@@ -75,45 +68,58 @@ export function Shell() {
             </span>
           )}
         </div>
-        <ul className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-          {NAV.filter((item) => !item.devOnly || import.meta.env.DEV).map(
-            (item) => (
-              <li key={item.id}>
-                <NavButton
-                  active={section === item.id}
-                  icon={item.icon}
-                  label={item.label}
-                  collapsed={collapsed}
-                  onClick={() => goTo(item.id)}
-                />
+
+        <ul className="flex flex-col gap-0.5 px-2 py-2">
+          {MAIN_NAV.map((item) => (
+            <li key={item.id}>
+              <NavButton
+                active={section === item.id}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed}
+                onClick={() => goTo(item.id)}
+              />
+            </li>
+          ))}
+        </ul>
+
+        {openServer && (
+          <ul className="flex flex-col gap-0.5 px-2">
+            {collapsed ? (
+              <li className="mx-2 my-1 h-px bg-border" aria-hidden />
+            ) : (
+              <li className="px-2.5 pt-3 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
+                Open now
               </li>
-            ),
-          )}
-          {openServer && (
-            <>
-              {collapsed ? (
-                <li className="mx-2 my-2 h-px bg-border" aria-hidden />
-              ) : (
-                <li className="px-2.5 pt-4 pb-1 text-[10px] font-medium tracking-wide text-fg-subtle uppercase">
-                  Open
-                </li>
-              )}
-              <li>
-                <NavButton
-                  active={section === "explorer"}
-                  icon={<Database />}
-                  label={openServer.name}
-                  collapsed={collapsed}
-                  onClick={() => goTo("explorer")}
-                />
-              </li>
-            </>
-          )}
+            )}
+            <li>
+              <NavButton
+                active={section === "explorer"}
+                icon={<Table2 />}
+                label={openServer.name}
+                collapsed={collapsed}
+                onClick={() => goTo("explorer")}
+              />
+            </li>
+          </ul>
+        )}
+
+        {/* Settings and the collapse toggle live at the bottom */}
+        <ul className="mt-auto flex flex-col gap-0.5 px-2 py-2">
+          <li>
+            <NavButton
+              active={section === "settings"}
+              icon={<Settings />}
+              label="Settings"
+              collapsed={collapsed}
+              onClick={() => goTo("settings")}
+            />
+          </li>
         </ul>
         <div
           className={cn(
-            "flex items-center gap-2 border-t border-border py-2",
-            collapsed ? "justify-center px-0" : "justify-between pr-2 pl-4",
+            "flex h-11 shrink-0 items-center gap-2 border-t border-border",
+            collapsed ? "justify-center" : "justify-between pr-2 pl-4",
           )}
         >
           {!collapsed && (
@@ -147,28 +153,30 @@ export function Shell() {
       </nav>
 
       <main className="min-w-0 flex-1 overflow-y-auto">
-        {section === "explorer" && openServerId ? (
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center text-fg-subtle">
-                <Spinner />
-              </div>
-            }
-          >
-            <ExplorerPage
-              key={openServerId}
-              serverId={openServerId}
-              onClose={closeServer}
-            />
-          </Suspense>
-        ) : (
-          <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
-            {section === "home" && <HomePage />}
-            {section === "servers" && <ServersPage />}
-            {section === "settings" && <SettingsPage />}
-            {section === "playground" && <Playground />}
-          </div>
-        )}
+        <ErrorBoundary resetKey={`${section}:${openServerId}`}>
+          {section === "explorer" && openServerId ? (
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-fg-subtle">
+                  <Spinner />
+                </div>
+              }
+            >
+              <ExplorerPage
+                key={openServerId}
+                serverId={openServerId}
+                onClose={closeServer}
+              />
+            </Suspense>
+          ) : (
+            <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
+              {section === "home" && <HomePage />}
+              {section === "databases" && <DatabasesPage />}
+              {section === "settings" && <SettingsPage />}
+              {section === "playground" && <Playground />}
+            </div>
+          )}
+        </ErrorBoundary>
       </main>
 
       <CommandPalette />
@@ -198,7 +206,7 @@ function NavButton({
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-control text-sm transition-colors [&_svg]:size-4",
-        collapsed ? "justify-center px-0" : "px-2.5",
+        collapsed ? "justify-center" : "px-2.5",
         active
           ? "bg-surface-hover text-fg"
           : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
@@ -215,7 +223,7 @@ function NavButton({
       )}
     </button>
   );
-  // Collapsed: the icon alone, with the label as a tooltip
+  // Collapsed: just the icon, with the label as a tooltip
   return collapsed ? (
     <Tooltip side="right" content={label}>
       {button}
