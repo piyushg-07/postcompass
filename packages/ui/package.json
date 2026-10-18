@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/styles/tokens.css",
     "./*": "./src/*.tsx"
   },
   "scripts": {
@@ -20,7 +22,15 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.59.0",
+    "radix-ui": "^1.8.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
-  }
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.7.0"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

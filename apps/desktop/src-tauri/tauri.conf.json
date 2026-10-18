@@ -12,13 +12,19 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "PostCompass",
-        "width": 1200,
-        "height": 800
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true,
+        "backgroundColor": "#020202"
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset:; font-src 'self' data:; connect-src ipc: http://ipc.localhost",
+      "devCsp": null
     }
   },
   "bundle": {

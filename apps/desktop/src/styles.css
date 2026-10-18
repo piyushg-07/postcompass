@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@repo/ui/tokens.css";
+
+/* Scan shared components for Tailwind classes */
+@source "../../../packages/ui/src";

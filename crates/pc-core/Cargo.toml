@@ -1,0 +1,17 @@
+[package]
+name = "pc-core"
+description = "Shared types and interfaces for PostCompass database drivers and local runtimes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+tokio-util.workspace = true
+serde.workspace = true
+specta.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

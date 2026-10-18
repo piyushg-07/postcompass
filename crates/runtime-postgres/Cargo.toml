@@ -1,0 +1,27 @@
+[package]
+name = "runtime-postgres"
+description = "Detects, installs and manages local PostgreSQL servers for PostCompass"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+pc-core.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+reqwest = { version = "0.13", default-features = false, features = ["default-tls", "http2", "system-proxy", "stream"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+sha2 = "0.11"
+flate2 = "1"
+tar = "0.4"
+fs4 = "1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[lints]
+workspace = true

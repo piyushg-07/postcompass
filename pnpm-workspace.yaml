@@ -9,5 +9,6 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-64@2.11.9'
   - '@turbo/windows-arm64@2.11.9'
   - turbo@2.11.9
+  - lucide-react@1.59.0
 allowBuilds:
   esbuild: true
