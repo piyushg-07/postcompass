@@ -1,5 +1,5 @@
 import { Badge, Button, Card, ConfirmDialog, IconButton, type Status, StatusBadge, toast } from "@repo/ui";
-import { Copy, Eye, EyeOff, Play, Square, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, FolderOpen, Play, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import type { ManagedServer, ServerStatus } from "../../lib/bindings";
@@ -10,11 +10,14 @@ export function ServerCard({
   server,
   status,
   onStatus,
+  onOpen,
   compact = false,
 }: {
   server: ManagedServer;
   status: ServerStatus | undefined;
   onStatus: (status: ServerStatus) => void;
+  /** Opens the server in the explorer. */
+  onOpen: (serverId: string) => void;
   compact?: boolean;
 }) {
   const { refresh } = useAppState();
@@ -82,6 +85,11 @@ export function ServerCard({
             }
           />
         </div>
+        {running && (
+          <Button size="sm" variant="primary" iconLeft={<FolderOpen />} onClick={() => onOpen(server.id)}>
+            Open
+          </Button>
+        )}
         <Button
           size="sm"
           variant={running ? "secondary" : "primary"}

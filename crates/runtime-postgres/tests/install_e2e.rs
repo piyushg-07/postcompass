@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 use pc_core::runtime::{
     CancellationToken, InstallContext, InstallEvent, InstallRequest, LocalRuntime, ServerStatus, StepState,
 };
+use driver_postgres::PostgresDriver;
+use pc_core::driver::{ConnectionConfig, DatabaseDriver};
 use runtime_postgres::PostgresRuntime;
 
 const VERSION: &str = "18.6.0";
@@ -66,6 +68,32 @@ async fn installs_starts_stops_and_uninstalls() {
     // Detection labels our own install as managed
     let report = runtime.detect(Some(root.clone())).await;
     assert!(report.servers.iter().any(|s| s.port == port), "detection sees the running server");
+
+    // The driver connects with the install password and can inspect the server
+    let config = ConnectionConfig {
+        host: server.host.clone(),
+        port: server.port,
+        user: server.superuser.clone(),
+        password: "e2e-Secret-123".into(),
+        database: "postgres".into(),
+    };
+    let tested = PostgresDriver.test_connection(&config).await.expect("test connection succeeds");
+    assert!(tested.server_version.starts_with("18."), "version {}", tested.server_version);
+    let session = PostgresDriver.connect(config.clone()).await.expect("connect succeeds");
+    let databases = session.databases().await.expect("list databases");
+    assert!(databases.iter().any(|d| d.name == "postgres" && d.size_bytes.is_some()));
+    let schemas = session.schemas("postgres").await.expect("list schemas");
+    assert!(schemas.iter().any(|s| s.name == "public" && !s.is_system));
+    assert!(schemas.iter().any(|s| s.name == "pg_catalog" && s.is_system));
+    let catalog = session.tables("postgres", "pg_catalog").await.expect("list tables");
+    assert!(catalog.iter().any(|t| t.name == "pg_class"));
+    let err = session.schemas("no_such_db").await.err().expect("missing database fails");
+    assert_eq!(err.code(), pc_core::ErrorCode::NotFound);
+    drop(session);
+
+    let wrong = ConnectionConfig { password: "wrong".into(), ..config };
+    let err = PostgresDriver.test_connection(&wrong).await.unwrap_err();
+    assert_eq!(err.code(), pc_core::ErrorCode::AuthFailed);
 
     runtime.stop(&server).await.expect("stop succeeds");
     assert_eq!(runtime.status(&server).await, ServerStatus::Stopped);

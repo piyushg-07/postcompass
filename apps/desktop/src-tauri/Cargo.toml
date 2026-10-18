@@ -17,6 +17,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 pc-core.workspace = true
 runtime-postgres.workspace = true
+driver-postgres.workspace = true
+tokio.workspace = true
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 serde.workspace = true

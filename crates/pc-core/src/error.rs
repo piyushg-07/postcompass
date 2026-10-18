@@ -17,6 +17,9 @@ pub enum ErrorCode {
     Unsupported,
     ProcessFailed,
     Secrets,
+    ConnectionFailed,
+    AuthFailed,
+    QueryFailed,
 }
 
 /// The single error type returned by every Tauri command.
@@ -51,6 +54,12 @@ pub enum CoreError {
     ProcessFailed { program: String, message: String },
     #[error("secure storage error: {0}")]
     Secrets(String),
+    #[error("could not connect: {0}")]
+    ConnectionFailed(String),
+    #[error("{0}")]
+    AuthFailed(String),
+    #[error("{0}")]
+    QueryFailed(String),
 }
 
 impl CoreError {
@@ -68,6 +77,9 @@ impl CoreError {
             CoreError::Unsupported(_) => ErrorCode::Unsupported,
             CoreError::ProcessFailed { .. } => ErrorCode::ProcessFailed,
             CoreError::Secrets(_) => ErrorCode::Secrets,
+            CoreError::ConnectionFailed(_) => ErrorCode::ConnectionFailed,
+            CoreError::AuthFailed(_) => ErrorCode::AuthFailed,
+            CoreError::QueryFailed(_) => ErrorCode::QueryFailed,
         }
     }
 

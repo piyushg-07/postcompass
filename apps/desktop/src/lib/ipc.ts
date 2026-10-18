@@ -46,6 +46,12 @@ export function describeError(error: unknown): { title: string; message: string;
       };
     case "insufficient_disk_space":
       return { title: "Not enough disk space", message, hint: "Free up at least 1 GB and try again." };
+    case "auth_failed":
+      return { title: "Password rejected", message, hint: "The saved password no longer matches the server." };
+    case "connection_failed":
+      return { title: "Couldn't connect", message, hint: "Check that the server is running." };
+    case "query_failed":
+      return { title: "The server returned an error", message };
     case "secrets":
       return { title: "Couldn't access the system keychain", message };
     case "unsupported":

@@ -445,6 +445,7 @@ Each phase ends with something visible and testable.
 | 2 | ✅ Done | Onboarding (5 steps) → shell with Home / Servers / Settings. State in `state.json` in the app config folder. |
 | 3 | ✅ Done | `runtime-postgres/src/detect.rs`. PostgreSQL handshake probe on 5432–5442, PATH + common dirs, Windows/Homebrew/systemd services, Docker. |
 | 4 | ✅ Done | Own installer instead of `postgresql_embedded` (needed progress events, resume and cancel). Binaries from theseus-rs/postgresql-binaries, SHA-256 verified. End-to-end test: `cargo test -p runtime-postgres --test install_e2e -- --ignored`. Custom data folder is supported in the backend but not yet in the UI (needs a folder picker). |
+| 5 | 🟡 Local done | `DatabaseDriver` in `pc-core`, `crates/driver-postgres` (tokio-postgres). **Open** on a running local server → Explorer (databases → schemas → tables) using the keychain password. `test_connection` command exists. **Next:** Add-connection form, saved remote connections (passwords in keychain), SSL/TLS for cloud. |
 
 ---
 

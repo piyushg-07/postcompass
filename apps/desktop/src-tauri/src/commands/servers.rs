@@ -11,6 +11,7 @@ use specta::Type;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use crate::connections::{Connections, server_connection_id};
 use crate::runtimes::Runtimes;
 use crate::secrets;
 use crate::state::Store;
@@ -136,9 +137,11 @@ pub async fn start_server(
 pub async fn stop_server(
     runtimes: State<'_, Runtimes>,
     store: State<'_, Store>,
+    connections: State<'_, Connections>,
     id: String,
 ) -> Result<ServerStatus, CoreError> {
     let server = store.server(&id)?;
+    connections.close(&server_connection_id(&id)).await;
     let runtime = runtimes.get(server.kind)?;
     runtime.stop(&server).await?;
     Ok(runtime.status(&server).await)
@@ -158,10 +161,12 @@ pub fn server_password(store: State<'_, Store>, id: String) -> Result<String, Co
 pub async fn uninstall_server(
     runtimes: State<'_, Runtimes>,
     store: State<'_, Store>,
+    connections: State<'_, Connections>,
     id: String,
     keep_data: bool,
 ) -> Result<(), CoreError> {
     let server = store.server(&id)?;
+    connections.close(&server_connection_id(&id)).await;
     runtimes.get(server.kind)?.uninstall(&server, keep_data).await?;
     secrets::delete_server_password(&id)?;
     store.update(|state| state.servers.retain(|s| s.id != id))?;

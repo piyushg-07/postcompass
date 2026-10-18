@@ -6,7 +6,15 @@ import { greeting } from "../../lib/format";
 import { ServerCard } from "../servers/server-card";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
-export function HomePage({ onInstall, onOpenServers }: { onInstall: () => void; onOpenServers: () => void }) {
+export function HomePage({
+  onInstall,
+  onOpenServers,
+  onOpen,
+}: {
+  onInstall: () => void;
+  onOpenServers: () => void;
+  onOpen: (serverId: string) => void;
+}) {
   const { state } = useAppState();
   const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
   const hasServers = state.servers.length > 0;
@@ -41,6 +49,7 @@ export function HomePage({ onInstall, onOpenServers }: { onInstall: () => void; 
                 server={server}
                 status={statuses[server.id]}
                 onStatus={(s) => setStatus(server.id, s)}
+                onOpen={onOpen}
               />
             ))}
           </div>

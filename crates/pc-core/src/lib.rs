@@ -2,8 +2,8 @@
 //!
 //! Every database-specific crate (`driver-*`, `runtime-*`) depends on this crate,
 //! and the desktop app only talks to databases through the types defined here.
-//! The `DatabaseDriver` trait lands here in Phase 5.
 
+pub mod driver;
 mod error;
 mod kind;
 pub mod runtime;

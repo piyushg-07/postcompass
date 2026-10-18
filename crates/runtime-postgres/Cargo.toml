@@ -21,6 +21,7 @@ tar = "0.4"
 fs4 = "1"
 
 [dev-dependencies]
+driver-postgres.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [lints]

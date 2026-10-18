@@ -1,3 +1,22 @@
+/** 1536 → "1.5 KB" */
+export function formatBytes(bytes: number | null | undefined) {
+  if (bytes === null || bytes === undefined) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? value : value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
+}
+
+/** 12345 → "12.3K", for row estimates */
+export function formatCount(count: number | null | undefined) {
+  if (count === null || count === undefined) return "—";
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(count);
+}
+
 export function formatMb(bytes: number) {
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
 }

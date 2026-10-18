@@ -35,6 +35,14 @@ export const commands = {
 	serverPassword: (id: string) => typedError<string, CoreError>(__TAURI_INVOKE("server_password", { id })),
 	/**  Stops the server, removes it from PostCompass and deletes its data unless `keep_data` is set. */
 	uninstallServer: (id: string, keepData: boolean) => typedError<null, CoreError>(__TAURI_INVOKE("uninstall_server", { id, keepData })),
+	/**  Connects to a PostCompass-managed server using the password from the OS keychain. No form needed. */
+	openServer: (id: string) => typedError<OpenedConnection, CoreError>(__TAURI_INVOKE("open_server", { id })),
+	/**  Checks connection details without saving anything. */
+	testConnection: (kind: DatabaseKind, config: ConnectionConfig) => typedError<TestResult, CoreError>(__TAURI_INVOKE("test_connection", { kind, config })),
+	closeConnection: (connectionId: string) => typedError<null, CoreError>(__TAURI_INVOKE("close_connection", { connectionId })),
+	listDatabases: (connectionId: string) => typedError<DatabaseInfo[], CoreError>(__TAURI_INVOKE("list_databases", { connectionId })),
+	listSchemas: (connectionId: string, database: string) => typedError<SchemaInfo[], CoreError>(__TAURI_INVOKE("list_schemas", { connectionId, database })),
+	listTables: (connectionId: string, database: string, schema: string) => typedError<TableInfo[], CoreError>(__TAURI_INVOKE("list_tables", { connectionId, database, schema })),
 };
 
 /* Types */
@@ -53,9 +61,26 @@ export type AppState = {
 	settings: Settings,
 };
 
+/**  Where and how to connect. Lives only in memory; passwords are never persisted here. */
+export type ConnectionConfig = {
+	host: string,
+	port: number,
+	user: string,
+	password: string,
+	/**  Database to connect to first. */
+	database: string,
+};
+
 export type CoreError = {
 	code: ErrorCode,
 	message: string,
+};
+
+export type DatabaseInfo = {
+	name: string,
+	/**  `None` when the user may not connect to this database. */
+	sizeBytes: number | null,
+	allowConnections: boolean,
 };
 
 /**  Databases PostCompass knows about. Add a variant here when a new driver crate is added. */
@@ -81,7 +106,7 @@ export type DetectionReport = {
 };
 
 /**  Stable, machine-readable error codes. The UI maps these to messages and toasts. */
-export type ErrorCode = "internal" | "io" | "not_found" | "invalid_input" | "network" | "checksum_mismatch" | "cancelled" | "port_in_use" | "insufficient_disk_space" | "unsupported" | "process_failed" | "secrets";
+export type ErrorCode = "internal" | "io" | "not_found" | "invalid_input" | "network" | "checksum_mismatch" | "cancelled" | "port_in_use" | "insufficient_disk_space" | "unsupported" | "process_failed" | "secrets" | "connection_failed" | "auth_failed" | "query_failed";
 
 export type Experience = "new" | "some" | "expert";
 
@@ -135,6 +160,14 @@ export type ManagedServer = {
 	createdAt: number | null,
 };
 
+export type OpenedConnection = {
+	connectionId: string,
+	serverVersion: string,
+	latencyMs: number,
+	/**  Database the session connected to first. */
+	database: string,
+};
+
 /**  Answers from onboarding. Present once onboarding is complete. */
 export type Profile = {
 	name: string | null,
@@ -158,6 +191,14 @@ export type RuntimeVersion = {
 	downloadMb: number | null,
 };
 
+export type SchemaInfo = {
+	name: string,
+	owner: string,
+	tableCount: number,
+	/**  Built-in schemas such as `pg_catalog` and `information_schema`. */
+	isSystem: boolean,
+};
+
 export type ServerStatus = "running" | "stopped" | 
 /**  Files are missing or the status check failed. */
 "error";
@@ -178,6 +219,25 @@ export type SupportedDatabase = {
 	kind: DatabaseKind,
 	displayName: string,
 	defaultPort: number,
+};
+
+export type TableInfo = {
+	schema: string,
+	name: string,
+	kind: TableKind,
+	/**  Planner estimate; cheap to read, may be stale for tables that were never analyzed. */
+	rowEstimate: number | null,
+	/**  Total size including indexes and TOAST. */
+	sizeBytes: number | null,
+};
+
+export type TableKind = "table" | "partitioned_table" | "view" | "materialized_view" | "foreign_table";
+
+export type TestResult = {
+	/**  e.g. `18.6` */
+	serverVersion: string,
+	/**  Time to connect and run a trivial query. */
+	latencyMs: number,
 };
 
 export type UseCase = "local_dev" | "remote" | "both" | "learning";

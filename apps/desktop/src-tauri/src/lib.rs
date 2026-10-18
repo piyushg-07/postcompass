@@ -1,4 +1,5 @@
 mod commands;
+mod connections;
 mod runtimes;
 mod secrets;
 mod state;
@@ -6,13 +7,14 @@ mod state;
 use tauri::{Manager, RunEvent};
 use tauri_specta::{Builder, collect_commands};
 
+use crate::connections::Connections;
 use crate::runtimes::Runtimes;
 use crate::state::Store;
 
 /// Single source of truth for every command the UI can call.
 /// In debug builds this also regenerates `src/lib/bindings.ts`.
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, servers, state};
+    use commands::{app, connections, servers, state};
     Builder::<tauri::Wry>::new().commands(collect_commands![
         app::app_info,
         state::get_state,
@@ -30,6 +32,12 @@ fn specta_builder() -> Builder<tauri::Wry> {
         servers::stop_server,
         servers::server_password,
         servers::uninstall_server,
+        connections::open_server,
+        connections::test_connection,
+        connections::close_connection,
+        connections::list_databases,
+        connections::list_schemas,
+        connections::list_tables,
     ])
 }
 
@@ -49,6 +57,7 @@ pub fn run() {
             let paths = app.path();
             app.manage(Store::load(paths.app_config_dir()?.join("state.json")));
             app.manage(Runtimes::new(paths.app_local_data_dir()?.join("runtimes")));
+            app.manage(Connections::new());
 
             auto_start_servers(app.handle().clone());
             Ok(())

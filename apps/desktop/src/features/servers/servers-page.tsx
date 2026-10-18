@@ -9,7 +9,15 @@ import { ServerCard } from "./server-card";
 import { useDetection } from "./use-detection";
 import { useServerStatuses } from "./use-server-statuses";
 
-export function ServersPage({ installOpen, onInstallOpenChange }: { installOpen: boolean; onInstallOpenChange: (open: boolean) => void }) {
+export function ServersPage({
+  installOpen,
+  onInstallOpenChange,
+  onOpen,
+}: {
+  installOpen: boolean;
+  onInstallOpenChange: (open: boolean) => void;
+  onOpen: (serverId: string) => void;
+}) {
   const { state, refresh } = useAppState();
   const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
   const detection = useDetection();
@@ -50,6 +58,7 @@ export function ServersPage({ installOpen, onInstallOpenChange }: { installOpen:
                 server={server}
                 status={statuses[server.id]}
                 onStatus={(s) => setStatus(server.id, s)}
+                onOpen={onOpen}
               />
             ))}
           </div>
