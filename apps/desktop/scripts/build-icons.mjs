@@ -14,6 +14,7 @@
  * Usage: pnpm icons
  */
 import { Resvg } from "@resvg/resvg-js";
+import { Buffer } from "node:buffer";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
