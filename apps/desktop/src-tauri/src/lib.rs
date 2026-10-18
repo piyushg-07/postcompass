@@ -3,6 +3,8 @@ mod connections;
 mod runtimes;
 mod secrets;
 mod state;
+#[cfg(windows)]
+mod windows_icon;
 
 use tauri::{Manager, RunEvent};
 use tauri_specta::{Builder, collect_commands};
@@ -73,6 +75,11 @@ pub fn run() {
             app.manage(Store::load(paths.app_config_dir()?.join("state.json")));
             app.manage(Runtimes::new(paths.app_local_data_dir()?.join("runtimes")));
             app.manage(Connections::new());
+
+            #[cfg(windows)]
+            if let Some(window) = app.get_webview_window("main") {
+                windows_icon::apply(&window);
+            }
 
             auto_start_servers(app.handle().clone());
             Ok(())

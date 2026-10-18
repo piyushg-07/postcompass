@@ -21,7 +21,8 @@ tokio = { version = "1", features = ["rt", "macros", "process", "net", "time", "
 tokio-util = "0.7"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# deny (not forbid) so a module can opt in with #![allow(unsafe_code)] for unavoidable OS calls
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

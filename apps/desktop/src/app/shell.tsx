@@ -16,7 +16,6 @@ import { CommandPalette } from "../features/palette/command-palette";
 import { DatabasesPage } from "../features/servers/databases-page";
 import { SettingsPage } from "../features/settings/settings-page";
 import { useAppState } from "./app-state";
-import { CompassMark } from "./compass-mark";
 import { ErrorBoundary } from "./error-boundary";
 import { type Section, useNavigation } from "./navigation";
 import { useUiPrefs } from "./ui-prefs";
@@ -54,23 +53,8 @@ export function Shell() {
         )}
         aria-label="Main"
       >
-        <div
-          className={cn(
-            "flex h-14 shrink-0 items-center gap-2.5",
-            collapsed ? "justify-center" : "px-4",
-          )}
-        >
-          <span className="shrink-0">
-            <CompassMark size={22} />
-          </span>
-          {!collapsed && (
-            <span className="font-heading text-sm font-bold tracking-tight whitespace-nowrap">
-              PostCompass
-            </span>
-          )}
-        </div>
-
-        <ul className="flex flex-col gap-0.5 px-2 py-2">
+        {/* The window title bar already shows the app name and icon */}
+        <ul className="flex flex-col gap-0.5 px-2 pt-3 pb-2">
           {MAIN_NAV.map((item) => (
             <li key={item.id}>
               <NavButton

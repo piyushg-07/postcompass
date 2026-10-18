@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "lint": "eslint --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query-devtools": "^5.104.4",
     "@tanstack/react-router-devtools": "^1.167.2",
