@@ -40,3 +40,12 @@ pub fn app_info(app: tauri::AppHandle) -> Result<AppInfo, CoreError> {
             .collect(),
     })
 }
+
+/// Writes text to a file the user picked in a save dialog (data exports).
+#[tauri::command]
+#[specta::specta]
+pub async fn save_text_file(path: String, contents: String) -> Result<(), CoreError> {
+    tokio::fs::write(&path, contents)
+        .await
+        .map_err(|e| CoreError::io(format!("couldn't write {path}"), e))
+}

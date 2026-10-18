@@ -19,6 +19,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
     use commands::{app, backup, connections, data, explorer, servers, state};
     Builder::<tauri::Wry>::new().commands(collect_commands![
         app::app_info,
+        app::save_text_file,
         state::get_state,
         state::save_profile,
         state::reset_onboarding,

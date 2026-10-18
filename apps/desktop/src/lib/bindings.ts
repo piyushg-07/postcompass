@@ -7,6 +7,8 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 export const commands = {
 	/**  Basic app and platform info. Also proves the typed UI ↔ Rust bridge works end to end. */
 	appInfo: () => typedError<AppInfo, CoreError>(__TAURI_INVOKE("app_info")),
+	/**  Writes text to a file the user picked in a save dialog (data exports). */
+	saveTextFile: (path: string, contents: string) => typedError<null, CoreError>(__TAURI_INVOKE("save_text_file", { path, contents })),
 	/**  Everything the UI needs on startup. */
 	getState: () => __TAURI_INVOKE<AppState>("get_state"),
 	/**  Saves onboarding answers; marks onboarding as complete. */

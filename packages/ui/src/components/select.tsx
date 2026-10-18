@@ -47,8 +47,8 @@ export function Select({
 }) {
   return (
     <SelectPrimitive.Root
-      // Radix treats "" as "nothing selected", which shows the placeholder
-      value={value || undefined}
+      // Stays controlled: "" means nothing selected and shows the placeholder
+      value={value}
       onValueChange={onValueChange}
       disabled={disabled}
     >

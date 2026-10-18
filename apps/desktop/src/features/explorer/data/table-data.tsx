@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  cn,
   Dialog,
   DialogClose,
   DialogContent,
@@ -8,34 +9,63 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   IconButton,
-  Input,
   Select,
   Spinner,
   toast,
   Tooltip,
 } from "@repo/ui";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { save as saveFile } from "@tauri-apps/plugin-dialog";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Columns3,
   Copy,
-  Filter,
+  Download,
   Lock,
+  Pencil,
   Plus,
   RefreshCw,
+  Rows3,
   Trash2,
   Undo2,
   X,
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import type { FilterOp, FilterSpec, RowChange, RowsPage, SortSpec } from "../../../lib/bindings";
+import type {
+  ColumnInfo,
+  FilterSpec,
+  RowChange,
+  RowsPage,
+  SortSpec,
+} from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer } from "../explorer-context";
 import { SqlBlock } from "../sql/sql-editor";
-import { DataGrid, type GridCell, type GridColumn, type GridRow } from "./data-grid";
+import { ColumnSheet } from "../structure/add-column-sheet";
+import { RunSqlDialog } from "../run-sql-dialog";
+import { dropColumn } from "../../../lib/sql";
+import {
+  DataGrid,
+  type GridCell,
+  type GridColumn,
+  type GridRow,
+} from "./data-grid";
+import { FilterBar } from "./filter-bar";
+import { SortPopover } from "./filter-sort";
+import { type EditTarget, RowSheet } from "./insert-row-sheet";
 import { type ExportFormat, exportRows } from "./export";
 
 const EMPTY_PAGE: RowsPage = {
@@ -47,19 +77,6 @@ const EMPTY_PAGE: RowsPage = {
   totalIsEstimate: false,
 };
 
-const FILTER_OPS: { op: FilterOp; label: string; needsValue: boolean }[] = [
-  { op: "equals", label: "=", needsValue: true },
-  { op: "not_equals", label: "≠", needsValue: true },
-  { op: "contains", label: "contains", needsValue: true },
-  { op: "starts_with", label: "starts with", needsValue: true },
-  { op: "greater_than", label: ">", needsValue: true },
-  { op: "greater_or_equal", label: "≥", needsValue: true },
-  { op: "less_than", label: "<", needsValue: true },
-  { op: "less_or_equal", label: "≤", needsValue: true },
-  { op: "is_null", label: "is NULL", needsValue: false },
-  { op: "is_not_null", label: "is not NULL", needsValue: false },
-];
-
 interface Pending {
   /** rowId → column index → new value */
   edits: Map<string, Map<number, string | null>>;
@@ -67,7 +84,11 @@ interface Pending {
   deletes: Set<string>;
 }
 
-const NO_CHANGES: Pending = { edits: new Map(), inserts: [], deletes: new Set() };
+const NO_CHANGES: Pending = {
+  edits: new Map(),
+  inserts: [],
+  deletes: new Set(),
+};
 
 function pendingCount(p: Pending) {
   return p.edits.size + p.inserts.length + p.deletes.size;
@@ -92,15 +113,27 @@ export function TableData({
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState<SortSpec[]>([]);
   const [filters, setFilters] = useState<FilterSpec[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
+  const [insert, setInsert] = useState<"row" | "column" | null>(null);
+  const [editRow, setEditRow] = useState<EditTarget | null>(null);
+  const [editColumn, setEditColumn] = useState<ColumnInfo | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<Pending>(NO_CHANGES);
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const request = { offset: page * pageSize, limit: pageSize, sort, filters };
   const rowsQuery = useQuery({
-    queryKey: queryKeys.explorer.rows(connectionId, database, schema, table, request),
-    queryFn: () => unwrap(commands.tableRows(connectionId, database, schema, table, request)),
+    queryKey: queryKeys.explorer.rows(
+      connectionId,
+      database,
+      schema,
+      table,
+      request,
+    ),
+    queryFn: () =>
+      unwrap(
+        commands.tableRows(connectionId, database, schema, table, request),
+      ),
     placeholderData: keepPreviousData,
   });
   const data = rowsQuery.data ?? EMPTY_PAGE;
@@ -108,16 +141,25 @@ export function TableData({
   const changes = pendingCount(pending);
 
   const columns: GridColumn[] = useMemo(
-    () => data.columns.map((c) => ({ id: c.name, name: c.name, dataType: c.dataType, isKey: c.isPrimaryKey })),
+    () =>
+      data.columns.map((c) => ({
+        id: c.name,
+        name: c.name,
+        dataType: c.dataType,
+        isKey: c.isPrimaryKey,
+      })),
     [data.columns],
   );
   const keyIndexes = useMemo(
-    () => data.keyColumns.map((k) => data.columns.findIndex((c) => c.name === k)),
+    () =>
+      data.keyColumns.map((k) => data.columns.findIndex((c) => c.name === k)),
     [data.columns, data.keyColumns],
   );
 
   const rowId = (cells: (string | null)[], index: number) =>
-    editable ? JSON.stringify(keyIndexes.map((i) => cells[i])) : `row:${page * pageSize + index}`;
+    editable
+      ? JSON.stringify(keyIndexes.map((i) => cells[i]))
+      : `row:${page * pageSize + index}`;
 
   const gridRows: GridRow[] = useMemo(() => {
     const existing = data.rows.map((cells, index) => {
@@ -125,18 +167,24 @@ export function TableData({
       const edits = pending.edits.get(id);
       return {
         id,
-        cells: edits ? cells.map((v, i) => (edits.has(i) ? edits.get(i)! : v)) : cells,
+        cells: edits
+          ? cells.map((v, i) => (edits.has(i) ? edits.get(i)! : v))
+          : cells,
         modified: edits ? new Set(edits.keys()) : undefined,
         state: pending.deletes.has(id) ? ("deleted" as const) : undefined,
       };
     });
-    return [...pending.inserts.map((r) => ({ ...r, state: "new" as const })), ...existing];
+    return [
+      ...pending.inserts.map((r) => ({ ...r, state: "new" as const })),
+      ...existing,
+    ];
     // rowId depends on page/keyIndexes, both covered by data
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, pending]);
 
   const originalRows = useMemo(
-    () => new Map(data.rows.map((cells, index) => [rowId(cells, index), cells])),
+    () =>
+      new Map(data.rows.map((cells, index) => [rowId(cells, index), cells])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data],
   );
@@ -148,7 +196,12 @@ export function TableData({
       const insertIndex = p.inserts.findIndex((r) => r.id === id);
       if (insertIndex >= 0) {
         const inserts = [...p.inserts];
-        inserts[insertIndex] = { id, cells: inserts[insertIndex]!.cells.map((v, i) => (i === col ? value : v)) };
+        inserts[insertIndex] = {
+          id,
+          cells: inserts[insertIndex]!.cells.map((v, i) =>
+            i === col ? value : v,
+          ),
+        };
         return { ...p, inserts };
       }
       const original = originalRows.get(id);
@@ -161,12 +214,6 @@ export function TableData({
       return { ...p, edits };
     });
   };
-
-  const addRow = () =>
-    setPending((p) => ({
-      ...p,
-      inserts: [{ id: `new:${Date.now()}`, cells: data.columns.map(() => undefined) }, ...p.inserts],
-    }));
 
   const deleteSelected = () => {
     setPending((p) => {
@@ -184,7 +231,10 @@ export function TableData({
   };
 
   const keyOf = (id: string) =>
-    data.keyColumns.map((column, i) => ({ column, value: originalRows.get(id)![keyIndexes[i]!] ?? null }));
+    data.keyColumns.map((column, i) => ({
+      column,
+      value: originalRows.get(id)![keyIndexes[i]!] ?? null,
+    }));
 
   const rowChanges: RowChange[] = useMemo(() => {
     const out: RowChange[] = [];
@@ -193,7 +243,10 @@ export function TableData({
         type: "insert",
         values: insert.cells
           .map((value, i) => ({ column: data.columns[i]!.name, value }))
-          .filter((cv): cv is { column: string; value: string | null } => cv.value !== undefined),
+          .filter(
+            (cv): cv is { column: string; value: string | null } =>
+              cv.value !== undefined,
+          ),
       });
     }
     for (const [id, edits] of pending.edits) {
@@ -201,17 +254,30 @@ export function TableData({
       out.push({
         type: "update",
         key: keyOf(id),
-        values: [...edits].map(([i, value]) => ({ column: data.columns[i]!.name, value })),
+        values: [...edits].map(([i, value]) => ({
+          column: data.columns[i]!.name,
+          value,
+        })),
       });
     }
-    for (const id of pending.deletes) out.push({ type: "delete", key: keyOf(id) });
+    for (const id of pending.deletes)
+      out.push({ type: "delete", key: keyOf(id) });
     return out;
     // keyOf reads data, covered below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, data]);
 
   const apply = useMutation({
-    mutationFn: () => unwrap(commands.applyChanges(connectionId, database, schema, table, rowChanges)),
+    mutationFn: () =>
+      unwrap(
+        commands.applyChanges(
+          connectionId,
+          database,
+          schema,
+          table,
+          rowChanges,
+        ),
+      ),
     onSuccess: (result) => {
       const parts = [
         result.inserted && `${result.inserted} added`,
@@ -221,27 +287,30 @@ export function TableData({
       toast.success("Changes saved", { description: parts.join(", ") });
       setPending(NO_CHANGES);
       setReviewOpen(false);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.explorer.table(connectionId, database, schema, table) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.explorer.tables(connectionId, database, schema) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.explorer.table(
+          connectionId,
+          database,
+          schema,
+          table,
+        ),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.explorer.tables(connectionId, database, schema),
+      });
     },
-    onError: (e) => toast.error("Nothing was saved", { description: describeError(e).message }),
+    onError: (e) =>
+      toast.error("Nothing was saved", {
+        description: describeError(e).message,
+      }),
   });
 
   /* ── Sorting, paging, copying ── */
 
-  const toggleSort = (column: string) => {
-    if (changes) return;
-    setSort((current) => {
-      const existing = current.find((s) => s.column === column);
-      if (!existing) return [{ column, descending: false }];
-      if (!existing.descending) return [{ column, descending: true }];
-      return [];
-    });
-    setPage(0);
-  };
-
   const copy = (format: ExportFormat) => {
-    const source = selected.size ? gridRows.filter((r) => selected.has(r.id)) : gridRows;
+    const source = selected.size
+      ? gridRows.filter((r) => selected.has(r.id))
+      : gridRows;
     const text = exportRows(
       format,
       data.columns.map((c) => c.name),
@@ -250,13 +319,45 @@ export function TableData({
     );
     void navigator.clipboard
       .writeText(text)
-      .then(() => toast.success(`Copied ${source.length} row${source.length === 1 ? "" : "s"} as ${format.toUpperCase()}`));
+      .then(() =>
+        toast.success(
+          `Copied ${source.length} row${source.length === 1 ? "" : "s"} as ${format.toUpperCase()}`,
+        ),
+      );
+  };
+
+  const exportFile = async (format: ExportFormat) => {
+    const source = selected.size
+      ? gridRows.filter((r) => selected.has(r.id))
+      : gridRows;
+    const text = exportRows(
+      format,
+      data.columns.map((c) => c.name),
+      source.map((r) => r.cells),
+      { schema, table },
+    );
+    const path = await saveFile({
+      defaultPath: `${table}.${format}`,
+      filters: [{ name: format.toUpperCase(), extensions: [format] }],
+    });
+    if (!path) return;
+    try {
+      await unwrap(commands.saveTextFile(path, text));
+      toast.success(
+        `Exported ${source.length} row${source.length === 1 ? "" : "s"}`,
+        { description: path },
+      );
+    } catch (e) {
+      toast.error("Couldn't export", { description: describeError(e).message });
+    }
   };
 
   const from = data.rows.length ? page * pageSize + 1 : 0;
   const to = page * pageSize + data.rows.length;
   const total =
-    data.total === null ? null : `${data.totalIsEstimate ? "~" : ""}${Math.round(data.total).toLocaleString()}`;
+    data.total === null
+      ? null
+      : `${data.totalIsEstimate ? "~" : ""}${Math.round(data.total).toLocaleString()}`;
   const locked = changes > 0;
   const pages =
     data.total === null
@@ -265,72 +366,128 @@ export function TableData({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Toolbar */}
+      {/* Toolbar, like Supabase: filter, sort, insert; bulk actions while rows are selected */}
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
-        <Button
-          size="sm"
-          variant={showFilters || filters.length ? "secondary" : "ghost"}
-          iconLeft={<Filter />}
-          onClick={() => setShowFilters((s) => !s)}
-        >
-          Filter{filters.length ? ` (${filters.length})` : ""}
-        </Button>
-        <IconButton
-          size="sm"
-          label="Refresh"
-          icon={rowsQuery.isFetching ? <Spinner className="size-3.5" /> : <RefreshCw />}
-          onClick={() => void rowsQuery.refetch()}
-        />
-        <span className="mx-1 h-4 w-px bg-border" />
-        {editable ? (
+        {selected.size > 0 ? (
           <>
-            <Button size="sm" variant="ghost" iconLeft={<Plus />} onClick={addRow}>
-              Row
-            </Button>
-            <Button size="sm" variant="ghost" iconLeft={<Trash2 />} disabled={!selected.size} onClick={deleteSelected}>
-              Delete{selected.size ? ` (${selected.size})` : ""}
-            </Button>
+            <IconButton
+              size="sm"
+              label="Clear selection"
+              icon={<X />}
+              onClick={() => setSelected(new Set())}
+            />
+            <span className="px-1 text-xs text-fg">
+              {selected.size} row{selected.size === 1 ? "" : "s"} selected
+            </span>
+            <span className="mx-1 h-4 w-px bg-border" />
+            <RowsMenu
+              icon={<Copy />}
+              label="Copy"
+              verb="Copy as"
+              onPick={copy}
+            />
+            <RowsMenu
+              icon={<Download />}
+              label="Export"
+              verb="Export as"
+              onPick={(f) => void exportFile(f)}
+            />
           </>
         ) : (
-          data.columns.length > 0 && (
-            <Tooltip content="Rows can only be edited in tables with a primary key">
-              <span className="flex items-center gap-1.5 px-2 text-xs text-fg-subtle">
-                <Lock className="size-3.5" /> Read-only
-              </span>
-            </Tooltip>
-          )
+          <>
+            <FilterBar
+              columns={data.columns.map((c) => c.name)}
+              applied={filters}
+              disabled={locked}
+              onApply={(next) => {
+                setFilters(next);
+                setPage(0);
+              }}
+            />
+            <SortPopover
+              columns={data.columns.map((c) => c.name)}
+              applied={sort}
+              disabled={locked}
+              onApply={(next) => {
+                setSort(next);
+                setPage(0);
+              }}
+            />
+            {editable ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    iconLeft={<Plus />}
+                    iconRight={<ChevronDown />}
+                  >
+                    Insert
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72">
+                  <InsertOption
+                    icon={<Rows3 />}
+                    title="Insert row"
+                    description={`Add a new row to ${table}`}
+                    onSelect={() => setInsert("row")}
+                  />
+                  <InsertOption
+                    icon={<Columns3 />}
+                    title="Insert column"
+                    description={`Add a new column to ${table}`}
+                    onSelect={() => setInsert("column")}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              data.columns.length > 0 && (
+                <Tooltip content="Rows can only be edited in tables with a primary key">
+                  <span className="flex items-center gap-1.5 px-2 text-xs text-fg-subtle">
+                    <Lock className="size-3.5" /> Read-only
+                  </span>
+                </Tooltip>
+              )
+            )}
+          </>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="ghost" iconLeft={<Copy />}>
-              Copy{selected.size ? ` (${selected.size})` : ""}
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            selected.size > 0 && "ml-auto",
+          )}
+        >
+          <IconButton
+            size="sm"
+            label="Refresh"
+            icon={
+              rowsQuery.isFetching ? (
+                <Spinner className="size-3.5" />
+              ) : (
+                <RefreshCw />
+              )
+            }
+            onClick={() => void rowsQuery.refetch()}
+          />
+          {selected.size > 0 && editable && (
+            <Button
+              size="sm"
+              variant="danger"
+              iconLeft={<Trash2 />}
+              onClick={deleteSelected}
+            >
+              Delete {selected.size} row{selected.size === 1 ? "" : "s"}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={() => copy("csv")}>As CSV</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => copy("json")}>As JSON</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => copy("sql")}>As SQL INSERT</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
+          )}
+        </div>
       </div>
-
-      {showFilters && (
-        <FilterBar
-          columns={data.columns.map((c) => c.name)}
-          applied={filters}
-          disabled={locked}
-          onApply={(next) => {
-            setFilters(next);
-            setPage(0);
-          }}
-        />
-      )}
 
       {/* Grid */}
       <div className="relative min-h-0 flex-1">
         {rowsQuery.isError ? (
-          <p className="p-4 text-sm text-danger">{describeError(rowsQuery.error).message}</p>
+          <p className="p-4 text-sm text-danger">
+            {describeError(rowsQuery.error).message}
+          </p>
         ) : rowsQuery.isPending ? (
           <div className="flex h-full items-center justify-center text-fg-subtle">
             <Spinner />
@@ -341,11 +498,48 @@ export function TableData({
             rows={gridRows}
             startIndex={page * pageSize}
             sort={sort}
-            onSort={toggleSort}
+            headerMenu={(column) => (
+              <ColumnMenu
+                name={column.name}
+                sort={sort.find((x) => x.column === column.id)}
+                disabled={locked}
+                onSort={(descending) => {
+                  setSort(
+                    descending === null
+                      ? sort.filter((x) => x.column !== column.id)
+                      : [{ column: column.id, descending }],
+                  );
+                  setPage(0);
+                }}
+                onEdit={() =>
+                  setEditColumn(
+                    data.columns.find((c) => c.name === column.id) ?? null,
+                  )
+                }
+                onDrop={() => setDropTarget(column.id)}
+                onCopy={() =>
+                  void navigator.clipboard
+                    .writeText(column.name)
+                    .then(() => toast.success("Column name copied"))
+                }
+              />
+            )}
+            onExpandRow={
+              editable
+                ? (id) => {
+                    const values = originalRows.get(id);
+                    if (values) setEditRow({ values, key: keyOf(id) });
+                  }
+                : undefined
+            }
             selected={selected}
             onSelectedChange={setSelected}
             onEdit={editable ? editCell : undefined}
-            emptyText={filters.length ? "No rows match these filters" : "This table is empty"}
+            emptyText={
+              filters.length
+                ? "No rows match these filters"
+                : "This table is empty"
+            }
           />
         )}
       </div>
@@ -360,10 +554,19 @@ export function TableData({
             {pending.deletes.size > 0 && `${pending.deletes.size} to delete`}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" iconLeft={<Undo2 />} onClick={discard}>
+            <Button
+              size="sm"
+              variant="ghost"
+              iconLeft={<Undo2 />}
+              onClick={discard}
+            >
               Discard
             </Button>
-            <Button size="sm" variant="primary" onClick={() => setReviewOpen(true)}>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setReviewOpen(true)}
+            >
               Review & save
             </Button>
           </div>
@@ -380,7 +583,10 @@ export function TableData({
           onClick={() => setPage((p) => p - 1)}
         />
         <span className="text-xs text-fg-muted">
-          Page <span className="font-mono text-fg">{(page + 1).toLocaleString()}</span>
+          Page{" "}
+          <span className="font-mono text-fg">
+            {(page + 1).toLocaleString()}
+          </span>
           {pages !== null && (
             <>
               {" "}
@@ -407,12 +613,58 @@ export function TableData({
             setPageSize(Number(v));
             setPage(0);
           }}
-          options={[50, 100, 500, 1000].map((n) => ({ value: String(n), label: `${n} rows` }))}
+          options={[50, 100, 500, 1000].map((n) => ({
+            value: String(n),
+            label: `${n} rows`,
+          }))}
         />
         <span className="ml-1 font-mono text-xs text-fg-subtle">
-          {total !== null ? `${total} records` : `${from.toLocaleString()}–${to.toLocaleString()}`}
+          {total !== null
+            ? `${total} records`
+            : `${from.toLocaleString()}–${to.toLocaleString()}`}
         </span>
       </TableFooter>
+
+      <RowSheet
+        open={insert === "row" || editRow !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setInsert(null);
+            setEditRow(null);
+          }
+        }}
+        database={database}
+        schema={schema}
+        table={table}
+        columns={data.columns}
+        row={editRow}
+      />
+      <ColumnSheet
+        open={insert === "column" || editColumn !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setInsert(null);
+            setEditColumn(null);
+          }
+        }}
+        database={database}
+        schema={schema}
+        table={table}
+        column={editColumn}
+      />
+      {dropTarget && (
+        <RunSqlDialog
+          open
+          onOpenChange={(o) => !o && setDropTarget(null)}
+          title={`Delete column ${dropTarget}?`}
+          description="The column and all its values are removed permanently."
+          sql={dropColumn(schema, table, dropTarget)}
+          database={database}
+          confirmLabel="Delete column"
+          destructive
+          successMessage={`Column ${dropTarget} deleted`}
+        />
+      )}
 
       <ReviewDialog
         open={reviewOpen}
@@ -449,8 +701,18 @@ function ReviewDialog({
 }) {
   const { connectionId } = useExplorer();
   const preview = useQuery({
-    queryKey: ["preview-changes", connectionId, database, schema, table, changes],
-    queryFn: () => unwrap(commands.previewChanges(connectionId, database, schema, table, changes)),
+    queryKey: [
+      "preview-changes",
+      connectionId,
+      database,
+      schema,
+      table,
+      changes,
+    ],
+    queryFn: () =>
+      unwrap(
+        commands.previewChanges(connectionId, database, schema, table, changes),
+      ),
     enabled: open,
     staleTime: 0,
     gcTime: 0,
@@ -468,7 +730,9 @@ function ReviewDialog({
             <Spinner />
           </div>
         ) : preview.isError ? (
-          <p className="text-sm text-danger">{describeError(preview.error).message}</p>
+          <p className="text-sm text-danger">
+            {describeError(preview.error).message}
+          </p>
         ) : (
           <SqlBlock sql={preview.data.join("\n")} className="h-64" />
         )}
@@ -476,7 +740,12 @@ function ReviewDialog({
           <DialogClose asChild>
             <Button variant="ghost">Keep editing</Button>
           </DialogClose>
-          <Button variant="primary" loading={saving} disabled={!preview.isSuccess} onClick={onSave}>
+          <Button
+            variant="primary"
+            loading={saving}
+            disabled={!preview.isSuccess}
+            onClick={onSave}
+          >
             Save {changes.length} change{changes.length === 1 ? "" : "s"}
           </Button>
         </DialogFooter>
@@ -485,103 +754,150 @@ function ReviewDialog({
   );
 }
 
-function FilterBar({
-  columns,
-  applied,
-  disabled,
-  onApply,
-}: {
-  columns: string[];
-  applied: FilterSpec[];
-  disabled: boolean;
-  onApply: (filters: FilterSpec[]) => void;
-}) {
-  const [draft, setDraft] = useState<FilterSpec[]>(
-    applied.length ? applied : [{ column: columns[0] ?? "", op: "contains", value: "" }],
-  );
-  const update = (index: number, patch: Partial<FilterSpec>) =>
-    setDraft((d) => d.map((f, i) => (i === index ? { ...f, ...patch } : f)));
-  const valid = draft.filter((f) => f.column && (!FILTER_OPS.find((o) => o.op === f.op)?.needsValue || f.value));
-
-  return (
-    <div className="flex shrink-0 flex-col gap-1.5 border-b border-border bg-surface px-3 py-2">
-      {draft.map((filter, index) => {
-        const needsValue = FILTER_OPS.find((o) => o.op === filter.op)?.needsValue ?? true;
-        return (
-          <div key={index} className="flex items-center gap-1.5">
-            <span className="w-10 text-right text-[11px] text-fg-subtle">{index === 0 ? "where" : "and"}</span>
-            <Select
-              aria-label="Column"
-              size="sm"
-              mono
-              className="w-44"
-              value={filter.column}
-              onValueChange={(column) => update(index, { column })}
-              options={columns.map((c) => ({ value: c, label: c }))}
-            />
-            <Select
-              aria-label="Condition"
-              size="sm"
-              className="w-32"
-              value={filter.op}
-              onValueChange={(op) => update(index, { op: op as FilterOp })}
-              options={FILTER_OPS.map((o) => ({ value: o.op, label: o.label }))}
-            />
-            {needsValue && (
-              <Input
-                aria-label="Value"
-                className="h-7 w-56 font-mono text-xs"
-                placeholder="value"
-                value={filter.value ?? ""}
-                onChange={(e) => update(index, { value: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && !disabled && onApply(valid)}
-              />
-            )}
-            <IconButton
-              size="sm"
-              label="Remove filter"
-              icon={<X />}
-              onClick={() => setDraft((d) => d.filter((_, i) => i !== index))}
-            />
-          </div>
-        );
-      })}
-      <div className="flex items-center gap-2 pl-11">
-        <Button
-          size="sm"
-          variant="ghost"
-          iconLeft={<Plus />}
-          onClick={() => setDraft((d) => [...d, { column: columns[0] ?? "", op: "equals", value: "" }])}
-        >
-          Add condition
-        </Button>
-        <Button size="sm" variant="primary" disabled={disabled} onClick={() => onApply(valid)}>
-          Apply
-        </Button>
-        {applied.length > 0 && (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={disabled}
-            onClick={() => {
-              setDraft([{ column: columns[0] ?? "", op: "contains", value: "" }]);
-              onApply([]);
-            }}
-          >
-            Clear
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /** The table tab's bottom bar. `children` go on the left. */
-export function TableFooter({ children, right }: { children?: ReactNode; right?: ReactNode }) {
+export function TableFooter({
+  children,
+  right,
+}: {
+  children?: ReactNode;
+  right?: ReactNode;
+}) {
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-t border-border bg-surface px-2">
       {children}
       <div className="ml-auto flex items-center gap-1">{right}</div>
     </div>
+  );
+}
+
+function RowsMenu({
+  icon,
+  label,
+  verb,
+  onPick,
+}: {
+  icon: ReactNode;
+  label: string;
+  verb: string;
+  onPick: (format: ExportFormat) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          variant="ghost"
+          iconLeft={icon}
+          iconRight={<ChevronDown />}
+        >
+          {label}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem onSelect={() => onPick("csv")}>
+          {verb} CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onPick("json")}>
+          {verb} JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onPick("sql")}>
+          {verb} SQL
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function InsertOption({
+  icon,
+  title,
+  description,
+  onSelect,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  onSelect: () => void;
+}) {
+  return (
+    <DropdownMenuItem
+      icon={icon}
+      className="h-auto items-start py-2 [&_svg]:mt-0.5"
+      onSelect={onSelect}
+    >
+      <span className="flex flex-col gap-0.5">
+        <span className="text-fg">{title}</span>
+        <span className="text-[11px] text-fg-subtle">{description}</span>
+      </span>
+    </DropdownMenuItem>
+  );
+}
+
+/** The menu behind each column header's button, like Supabase's. */
+function ColumnMenu({
+  name,
+  sort,
+  disabled,
+  onSort,
+  onEdit,
+  onDrop,
+  onCopy,
+}: {
+  name: string;
+  sort?: SortSpec;
+  disabled: boolean;
+  onSort: (descending: boolean | null) => void;
+  onEdit: () => void;
+  onDrop: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${name} column options`}
+          className="flex size-5 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-raised hover:text-fg data-[state=open]:bg-surface-raised data-[state=open]:text-fg"
+        >
+          <ChevronDown className="size-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="font-sans">
+        <DropdownMenuItem
+          icon={<ArrowUp />}
+          disabled={disabled}
+          onSelect={() => onSort(false)}
+        >
+          Sort ascending
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          icon={<ArrowDown />}
+          disabled={disabled}
+          onSelect={() => onSort(true)}
+        >
+          Sort descending
+        </DropdownMenuItem>
+        {sort && (
+          <DropdownMenuItem
+            icon={<X />}
+            disabled={disabled}
+            onSelect={() => onSort(null)}
+          >
+            Remove sort
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem icon={<Pencil />} onSelect={onEdit}>
+          Edit column
+        </DropdownMenuItem>
+        <DropdownMenuItem icon={<Copy />} onSelect={onCopy}>
+          Copy name
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem icon={<Trash2 />} danger onSelect={onDrop}>
+          Delete column
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

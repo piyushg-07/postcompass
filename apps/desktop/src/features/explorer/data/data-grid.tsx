@@ -1,8 +1,20 @@
 import { Checkbox, cn } from "@repo/ui";
-import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, KeyRound } from "lucide-react";
-import { type KeyboardEvent, type MouseEvent, memo, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, KeyRound, Maximize2 } from "lucide-react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  memo,
+  type ReactNode,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 /** `undefined` means "not set" (a new row's column that will use its DEFAULT). */
 export type GridCell = string | null | undefined;
@@ -33,9 +45,13 @@ const features = tableFeatures({});
 const helper = createColumnHelper<typeof features, GridRow>();
 
 function initialWidth(column: GridColumn, rows: GridRow[], index: number) {
-  const header = column.name.length * 7.5 + (column.dataType ? column.dataType.length * 5.5 : 0) + 40;
+  const header =
+    column.name.length * 7.5 +
+    (column.dataType ? column.dataType.length * 5.5 : 0) +
+    40;
   let widest = 0;
-  for (const row of rows.slice(0, 50)) widest = Math.max(widest, row.cells[index]?.length ?? 4);
+  for (const row of rows.slice(0, 50))
+    widest = Math.max(widest, row.cells[index]?.length ?? 4);
   return Math.round(Math.min(360, Math.max(90, header, widest * 7.2 + 24)));
 }
 
@@ -51,6 +67,10 @@ export interface DataGridProps {
   /** When set, double-clicking a cell edits it. */
   onEdit?: (rowId: string, columnIndex: number, value: string | null) => void;
   emptyText?: string;
+  /** Menu shown from a button in each column header (sort, edit, delete…). */
+  headerMenu?: (column: GridColumn) => ReactNode;
+  /** When set, each row shows an expand button that calls this (e.g. to edit it in a panel). */
+  onExpandRow?: (rowId: string) => void;
 }
 
 export function DataGrid({
@@ -63,17 +83,34 @@ export function DataGrid({
   onSelectedChange,
   onEdit,
   emptyText = "No rows",
+  headerMenu,
+  onExpandRow,
 }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
-  const [editing, setEditing] = useState<{ rowId: string; col: number } | null>(null);
+  const [editing, setEditing] = useState<{ rowId: string; col: number } | null>(
+    null,
+  );
   const lastClicked = useRef<number | null>(null);
 
   const tableColumns = useMemo(
-    () => helper.columns(columns.map((c, i) => helper.accessor((row: GridRow) => row.cells[i], { id: c.id, header: c.name }))),
+    () =>
+      helper.columns(
+        columns.map((c, i) =>
+          helper.accessor((row: GridRow) => row.cells[i], {
+            id: c.id,
+            header: c.name,
+          }),
+        ),
+      ),
     [columns],
   );
-  const table = useTable({ features, columns: tableColumns, data: rows, getRowId: (row: GridRow) => row.id });
+  const table = useTable({
+    features,
+    columns: tableColumns,
+    data: rows,
+    getRowId: (row: GridRow) => row.id,
+  });
   const modelRows = table.getRowModel().rows;
 
   const colWidths = useMemo(
@@ -107,14 +144,42 @@ export function DataGrid({
     onSelectedChange(next);
   };
 
-  const allSelected = selected !== undefined && rows.length > 0 && rows.every((r) => selected.has(r.id));
+  /** A row's checkbox adds or removes just that row; Shift selects the range from the last one. */
+  const checkRow = (index: number, rowId: string, event: MouseEvent) => {
+    if (!onSelectedChange || !selected) return;
+    const next = new Set(selected);
+    if (event.shiftKey && lastClicked.current !== null) {
+      const [a, b] = [lastClicked.current, index].sort((x, y) => x - y);
+      for (let i = a!; i <= b!; i++) next.add(modelRows[i]!.id);
+    } else if (next.has(rowId)) {
+      next.delete(rowId);
+    } else {
+      next.add(rowId);
+    }
+    lastClicked.current = index;
+    onSelectedChange(next);
+  };
 
-  const startResize = (columnId: string, startWidth: number, event: MouseEvent) => {
+  const someSelected =
+    selected !== undefined && rows.some((r) => selected.has(r.id));
+  const allSelected =
+    selected !== undefined &&
+    rows.length > 0 &&
+    rows.every((r) => selected.has(r.id));
+
+  const startResize = (
+    columnId: string,
+    startWidth: number,
+    event: MouseEvent,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
     const move = (e: globalThis.MouseEvent) =>
-      setWidths((w) => ({ ...w, [columnId]: Math.max(60, Math.round(startWidth + e.clientX - startX)) }));
+      setWidths((w) => ({
+        ...w,
+        [columnId]: Math.max(60, Math.round(startWidth + e.clientX - startX)),
+      }));
     const up = () => {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
@@ -124,19 +189,31 @@ export function DataGrid({
   };
 
   return (
-    <div ref={scrollRef} className="relative h-full min-h-0 overflow-auto bg-bg font-mono text-xs select-none">
+    <div
+      ref={scrollRef}
+      className="relative h-full min-h-0 overflow-auto bg-bg font-mono text-xs select-none"
+    >
       <div style={{ width: totalWidth, minWidth: "100%" }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex border-b border-border-strong bg-surface" style={{ height: ROW_HEIGHT + 4 }}>
+        <div
+          className="sticky top-0 z-10 flex border-b border-border-strong bg-surface"
+          style={{ height: ROW_HEIGHT + 4 }}
+        >
           <div
-            className="flex shrink-0 items-center justify-center border-r border-border"
+            className="flex shrink-0 items-center border-r border-border pl-2.5"
             style={{ width: ROW_NUMBER_WIDTH }}
           >
             {onSelectedChange && (
               <Checkbox
                 aria-label="Select all rows"
-                checked={allSelected}
-                onCheckedChange={(checked) => onSelectedChange(new Set(checked ? rows.map((r) => r.id) : []))}
+                checked={
+                  allSelected ? true : someSelected ? "indeterminate" : false
+                }
+                onCheckedChange={(checked) =>
+                  onSelectedChange(
+                    new Set(checked ? rows.map((r) => r.id) : []),
+                  )
+                }
               />
             )}
           </div>
@@ -152,19 +229,42 @@ export function DataGrid({
                 )}
                 style={{ width: colWidths[i] }}
                 onClick={() => onSort?.(column.id)}
-                title={column.dataType ? `${column.name} · ${column.dataType}` : column.name}
+                title={
+                  column.dataType
+                    ? `${column.name} · ${column.dataType}`
+                    : column.name
+                }
               >
-                {column.isKey && <KeyRound className="size-3 shrink-0 text-warning" aria-label="Primary key" />}
-                <span className="truncate text-xs font-medium text-fg">{column.name}</span>
-                {column.dataType && (
-                  <span className="truncate font-mono text-[10px] text-fg-subtle">{column.dataType}</span>
+                {column.isKey && (
+                  <KeyRound
+                    className="size-3 shrink-0 text-warning"
+                    aria-label="Primary key"
+                  />
                 )}
-                {sortState &&
-                  (sortState.descending ? (
-                    <ArrowDown className="ml-auto size-3 shrink-0 text-accent" />
-                  ) : (
-                    <ArrowUp className="ml-auto size-3 shrink-0 text-accent" />
-                  ))}
+                <span className="truncate text-xs font-medium text-fg">
+                  {column.name}
+                </span>
+                {column.dataType && (
+                  <span className="truncate font-mono text-[10px] text-fg-subtle">
+                    {column.dataType}
+                  </span>
+                )}
+                <span className="ml-auto flex shrink-0 items-center gap-0.5">
+                  {sortState &&
+                    (sortState.descending ? (
+                      <ArrowDown className="size-3 shrink-0 text-accent" />
+                    ) : (
+                      <ArrowUp className="size-3 shrink-0 text-accent" />
+                    ))}
+                  {headerMenu && (
+                    <span
+                      className="opacity-0 group-hover:opacity-100 has-[[data-state=open]]:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {headerMenu(column)}
+                    </span>
+                  )}
+                </span>
                 <span
                   className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
                   onMouseDown={(e) => startResize(column.id, colWidths[i]!, e)}
@@ -177,9 +277,14 @@ export function DataGrid({
 
         {/* Body */}
         {modelRows.length === 0 ? (
-          <div className="p-6 text-center font-sans text-sm text-fg-subtle">{emptyText}</div>
+          <div className="p-6 text-center font-sans text-sm text-fg-subtle">
+            {emptyText}
+          </div>
         ) : (
-          <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+          <div
+            className="relative"
+            style={{ height: virtualizer.getTotalSize() }}
+          >
             {virtualizer.getVirtualItems().map((item) => {
               const row = modelRows[item.index]!;
               const original = row.original;
@@ -193,10 +298,24 @@ export function DataGrid({
                   top={item.start}
                   widths={colWidths}
                   selected={isSelected}
-                  editingCol={editing?.rowId === original.id ? editing.col : null}
+                  editingCol={
+                    editing?.rowId === original.id ? editing.col : null
+                  }
                   onSelect={(e) => toggleRow(item.index, original.id, e)}
+                  onCheck={
+                    onSelectedChange
+                      ? (e) => checkRow(item.index, original.id, e)
+                      : undefined
+                  }
+                  onExpand={
+                    onExpandRow && !original.state
+                      ? () => onExpandRow(original.id)
+                      : undefined
+                  }
                   onStartEdit={
-                    onEdit && original.state !== "deleted" ? (col) => setEditing({ rowId: original.id, col }) : undefined
+                    onEdit && original.state !== "deleted"
+                      ? (col) => setEditing({ rowId: original.id, col })
+                      : undefined
                   }
                   onCommit={(col, value) => {
                     setEditing(null);
@@ -221,6 +340,8 @@ const GridRowView = memo(function GridRowView({
   selected,
   editingCol,
   onSelect,
+  onCheck,
+  onExpand,
   onStartEdit,
   onCommit,
 }: {
@@ -232,6 +353,8 @@ const GridRowView = memo(function GridRowView({
   selected: boolean;
   editingCol: number | null;
   onSelect: (e: MouseEvent) => void;
+  onCheck?: (e: MouseEvent) => void;
+  onExpand?: () => void;
   onStartEdit?: (col: number) => void;
   /** `false` = cancelled. */
   onCommit: (col: number, value: string | null | false) => void;
@@ -248,11 +371,40 @@ const GridRowView = memo(function GridRowView({
       style={{ top, height: ROW_HEIGHT }}
     >
       <div
-        className="flex shrink-0 cursor-pointer items-center justify-end border-r border-border pr-2 text-[10px] text-fg-subtle hover:text-fg"
+        className="group/num relative flex shrink-0 cursor-pointer items-center gap-1 border-r border-border pl-2.5 text-[10px] text-fg-subtle"
         style={{ width: ROW_NUMBER_WIDTH }}
         onClick={onSelect}
+        title={`Row ${number}`}
       >
-        {row.state === "new" ? <span className="text-accent">new</span> : number}
+        {onCheck && (
+          <Checkbox
+            aria-label={`Select row ${number}`}
+            checked={selected}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onCheck(e);
+            }}
+          />
+        )}
+        {row.state === "new" ? (
+          <span className="text-accent">new</span>
+        ) : (
+          onExpand && (
+            <button
+              type="button"
+              aria-label="Expand row"
+              title="Expand row"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpand();
+              }}
+              className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/num:flex hover:bg-surface-hover hover:text-fg"
+            >
+              <Maximize2 className="size-3" />
+            </button>
+          )
+        )}
       </div>
       {row.cells.map((value, col) => (
         <div
@@ -272,7 +424,9 @@ const GridRowView = memo(function GridRowView({
           ) : value === undefined ? (
             <span className="text-fg-subtle italic">DEFAULT</span>
           ) : (
-            <span className="truncate whitespace-pre text-fg">{value.replaceAll("\n", "↵ ")}</span>
+            <span className="truncate whitespace-pre text-fg">
+              {value.replaceAll("\n", "↵ ")}
+            </span>
           )}
         </div>
       ))}
@@ -280,7 +434,13 @@ const GridRowView = memo(function GridRowView({
   );
 });
 
-function CellEditor({ value, onCommit }: { value: GridCell; onCommit: (value: string | null | false) => void }) {
+function CellEditor({
+  value,
+  onCommit,
+}: {
+  value: GridCell;
+  onCommit: (value: string | null | false) => void;
+}) {
   const [text, setText] = useState(value ?? "");
   const done = useRef(false);
   const finish = (v: string | null | false) => {
