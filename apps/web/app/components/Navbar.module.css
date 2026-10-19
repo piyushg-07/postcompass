@@ -1,19 +1,20 @@
 .header {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
   transition: all var(--transition-base);
-  background: transparent;
-  border-bottom: 1px solid transparent;
-}
-
-.header.scrolled {
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom-color: var(--border-default);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.header.scrolled {
+  background: rgba(9, 9, 11, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .nav {
@@ -155,7 +156,7 @@
     display: flex;
   }
 
-  .actions .btn-primary {
+  .actions :global(.btn-primary) {
     display: none;
   }
 }

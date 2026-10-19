@@ -1,23 +1,36 @@
+/* ============================================================
+   PostCompass — How It Works (Fully Responsive & Modern)
+   ============================================================ */
+
+.section {
+  position: relative;
+  overflow: hidden;
+}
+
 .steps {
-  max-width: 700px;
+  max-width: 780px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0;
+  width: 100%;
 }
 
 .step {
   display: flex;
-  gap: var(--space-6);
-  padding-bottom: var(--space-10);
+  gap: 1.5rem;
+  padding-bottom: 2.75rem;
   text-align: left;
+  min-width: 0;
+  width: 100%;
+  position: relative;
 }
 
 .step:last-child {
   padding-bottom: 0;
 }
 
-/* Step indicator */
+/* Step indicator timeline column */
 .stepIndicator {
   display: flex;
   flex-direction: column;
@@ -26,55 +39,220 @@
 }
 
 .stepNumber {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--accent-muted);
+  background: rgba(16, 185, 129, 0.12);
   color: var(--accent);
   font-size: var(--text-sm);
   font-weight: 700;
-  border: 1px solid var(--border-accent);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.step:hover .stepNumber {
+  background: var(--accent);
+  color: #09090b;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  transform: scale(1.05);
 }
 
 .stepLine {
-  width: 1px;
+  width: 2px;
   flex: 1;
-  background: linear-gradient(to bottom, var(--border-accent), var(--border-default));
-  margin-top: var(--space-3);
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%);
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
 }
 
-/* Step content */
+/* Step content card */
 .stepContent {
   flex: 1;
-  padding-top: var(--space-1);
+  min-width: 0; /* Critical for flex child containing code */
+  width: 100%;
+  padding-top: 0.25rem;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .stepTitle {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+  font-weight: 700;
   color: var(--fg-primary);
-  margin-bottom: var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.stepBadge {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .stepDesc {
   font-size: var(--text-sm);
   color: var(--fg-secondary);
-  line-height: var(--leading-normal);
-  margin-bottom: var(--space-4);
+  line-height: 1.6;
+  margin-bottom: 1rem;
 }
 
-@media (max-width: 480px) {
+/* Features checklist for steps without code */
+.stepFeatureList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.stepFeatureTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  color: var(--fg-primary);
+}
+
+/* Scoped Code Block with Dedicated Header */
+.codeContainer {
+  background: #09090c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s ease;
+}
+
+.codeContainer:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.codeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.codeTitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.codeCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--fg-muted);
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.codeCopyBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.codeCopied {
+  color: var(--accent) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.codeScroll {
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--fg-secondary);
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile & Tablet Responsive Adjustments */
+@media (max-width: 640px) {
   .step {
-    gap: var(--space-4);
+    gap: 1rem;
+    padding-bottom: 2rem;
   }
 
   .stepNumber {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+
+  .stepContent {
+    padding-top: 0;
+  }
+
+  .stepDesc {
     font-size: var(--text-xs);
+    margin-bottom: 0.75rem;
+  }
+
+  .codeScroll {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .steps {
+    padding: 0;
+  }
+
+  .step {
+    gap: 0.75rem;
+    padding-bottom: 1.75rem;
+  }
+
+  .stepNumber {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .codeScroll {
+    font-size: 0.72rem;
+    line-height: 1.5;
   }
 }

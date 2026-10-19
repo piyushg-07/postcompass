@@ -7,9 +7,10 @@ interface IconProps {
   size?: number;
   className?: string;
   strokeWidth?: number;
+  style?: React.CSSProperties;
 }
 
-const defaultProps: Required<IconProps> = {
+const defaultProps: Required<Omit<IconProps, "style">> = {
   size: 20,
   className: "",
   strokeWidth: 2,
@@ -32,6 +33,7 @@ function makeIcon(
         strokeLinecap="round"
         strokeLinejoin="round"
         className={className}
+        style={props.style}
         aria-hidden="true"
       >
         {paths}
@@ -333,6 +335,88 @@ export const LinuxIcon: React.FC<IconProps> = ({
   </svg>
 );
 
+export const Cloud = makeIcon(
+  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+);
+
+export const Play = makeIcon(
+  <polygon points="6 3 20 12 6 21 6 3" />
+);
+
+export const RefreshCw = makeIcon(
+  <>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M8 16H3v5" />
+  </>
+);
+
+export const Plus = makeIcon(
+  <>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </>
+);
+
+export const Trash = makeIcon(
+  <>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </>
+);
+
+export const ArrowUpRight = makeIcon(
+  <>
+    <line x1="7" y1="17" x2="17" y2="7" />
+    <polyline points="7 7 17 7 17 17" />
+  </>
+);
+
+export const Server = makeIcon(
+  <>
+    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+    <line x1="6" y1="6" x2="6.01" y2="6" />
+    <line x1="6" y1="18" x2="6.01" y2="18" />
+  </>
+);
+
+export const Cpu = makeIcon(
+  <>
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+    <rect x="9" y="9" width="6" height="6" />
+    <line x1="9" y1="1" x2="9" y2="4" />
+    <line x1="15" y1="1" x2="15" y2="4" />
+    <line x1="9" y1="20" x2="9" y2="23" />
+    <line x1="15" y1="20" x2="15" y2="23" />
+    <line x1="20" y1="9" x2="23" y2="9" />
+    <line x1="20" y1="14" x2="23" y2="14" />
+    <line x1="1" y1="9" x2="4" y2="9" />
+    <line x1="1" y1="14" x2="4" y2="14" />
+  </>
+);
+
+export const AwsLogo: React.FC<IconProps> = ({
+  size = 20,
+  className = "",
+  style,
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    style={style}
+    aria-hidden="true"
+  >
+    <path d="M18.75 14.28c-1.89 1.4-4.5 2.16-7.38 2.16-4.14 0-7.86-1.57-10.68-4.19-.22-.2-.02-.5.23-.35 3.03 1.83 6.81 2.94 10.74 2.94 2.56 0 5.31-.59 7.76-1.78.37-.18.66.27.33.52z" />
+    <path d="M19.78 13.06c-.24-.31-1.58-.15-2.18-.08-.18.02-.21-.13-.05-.24 1.05-.72 2.76-.51 3.03-.18.27.33-.07 2.05-1.07 2.86-.15.12-.29.06-.23-.1.21-.56.74-1.95.5-2.26z" />
+    <path d="M12.94 4.07c-1.39 0-2.3.93-2.3 2.18 0 1.28.91 2.17 2.3 2.17 1.4 0 2.3-.89 2.3-2.17 0-1.25-.9-2.18-2.3-2.18zm0 3.32c-.74 0-1.22-.5-1.22-1.14 0-.65.48-1.15 1.22-1.15.74 0 1.22.5 1.22 1.15 0 .64-.48 1.14-1.22 1.14z" />
+  </svg>
+);
+
 // Map icon names to components
 export const iconMap: Record<string, React.FC<IconProps>> = {
   zap: Zap,
@@ -361,4 +445,9 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   activity: Activity,
   lock: Lock,
   compass: Compass,
+  cloud: Cloud,
+  play: Play,
+  "refresh-cw": RefreshCw,
+  server: Server,
+  cpu: Cpu,
 };

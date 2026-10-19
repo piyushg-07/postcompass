@@ -1,6 +1,7 @@
 import AnnouncementBar from "./components/AnnouncementBar";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import AwsDbShowcase from "./components/AwsDbShowcase";
 import TrustSection from "./components/TrustSection";
 import FeaturesSection from "./components/FeaturesSection";
 import InteractiveDemo from "./components/InteractiveDemo";
@@ -18,6 +19,7 @@ export default function Home() {
       <Navbar />
       <main id="main-content">
         <Hero />
+        <AwsDbShowcase />
         <TrustSection />
         <FeaturesSection />
         <InteractiveDemo />

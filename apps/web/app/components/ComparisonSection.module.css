@@ -93,3 +93,16 @@
 .row:hover {
   background: rgba(255, 255, 255, 0.02);
 }
+
+@media (max-width: 640px) {
+  .table {
+    min-width: 520px;
+  }
+
+  .table th,
+  .table td {
+    padding: var(--space-3) var(--space-3);
+    font-size: var(--text-xs);
+  }
+}
+

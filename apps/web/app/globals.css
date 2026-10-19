@@ -122,6 +122,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-padding-top: calc(var(--nav-height) + 40px);
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -177,6 +179,7 @@ ul, ol {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 var(--space-6);
+  width: 100%;
 }
 
 .section {

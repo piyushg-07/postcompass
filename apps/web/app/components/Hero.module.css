@@ -1,16 +1,38 @@
 /* ============================================================
    PostCompass — Ultimate Developer Hero Section
+   Modern high-performance developer aesthetic with dynamic animations
    ============================================================ */
 
 .hero {
   position: relative;
-  padding-top: calc(var(--nav-height) + 48px);
-  padding-bottom: 5rem;
+  padding-top: 3.5rem;
+  padding-bottom: 5.5rem;
   overflow: hidden;
-  background: radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.15) 0%, rgba(9, 9, 11, 0) 60%);
+  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.06) 40%, rgba(9, 9, 11, 0) 70%);
 }
 
-/* Subtle grid overlay */
+/* Ambient animated aurora orb */
+.auroraOrb {
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 420px;
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.22) 0%, rgba(56, 189, 248, 0.14) 35%, rgba(255, 153, 0, 0.08) 60%, transparent 75%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: auroraShift 9s infinite alternate ease-in-out;
+}
+
+@keyframes auroraShift {
+  0% { transform: translateX(-50%) scale(0.95); opacity: 0.75; }
+  50% { transform: translateX(-48%) scale(1.06); opacity: 1; filter: blur(90px); }
+  100% { transform: translateX(-52%) scale(1.02); opacity: 0.85; }
+}
+
+/* Subtle tech grid background with radar pulse */
 .gridBackground {
   position: absolute;
   inset: 0;
@@ -38,9 +60,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.35rem 0.85rem;
-  background: rgba(24, 24, 27, 0.7);
-  backdrop-filter: blur(8px);
+  padding: 0.35rem 0.95rem;
+  background: rgba(24, 24, 27, 0.75);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   font-size: var(--text-xs);
@@ -48,13 +70,15 @@
   color: var(--fg-secondary);
   margin-bottom: 1.5rem;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .badge:hover {
-  border-color: var(--accent);
-  color: var(--fg-primary);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #ffffff;
   transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
 }
 
 .badgeDot {
@@ -68,7 +92,7 @@
 
 @keyframes pulseDot {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
 .badgeTag {
@@ -81,23 +105,40 @@
   font-size: 0.7rem;
 }
 
+.badgeSep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.badgeHighlight {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
 /* Main Headline */
 .headline {
-  font-size: clamp(2.4rem, 5.5vw, 4.25rem);
+  font-size: clamp(2.5rem, 5.8vw, 4.4rem);
   font-weight: 800;
   line-height: 1.1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   color: #ffffff;
   margin-bottom: 1.25rem;
-  max-width: 860px;
+  max-width: 900px;
 }
 
 .headlineAccent {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #2dd4bf 100%);
+  background: linear-gradient(135deg, #34d399 0%, #10b981 30%, #38bdf8 70%, #a78bfa 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
+  animation: gradientShift 6s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* Subtitle */
@@ -105,8 +146,13 @@
   font-size: clamp(1rem, 2vw, 1.2rem);
   line-height: 1.6;
   color: #a1a1aa;
-  max-width: 680px;
+  max-width: 700px;
   margin-bottom: 2rem;
+}
+
+.subtitleHighlight {
+  color: #f4f4f5;
+  font-weight: 500;
 }
 
 /* CTA Group */
@@ -131,14 +177,31 @@
   border-radius: 10px;
   text-decoration: none;
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
 }
 
+.primaryDownloadBtn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: rotate(25deg);
+  animation: buttonShimmer 4s infinite ease-in-out;
+}
+
+@keyframes buttonShimmer {
+  0% { left: -60%; }
+  30%, 100% { left: 140%; }
+}
+
 .primaryDownloadBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(16, 185, 129, 0.45);
+  box-shadow: 0 6px 28px rgba(16, 185, 129, 0.5);
   background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
 }
 
@@ -146,7 +209,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
-  background: rgba(24, 24, 27, 0.8);
+  background: rgba(24, 24, 27, 0.85);
   color: #f4f4f5;
   font-weight: 600;
   font-size: var(--text-base);
@@ -155,10 +218,11 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   text-decoration: none;
   transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .secondaryBtn:hover {
-  background: rgba(39, 39, 42, 0.9);
+  background: rgba(39, 39, 42, 0.95);
   border-color: rgba(255, 255, 255, 0.25);
   color: #ffffff;
   transform: translateY(-2px);
@@ -166,23 +230,63 @@
 
 .githubStarBadge {
   background: rgba(255, 255, 255, 0.1);
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
   font-size: var(--text-xs);
   color: #34d399;
 }
 
-/* CLI Quick Install Command Bar */
+/* CLI Quick Install Command Bar with OS Switcher */
+.cliSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2.25rem;
+  max-width: 100%;
+}
+
+.cliOsTabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(18, 18, 22, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.2rem;
+  border-radius: 8px;
+}
+
+.cliOsBtn {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cliOsBtn:hover {
+  color: var(--fg-primary);
+}
+
+.cliOsBtnActive {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .cliBar {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
   background: #111113;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.4rem 0.5rem 0.4rem 0.85rem;
+  padding: 0.45rem 0.6rem 0.45rem 0.95rem;
   border-radius: 10px;
-  margin-bottom: 2rem;
   max-width: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .cliPrompt {
@@ -251,12 +355,46 @@
 }
 
 /* ============================================================
-   Desktop App Window Mockup
+   Desktop App Window Mockup with Traveling Laser Border Beam!
    ============================================================ */
-.previewWrapper {
+.previewContainer {
   position: relative;
   width: 100%;
   max-width: 1140px;
+}
+
+/* Traveling Conic Laser Border Beam */
+.previewWrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  padding: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  box-shadow: 
+    0 24px 60px -12px rgba(0, 0, 0, 0.85),
+    0 0 50px rgba(16, 185, 129, 0.15);
+}
+
+.borderBeam {
+  position: absolute;
+  inset: -150%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 280deg,
+    #10b981 320deg,
+    #38bdf8 345deg,
+    #10b981 360deg
+  );
+  animation: rotateBeam 4s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rotateBeam {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .previewGlow {
@@ -266,7 +404,7 @@
   transform: translateX(-50%);
   width: 80%;
   height: 380px;
-  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 50%, transparent 75%);
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.05) 50%, transparent 75%);
   pointer-events: none;
   z-index: 0;
   filter: blur(40px);
@@ -276,13 +414,8 @@
   position: relative;
   z-index: 1;
   background: #0f0f12;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: 15px;
   overflow: hidden;
-  box-shadow: 
-    0 24px 60px -12px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 0 40px rgba(16, 185, 129, 0.12);
   text-align: left;
 }
 
@@ -294,13 +427,14 @@
   padding: 0.65rem 1rem;
   background: #141418;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 0.75rem;
 }
 
 .trafficLights {
   display: flex;
   align-items: center;
   gap: 7px;
-  width: 70px;
+  flex-shrink: 0;
 }
 
 .dot {
@@ -467,6 +601,28 @@
   flex-direction: column;
   background: #0a0a0c;
   overflow: hidden;
+  position: relative;
+}
+
+/* Laser scanbeam sweep on query run */
+.scanbeam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%);
+  box-shadow: 0 0 14px #10b981;
+  animation: sweepScan 0.55s ease-out forwards;
+  pointer-events: none;
+  z-index: 20;
+}
+
+@keyframes sweepScan {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
 }
 
 /* Toolbar */
@@ -498,10 +654,6 @@
   font-size: 0.7rem;
   font-family: var(--font-mono);
   color: #71717a;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .toolbarRight {
@@ -511,24 +663,22 @@
 }
 
 .toolbarBtn {
+  font-size: 0.725rem;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.25rem 0.55rem;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.725rem;
-  font-weight: 500;
-  color: #a1a1aa;
-  background: #1a1a1e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  cursor: pointer;
+  gap: 0.35rem;
   transition: all 0.15s ease;
 }
 
 .toolbarBtn:hover {
-  background: #27272a;
-  color: #f4f4f5;
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .filterActive {
@@ -537,46 +687,40 @@
   border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
-/* ============================================================
-   View 1: Data Grid Spreadsheet
-   ============================================================ */
+/* Table container */
 .tableContainer {
-  flex: 1;
   overflow-x: auto;
+  flex: 1;
 }
 
 .dataGrid {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-align: left;
 }
 
 .dataGrid th {
-  background: #111114;
+  background: #111115;
+  padding: 0.5rem 0.75rem;
   color: #71717a;
   font-weight: 600;
-  font-size: 0.725rem;
-  padding: 0.55rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   white-space: nowrap;
 }
 
 .colType {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: #52525b;
   font-weight: 400;
-  margin-left: 0.3rem;
+  color: #52525b;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  margin-left: 0.25rem;
 }
 
 .dataGrid td {
-  padding: 0.55rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   color: #d4d4d8;
-  font-family: var(--font-sans);
   white-space: nowrap;
 }
 
@@ -586,39 +730,33 @@
 
 .uuidCode {
   font-family: var(--font-mono);
-  font-size: 0.725rem;
-  color: #71717a;
+  font-size: 0.7rem;
+  color: #a1a1aa;
 }
 
-/* Active Editing Cell */
 .editingCell {
-  position: relative;
-  background: rgba(16, 185, 129, 0.08) !important;
-  box-shadow: inset 0 0 0 1.5px #10b981;
-  border-radius: 3px;
-  padding: 0.35rem 0.6rem !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-radius: 4px;
 }
 
 .cellInput {
-  background: transparent;
-  border: none;
+  background: #18181b;
+  border: 1px solid #10b981;
+  border-radius: 4px;
   color: #ffffff;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: 500;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
   outline: none;
-  width: 100%;
-  padding: 0;
+  width: 140px;
 }
 
 .cursorBlink {
   display: inline-block;
   width: 2px;
-  height: 14px;
+  height: 12px;
   background: #10b981;
-  vertical-align: middle;
   margin-left: 2px;
-  animation: blink 1s step-start infinite;
+  animation: blink 1s infinite;
 }
 
 @keyframes blink {
@@ -626,71 +764,58 @@
   50% { opacity: 0; }
 }
 
-/* Role Badges */
 .roleBadge {
   display: inline-block;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.45rem;
   border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.675rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 700;
   letter-spacing: 0.03em;
 }
 
 .roleAdmin {
-  background: rgba(139, 92, 246, 0.18);
-  color: #c4b5fd;
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
 }
 
 .roleEngineer {
-  background: rgba(16, 185, 129, 0.18);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
 }
 
 .roleViewer {
   background: rgba(113, 113, 122, 0.2);
-  color: #d4d4d8;
-  border: 1px solid rgba(113, 113, 122, 0.3);
+  color: #a1a1aa;
 }
 
-/* Bool switch */
 .boolBadge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   font-family: var(--font-mono);
-  font-size: 0.725rem;
-  color: #34d399;
+  font-size: 0.7rem;
 }
 
 .boolDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
 }
 
-/* ============================================================
-   View 2: SQL Query Studio
-   ============================================================ */
+/* SQL Studio View */
 .sqlStudio {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  gap: 0.85rem;
-  font-family: var(--font-mono);
+  gap: 0.75rem;
   flex: 1;
+  position: relative;
 }
 
 .sqlEditorHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 0.6rem;
 }
 
 .runQueryBtn {
@@ -699,126 +824,114 @@
   gap: 0.4rem;
   background: #10b981;
   color: #09090b;
-  font-weight: 700;
-  font-size: 0.75rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
   border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .runQueryBtn:hover {
   background: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
 }
 
 .queryStats {
-  font-size: 0.725rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
   color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
 }
 
 .codeArea {
-  background: #121215;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #060608;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  padding: 0.85rem 1rem;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: #e4e4e7;
+  padding: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #f4f4f5;
+  margin: 0;
   overflow-x: auto;
 }
 
-.sqlKeyword {
-  color: #f43f5e;
-  font-weight: 600;
-}
+.sqlComment { color: #52525b; }
+.sqlKeyword { color: #f472b6; font-weight: 600; }
+.sqlFunction { color: #60a5fa; }
+.sqlString { color: #34d399; }
 
-.sqlFunction {
-  color: #38bdf8;
-}
-
-.sqlString {
-  color: #fde047;
-}
-
-.sqlComment {
-  color: #52525b;
-  font-style: italic;
-}
-
-/* Mini result table */
 .sqlResultsTable {
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   overflow: hidden;
-  background: #0d0d10;
+  background: #09090c;
 }
 
-/* ============================================================
-   View 3: Visual Schema & DDL
-   ============================================================ */
+/* Schema View */
 .schemaViewer {
-  padding: 1.25rem;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  flex: 1;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 720px) {
   .schemaViewer {
     grid-template-columns: 1fr;
   }
 }
 
 .schemaCard {
-  background: #121215;
+  background: #111115;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 0.85rem;
 }
 
 .schemaCardTitle {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #f4f4f5;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .schemaColsList {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.725rem;
 }
 
 .schemaColItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.25rem 0.4rem;
-  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.3rem 0.5rem;
   background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
 }
 
 .keyBadge {
-  background: rgba(234, 179, 8, 0.15);
-  color: #facc15;
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 3px;
   font-weight: 700;
 }
 
-/* Bottom App Status Bar */
+/* Status Bar */
 .statusBar {
   display: flex;
   align-items: center;
@@ -826,13 +939,105 @@
   padding: 0.45rem 1rem;
   background: #111114;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: var(--font-mono);
   font-size: 0.7rem;
   color: #71717a;
+  font-family: var(--font-mono);
 }
 
 .statusMeta {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
+
+@media (max-width: 768px) {
+  .titleBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .trafficLights {
+    justify-content: flex-start;
+  }
+
+  .modeTabs {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .titleBarStatus {
+    display: none;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .toolbarRight {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .statusBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .cliSection {
+    width: 100%;
+  }
+
+  .cliBar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .metaBadges {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding-top: 2rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .headline {
+    font-size: 2.1rem;
+    letter-spacing: -0.03em;
+  }
+
+  .primaryDownloadBtn,
+  .secondaryBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cliOsTabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cliSnippet {
+    font-size: 0.75rem;
+  }
+
+  .modeTabBtn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .metaBadges {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
