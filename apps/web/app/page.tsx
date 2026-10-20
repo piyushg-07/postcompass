@@ -21,7 +21,7 @@ export default function Home() {
         <InteractiveDemo />
         <HowItWorks />
         <DownloadSection />
-        <FaqSection />
+        {/* <FaqSection /> */}
       </main>
       <Footer />
     </>

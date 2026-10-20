@@ -346,7 +346,6 @@ export default function Hero() {
                                         value={editingName}
                                         onChange={(e) => handleNameChange(e.target.value)}
                                         className={styles.cellInput}
-                                        autoFocus
                                       />
                                       <span className={styles.cursorBlink} />
                                     </div>

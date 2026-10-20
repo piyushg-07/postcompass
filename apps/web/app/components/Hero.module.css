@@ -27,16 +27,28 @@
 }
 
 @keyframes auroraShift {
-  0% { transform: translateX(-50%) scale(0.95); opacity: 0.75; }
-  50% { transform: translateX(-48%) scale(1.06); opacity: 1; filter: blur(90px); }
-  100% { transform: translateX(-52%) scale(1.02); opacity: 0.85; }
+  0% {
+    transform: translateX(-50%) scale(0.95);
+    opacity: 0.75;
+  }
+
+  50% {
+    transform: translateX(-48%) scale(1.06);
+    opacity: 1;
+    filter: blur(90px);
+  }
+
+  100% {
+    transform: translateX(-52%) scale(1.02);
+    opacity: 0.85;
+  }
 }
 
 /* Subtle tech grid background with radar pulse */
 .gridBackground {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -91,8 +103,17 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 .badgeTag {
@@ -116,8 +137,8 @@
 
 /* Main Headline */
 .headline {
-  font-size: clamp(2.4rem, 5.2vw, 4.2rem);
-  font-weight: 800;
+  font-size: clamp(2.1rem, 5.0vw, 4.0rem);
+  font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.04em;
   color: #ffffff;
@@ -136,9 +157,17 @@
 }
 
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Subtitle */
@@ -232,8 +261,14 @@
 }
 
 @keyframes buttonShimmer {
-  0% { left: -60%; }
-  30%, 100% { left: 140%; }
+  0% {
+    left: -60%;
+  }
+
+  30%,
+  100% {
+    left: 140%;
+  }
 }
 
 .primaryDownloadBtn:hover {
@@ -468,7 +503,7 @@
   padding: 1px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  box-shadow: 
+  box-shadow:
     0 24px 60px -12px rgba(0, 0, 0, 0.85),
     0 0 50px rgba(16, 185, 129, 0.15);
 }
@@ -476,22 +511,25 @@
 .borderBeam {
   position: absolute;
   inset: -150%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 280deg,
-    #10b981 320deg,
-    #38bdf8 345deg,
-    #10b981 360deg
-  );
+  background: conic-gradient(from 0deg,
+      transparent 0deg,
+      transparent 280deg,
+      #10b981 320deg,
+      #38bdf8 345deg,
+      #10b981 360deg);
   animation: rotateBeam 4s linear infinite;
   pointer-events: none;
   z-index: 0;
 }
 
 @keyframes rotateBeam {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .previewGlow {
@@ -629,6 +667,7 @@
   .appLayout {
     grid-template-columns: 1fr;
   }
+
   .sidebar {
     display: none !important;
   }
@@ -716,10 +755,23 @@
 }
 
 @keyframes sweepScan {
-  0% { top: 0%; opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
 }
 
 /* Toolbar */
@@ -857,8 +909,15 @@
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 .roleBadge {
@@ -957,10 +1016,22 @@
   overflow-x: auto;
 }
 
-.sqlComment { color: #52525b; }
-.sqlKeyword { color: #f472b6; font-weight: 600; }
-.sqlFunction { color: #60a5fa; }
-.sqlString { color: #34d399; }
+.sqlComment {
+  color: #52525b;
+}
+
+.sqlKeyword {
+  color: #f472b6;
+  font-weight: 600;
+}
+
+.sqlFunction {
+  color: #60a5fa;
+}
+
+.sqlString {
+  color: #34d399;
+}
 
 .sqlResultsTable {
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1137,4 +1208,3 @@
     gap: 0.5rem;
   }
 }
-

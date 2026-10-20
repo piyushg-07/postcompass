@@ -20,7 +20,6 @@ type Platform = "windows" | "macos" | "linux";
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
   { label: "Cloud Postgres", href: "#cloud-postgres", isLive: true },
-  { label: "Playground", href: "#playground" },
   { label: "Early Access", href: "#waitlist", isWaitlist: true },
   { label: "Download", href: "/download" },
 ];
@@ -66,15 +65,15 @@ export default function Navbar() {
     detectedOs === "windows"
       ? "Windows"
       : detectedOs === "macos"
-      ? "macOS"
-      : "Linux";
+        ? "macOS"
+        : "Linux";
 
   const PlatformIcon =
     detectedOs === "windows"
       ? WindowsIcon
       : detectedOs === "macos"
-      ? AppleIcon
-      : LinuxIcon;
+        ? AppleIcon
+        : LinuxIcon;
 
   return (
     <div className={styles.headerWrapper}>
