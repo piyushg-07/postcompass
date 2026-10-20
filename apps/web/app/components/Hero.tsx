@@ -185,31 +185,6 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* CLI Quick Install Command Bar */}
-        <div className={styles.cliSection}>
-          <div className={styles.cliBar}>
-            <span className={styles.cliPrompt}>$</span>
-            <code className={styles.cliSnippet} suppressHydrationWarning>{CLI_COMMANDS[selectedOs]}</code>
-            <button
-              onClick={handleCopy}
-              className={`${styles.cliCopyBtn} ${copied ? styles.cliCopied : ""}`}
-              aria-label="Copy terminal command"
-            >
-              {copied ? (
-                <>
-                  <Check size={13} />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={13} />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Trust Badges */}
         <div className={styles.metaBadges}>
           <span className={styles.metaItem}>
