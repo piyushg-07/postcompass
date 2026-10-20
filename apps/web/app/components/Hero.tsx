@@ -20,6 +20,7 @@ import {
   WindowsIcon,
   AppleIcon,
   LinuxIcon,
+  Sparkles,
 } from "./Icons";
 import styles from "./Hero.module.css";
 
@@ -96,7 +97,7 @@ export default function Hero() {
       
       <div className={`container ${styles.content}`}>
         {/* Eyebrow / Version Pill */}
-        <a href="#download" className={styles.badge}>
+        <a href="/download" className={styles.badge}>
           <span className={styles.badgeDot} />
           <span className={styles.badgeTag}>v{PRODUCT.version}</span>
           <span>Native PostgreSQL Desktop Studio</span>
@@ -113,7 +114,7 @@ export default function Hero() {
         {/* Primary CTAs with OS Auto-Detection */}
         <div className={styles.ctaWrapper}>
           <div className={styles.ctas}>
-            <a href="#download" className={styles.primaryDownloadBtn} suppressHydrationWarning>
+            <a href="/download" className={styles.primaryDownloadBtn} suppressHydrationWarning>
               <div className={styles.primaryDownloadIcon}>
                 {selectedOs === "windows" && <WindowsIcon size={20} />}
                 {selectedOs === "macos" && <AppleIcon size={20} />}
@@ -134,14 +135,12 @@ export default function Hero() {
             </a>
 
             <a
-              href={PRODUCT.github}
+              href="#waitlist"
               className={styles.secondaryBtn}
-              target="_blank"
-              rel="noopener noreferrer"
             >
-              <Github size={18} />
-              <span>Star on GitHub</span>
-              <span className={styles.githubStarBadge}>★ 4.2k</span>
+              <Sparkles size={18} className={styles.earlyAccessIcon} />
+              <span>Get Early Access</span>
+              <span className={styles.earlyAccessArrow}>↓</span>
             </a>
           </div>
 

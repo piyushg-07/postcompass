@@ -222,8 +222,8 @@ export default function CloudDbShowcase() {
       title: "Direct Connect",
       icon: Cloud,
       eyebrow: "Universal Cloud Bridge",
-      heading: `Connect to ${activeConfig.name} directly from your machine`,
-      desc: `Direct encrypted TCP/SSL connection without any third-party cloud proxy. Supports ${activeConfig.authMethod} with zero latency overhead.`,
+      heading: `Connect to ${activeConfig.name} directly`,
+      desc: `Direct encrypted TCP/SSL connection without proxy latency. Supports ${activeConfig.authMethod}.`,
       features: activeConfig.features,
       footerBadge: `Direct connection to ${activeConfig.name} in ${activeConfig.latency}`,
     },
@@ -232,8 +232,8 @@ export default function CloudDbShowcase() {
       title: "Table Editor",
       icon: Table,
       eyebrow: "Live Data Manipulation",
-      heading: "Inline spreadsheet data editing with atomic commits",
-      desc: "Click any cell to edit data live in the cloud. Changes are previewed with full SQL transparency before executing safely.",
+      heading: "Inline data editing with atomic commits",
+      desc: "Click any cell to edit live. Instant preview of generated SQL before atomic commit.",
       features: [
         "Inline cell editing with optimistic local updates",
         "Visual editors for JSONB, Arrays, Enums, and UUID types",
@@ -247,8 +247,8 @@ export default function CloudDbShowcase() {
       title: "SQL & EXPLAIN",
       icon: Code,
       eyebrow: "Performance Studio",
-      heading: "Sub-3ms queries with visual EXPLAIN ANALYZE tree",
-      desc: "Run queries against your remote database with catalog-aware autocomplete. Detect sequential scans and inspect buffer cache hit rates.",
+      heading: "Sub-3ms queries with visual EXPLAIN ANALYZE",
+      desc: "Run queries with catalog autocomplete, cache metrics, and visual EXPLAIN tree.",
       features: [
         "Catalog-aware autocomplete against your cloud schema",
         "Visual EXPLAIN execution tree with cost hotspots",
@@ -262,8 +262,8 @@ export default function CloudDbShowcase() {
       title: "Safe Migrations",
       icon: Layers,
       eyebrow: "Zero-Downtime DDL",
-      heading: "Deploy migrations safely with lock timeout guards",
-      desc: "PostCompass enforces 2000ms lock timeouts, generates CONCURRENTLY indexes, and prevents blocking live user traffic on production.",
+      heading: "Deploy migrations with lock timeout guards",
+      desc: "Enforces 2000ms lock timeouts and builds indexes concurrently to prevent downtime.",
       features: [
         "Local vs. Cloud production schema diff inspection",
         "Automatic CREATE INDEX CONCURRENTLY to prevent locks",
@@ -422,14 +422,8 @@ export default function CloudDbShowcase() {
             <span>Multi-Cloud PostgreSQL Studio</span>
           </div>
           <h2 className={styles.title}>
-            Connect Any Cloud PostgreSQL.{" "}
-            <span className={styles.titleGradient}>
-              Query & Mutate Live Data in &lt;3ms.
-            </span>
+            Connect Any Cloud PostgreSQL
           </h2>
-          <p className={styles.description}>
-            Direct TCP connection from your local workstation with zero third-party proxy. Seamlessly manage AWS RDS, Supabase, Neon, Google Cloud SQL, or self-hosted databases with complete data privacy.
-          </p>
 
           {/* Cloud Provider Switcher Pills */}
           <div className={styles.providerPicker}>

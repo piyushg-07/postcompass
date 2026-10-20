@@ -39,6 +39,9 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  max-width: 1140px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .demoContent {
