@@ -1,169 +1,421 @@
-.header {
+/* ============================================================
+   PostCompass — Floating Glassmorphism Navbar (AppKittie Inspired)
+   Ultra-sleek rounded island with blur and vibrant emerald glow
+   ============================================================ */
+
+.headerWrapper {
   position: sticky;
-  top: 0;
+  top: 0.75rem;
   left: 0;
   right: 0;
   z-index: 100;
-  transition: all var(--transition-base);
-  background: rgba(9, 9, 11, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-default);
+  padding: 0 1rem;
+  width: 100%;
+}
+
+.header {
+  max-width: 1100px;
+  margin: 0 auto;
+  border-radius: 9999px;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .header.scrolled {
-  background: rgba(9, 9, 11, 0.95);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 16px 40px -10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 24px rgba(255, 255, 255, 0.05);
 }
 
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: var(--nav-height);
-  gap: var(--space-8);
+  height: 54px;
+  padding: 0 1.25rem;
+  gap: 1.25rem;
 }
 
-/* Logo */
-.logo {
+/* Brand Group */
+.brandGroup {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-weight: 700;
-  font-size: var(--text-lg);
-  color: var(--fg-primary);
-  transition: opacity var(--transition-fast);
+  gap: 0.75rem;
   flex-shrink: 0;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #ffffff;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
 .logo:hover {
-  opacity: 0.8;
+  opacity: 0.9;
+}
+
+.logoIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
 .logoIcon {
-  color: var(--accent);
+  color: var(--accent, #10b981);
 }
 
 .logoText {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
-/* Nav links */
+.versionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--fg-secondary, #a1a1aa);
+}
+
+.versionDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent, #10b981);
+  box-shadow: 0 0 6px var(--accent, #10b981);
+}
+
+/* Desktop Links */
 .links {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--fg-secondary);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  white-space: nowrap;
+  gap: 0.45rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--fg-secondary, #a1a1aa);
+  text-decoration: none;
+  transition: all 0.15s ease;
 }
 
 .link:hover {
-  color: var(--fg-primary);
-  background: var(--bg-hover);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Actions */
+.linkHighlight {
+  color: #38bdf8 !important;
+}
+
+.linkHighlight:hover {
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+.livePulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Actions Group */
 .actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 0.65rem;
   flex-shrink: 0;
 }
 
-.menuBtn {
+/* GitHub Star Button */
+.githubBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--fg-secondary, #a1a1aa);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.githubBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.githubLabel {
+  font-weight: 500;
+}
+
+.githubStarCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: #fbbf24;
+}
+
+/* AppKittie Inspired Vivid Waitlist Button */
+.waitlistBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 14px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: #000000;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.waitlistBtn:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.55);
+  transform: translateY(-1px);
+}
+
+/* Mobile Toggle */
+.menuToggle {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--fg-secondary, #a1a1aa);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.menuToggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 /* Mobile Overlay */
 .mobileOverlay {
   position: fixed;
   inset: 0;
-  z-index: 90;
-  background: rgba(0, 0, 0, 0.6);
+  z-index: 85;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--transition-base);
+  transition: opacity 0.25s ease;
 }
 
-.mobileOverlay.open {
+.mobileOverlayOpen {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* Mobile Menu */
+/* Mobile Drawer */
 .mobileMenu {
   position: fixed;
-  top: var(--nav-height);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 95;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-default);
-  padding: var(--space-4) var(--space-6);
+  top: calc(0.75rem + 60px);
+  left: 1rem;
+  right: 1rem;
+  z-index: 90;
+  background: rgba(14, 16, 20, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
   transform: translateY(-10px);
   opacity: 0;
   pointer-events: none;
-  transition: all var(--transition-base);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: calc(100vh - 100px);
   overflow-y: auto;
 }
 
-.mobileMenu.open {
+.mobileMenuOpen {
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
 
-.mobileLink {
+.mobileMenuInner {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mobileNavLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mobileNavLink {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-3);
-  font-size: var(--text-lg);
+  justify-content: space-between;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
   font-weight: 500;
-  color: var(--fg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
-  transition: color var(--transition-fast);
+  color: var(--fg-secondary, #a1a1aa);
+  text-decoration: none;
+  transition: all 0.15s ease;
 }
 
-.mobileLink:hover {
-  color: var(--fg-primary);
+.mobileNavLink:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
 }
 
-.mobileCta {
-  padding-top: var(--space-6);
-  border-bottom: none;
+.mobileNavLinkTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+.mobileNavChevron {
+  font-family: var(--font-mono, monospace);
+  color: #52525b;
+}
+
+.mobileMenuDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobileActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobileWaitlistBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #000000;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+
+.mobileDownloadBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mobileGithubBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-secondary, #a1a1aa);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+/* Responsive Queries */
+@media (max-width: 860px) {
   .links {
     display: none;
   }
 
-  .menuBtn {
+  .menuToggle {
     display: flex;
   }
 
-  .actions :global(.btn-primary) {
+  .githubBtn {
     display: none;
   }
 }
 
-@media (min-width: 769px) {
-  .mobileOverlay,
-  .mobileMenu {
+@media (max-width: 480px) {
+  .headerWrapper {
+    top: 0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .versionBadge {
     display: none;
+  }
+
+  .waitlistBtn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
   }
 }

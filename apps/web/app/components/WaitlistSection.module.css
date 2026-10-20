@@ -1,0 +1,341 @@
+/* ============================================================
+   PostCompass — Early Access Waitlist Component
+   AppKittie-inspired glassmorphism waitlist studio
+   ============================================================ */
+
+.section {
+  position: relative;
+  padding: 4.5rem 0 5.5rem 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, rgba(9, 9, 11, 0.95) 75%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ambientGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.15) 0%, rgba(56, 189, 248, 0.08) 45%, transparent 70%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* Glassmorphism Card */
+.glassCard {
+  background: rgba(14, 16, 20, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  box-shadow: 
+    0 24px 60px -12px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 40px rgba(16, 185, 129, 0.12);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--accent, #10b981);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.25rem;
+}
+
+.pulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #10b981);
+  box-shadow: 0 0 8px var(--accent, #10b981);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.title {
+  font-size: clamp(1.85rem, 3.8vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  line-height: 1.2;
+  margin-bottom: 0.85rem;
+}
+
+.titleGradient {
+  background: linear-gradient(135deg, #10b981 0%, #38bdf8 60%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.description {
+  font-size: var(--text-base, 1rem);
+  color: var(--fg-secondary, #a1a1aa);
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto 2.25rem auto;
+}
+
+/* Form Layout */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.inputGroup {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr auto;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.fieldWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg-muted, #71717a);
+  letter-spacing: 0.02em;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.input {
+  width: 100%;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent, #10b981);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+  background: rgba(14, 16, 20, 0.95);
+}
+
+.input::placeholder {
+  color: #52525b;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #000000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+  height: 44px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submitArrow {
+  transition: transform 0.15s ease;
+}
+
+.submitBtn:hover .submitArrow {
+  transform: translateX(2px);
+}
+
+.errorAlert {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.guarantee {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--fg-muted, #71717a);
+}
+
+.guaranteeIcon {
+  color: var(--accent, #10b981);
+}
+
+.spreadsheetLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #38bdf8;
+  text-decoration: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  transition: color 0.15s ease;
+}
+
+.spreadsheetLink:hover {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+/* Success Card */
+.successCard {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+  padding: 2.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.successIconWrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.successIcon {
+  color: var(--accent, #10b981);
+}
+
+.successHeading {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.successText {
+  font-size: 0.9rem;
+  color: var(--fg-secondary, #a1a1aa);
+  max-width: 520px;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.successText strong {
+  color: #ffffff;
+}
+
+.successMeta {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.75rem;
+  color: #34d399;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.resetBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.resetBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive Queries */
+@media (max-width: 768px) {
+  .glassCard {
+    padding: 2.25rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .inputGroup {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .submitBtn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .formFooter {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}

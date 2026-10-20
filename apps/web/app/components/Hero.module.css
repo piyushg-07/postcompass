@@ -156,30 +156,66 @@
 }
 
 /* CTA Group */
+.ctaWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
 .ctas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
 .primaryDownloadBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.85rem;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #09090b;
+  color: #000000;
   font-weight: 700;
-  font-size: var(--text-base);
-  padding: 0.85rem 1.6rem;
-  border-radius: 10px;
+  padding: 0.85rem 1.75rem;
+  border-radius: 12px;
   text-decoration: none;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  text-align: left;
+}
+
+.primaryDownloadIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  flex-shrink: 0;
+}
+
+.primaryDownloadText {
+  display: flex;
+  flex-direction: column;
+}
+
+.primaryDownloadMain {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #042f2e;
+}
+
+.primaryDownloadSub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(4, 47, 46, 0.75);
+  font-family: var(--font-mono, monospace);
+  margin-top: 1px;
 }
 
 .primaryDownloadBtn::after {
@@ -201,7 +237,7 @@
 
 .primaryDownloadBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.55);
   background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
 }
 
@@ -213,8 +249,8 @@
   color: #f4f4f5;
   font-weight: 600;
   font-size: var(--text-base);
-  padding: 0.85rem 1.4rem;
-  border-radius: 10px;
+  padding: 0.95rem 1.5rem;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   text-decoration: none;
   transition: all 0.2s ease;
@@ -234,6 +270,47 @@
   border-radius: 4px;
   font-size: var(--text-xs);
   color: #34d399;
+}
+
+/* Quick Platform Switcher */
+.osSelectorRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.osSelectorPrompt {
+  color: var(--fg-muted, #71717a);
+}
+
+.osPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--fg-secondary, #a1a1aa);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.osPill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.osPillActive {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
+  font-weight: 600;
 }
 
 /* CLI Quick Install Command Bar with OS Switcher */

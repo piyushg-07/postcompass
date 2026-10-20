@@ -59,6 +59,7 @@ export default function InteractiveDemo() {
               onClick={() => setActiveTab(tab.id)}
               role="tab"
               aria-selected={activeTab === tab.id}
+              suppressHydrationWarning
             >
               {tab.label}
             </button>

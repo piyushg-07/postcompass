@@ -16,7 +16,10 @@ import {
   Shield,
   Globe,
   Cpu,
-  Server
+  Server,
+  WindowsIcon,
+  AppleIcon,
+  LinuxIcon,
 } from "./Icons";
 import styles from "./Hero.module.css";
 
@@ -46,7 +49,7 @@ const INITIAL_ROWS: UserRow[] = [
 ];
 
 export default function Hero() {
-  const [selectedOs, setSelectedOs] = useState<SupportedOs>("macos");
+  const [selectedOs, setSelectedOs] = useState<SupportedOs>("windows");
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"table" | "sql" | "schema">("table");
   const [rows, setRows] = useState<UserRow[]>(INITIAL_ROWS);
@@ -59,7 +62,7 @@ export default function Hero() {
       const ua = navigator.userAgent.toLowerCase();
       if (ua.includes("win")) setSelectedOs("windows");
       else if (ua.includes("linux")) setSelectedOs("linux");
-      else setSelectedOs("macos");
+      else if (ua.includes("mac")) setSelectedOs("macos");
     }
   }, []);
 
@@ -96,63 +99,98 @@ export default function Hero() {
         <a href="#download" className={styles.badge}>
           <span className={styles.badgeDot} />
           <span className={styles.badgeTag}>v{PRODUCT.version}</span>
-          <span>Native PostgreSQL Desktop Client</span>
-          <span className={styles.badgeSep}>·</span>
-          <span className={styles.badgeHighlight}>Tauri + Rust</span>
+          <span>Native PostgreSQL Desktop Studio</span>
           <ChevronRight size={13} />
         </a>
 
-        {/* High-Impact Headline */}
+        {/* Clean, High-Impact Headline */}
         <h1 className={styles.headline}>
-          The Native PostgreSQL Client
+          The Local-First PostgreSQL Studio.
           <br />
-          <span className={styles.headlineAccent}>Built for Developer Speed.</span>
+          <span className={styles.headlineAccent}>Connect Any Cloud. Query in Milliseconds.</span>
         </h1>
 
-        {/* Subtitle */}
-        <p className={styles.subtitle}>
-          Instant spreadsheet editing, sub-2ms direct SQL queries, and visual schema branching.{" "}
-          <span className={styles.subtitleHighlight}>
-            Combines the agility of Supabase with the deep inspection power of pgAdmin
-          </span>{" "}
-          — 100% local-first with zero telemetry.
-        </p>
+        {/* Primary CTAs with OS Auto-Detection */}
+        <div className={styles.ctaWrapper}>
+          <div className={styles.ctas}>
+            <a href="#download" className={styles.primaryDownloadBtn} suppressHydrationWarning>
+              <div className={styles.primaryDownloadIcon}>
+                {selectedOs === "windows" && <WindowsIcon size={20} />}
+                {selectedOs === "macos" && <AppleIcon size={20} />}
+                {selectedOs === "linux" && <LinuxIcon size={20} />}
+                {selectedOs === "cargo" && <Code size={20} />}
+              </div>
+              <div className={styles.primaryDownloadText}>
+                <span className={styles.primaryDownloadMain} suppressHydrationWarning>
+                  {selectedOs === "cargo" ? "Install via Cargo CLI" : `Download for ${currentOsLabel}`}
+                </span>
+                <span className={styles.primaryDownloadSub} suppressHydrationWarning>
+                  {selectedOs === "windows" && ".exe · 64-bit & ARM64 · 14.2 MB"}
+                  {selectedOs === "macos" && "Universal .dmg · Apple Silicon & Intel"}
+                  {selectedOs === "linux" && ".AppImage / .deb · x64 · 14.2 MB"}
+                  {selectedOs === "cargo" && "cargo install postcompass-cli"}
+                </span>
+              </div>
+            </a>
 
-        {/* Primary CTAs */}
-        <div className={styles.ctas}>
-          <a href="#download" className={styles.primaryDownloadBtn}>
-            <Download size={18} />
-            Download Free for {currentOsLabel}
-          </a>
-          <a
-            href={PRODUCT.github}
-            className={styles.secondaryBtn}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Github size={18} />
-            Star on GitHub
-            <span className={styles.githubStarBadge}>★ 4.2k</span>
-          </a>
-        </div>
-
-        {/* CLI Quick Install Command Bar with OS Switcher */}
-        <div className={styles.cliSection}>
-          <div className={styles.cliOsTabs}>
-            {(["macos", "windows", "linux", "cargo"] as SupportedOs[]).map((os) => (
-              <button
-                key={os}
-                onClick={() => setSelectedOs(os)}
-                className={`${styles.cliOsBtn} ${selectedOs === os ? styles.cliOsBtnActive : ""}`}
-              >
-                {os === "macos" ? "macOS" : os === "windows" ? "Windows" : os === "linux" ? "Linux" : "Cargo"}
-              </button>
-            ))}
+            <a
+              href={PRODUCT.github}
+              className={styles.secondaryBtn}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Github size={18} />
+              <span>Star on GitHub</span>
+              <span className={styles.githubStarBadge}>★ 4.2k</span>
+            </a>
           </div>
 
+          {/* Quick Platform Switcher */}
+          <div className={styles.osSelectorRow}>
+            <span className={styles.osSelectorPrompt}>Other platforms:</span>
+            <button
+              type="button"
+              onClick={() => setSelectedOs("windows")}
+              className={`${styles.osPill} ${selectedOs === "windows" ? styles.osPillActive : ""}`}
+              suppressHydrationWarning
+            >
+              <WindowsIcon size={12} />
+              <span>Windows</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedOs("macos")}
+              className={`${styles.osPill} ${selectedOs === "macos" ? styles.osPillActive : ""}`}
+              suppressHydrationWarning
+            >
+              <AppleIcon size={12} />
+              <span>macOS</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedOs("linux")}
+              className={`${styles.osPill} ${selectedOs === "linux" ? styles.osPillActive : ""}`}
+              suppressHydrationWarning
+            >
+              <LinuxIcon size={12} />
+              <span>Linux</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedOs("cargo")}
+              className={`${styles.osPill} ${selectedOs === "cargo" ? styles.osPillActive : ""}`}
+              suppressHydrationWarning
+            >
+              <span>Cargo</span>
+            </button>
+          </div>
+        </div>
+
+        {/* CLI Quick Install Command Bar */}
+        <div className={styles.cliSection}>
           <div className={styles.cliBar}>
             <span className={styles.cliPrompt}>$</span>
-            <code className={styles.cliSnippet}>{CLI_COMMANDS[selectedOs]}</code>
+            <code className={styles.cliSnippet} suppressHydrationWarning>{CLI_COMMANDS[selectedOs]}</code>
             <button
               onClick={handleCopy}
               className={`${styles.cliCopyBtn} ${copied ? styles.cliCopied : ""}`}
