@@ -1,81 +1,55 @@
-import { Button, Dialog, DialogContent, EmptyState } from "@repo/ui";
-import { Cloud, Database, Plus, RefreshCw } from "lucide-react";
+import { Button, Dialog, DialogContent } from "@repo/ui";
+import { Cloud, Database, Plus } from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
-import { PageHeader } from "../../app/page";
 import { DatabaseCard } from "./database-card";
-import { DetectionResults } from "./detection-results";
 import { InstallFlow } from "./install-flow";
 import { RemoteConnectionCard } from "./remote-connection-card";
 import { RemoteConnectionDialog } from "./remote-connection-dialog";
-import { useDetection } from "./use-detection";
 import { useServerStatuses } from "./use-server-statuses";
 
-/** Every PostgreSQL database PostCompass manages, remote connections, and other installs found on this computer. */
 export function DatabasesPage() {
   const { state, refresh } = useAppState();
   const installOpen = useNavigation((s) => s.installDialogOpen);
   const setInstallOpen = useNavigation((s) => s.setInstallDialogOpen);
   const openRemoteDialog = useNavigation((s) => s.openRemoteDialog);
-  const { statuses, setStatus } = useServerStatuses(
-    state.servers.map((s) => s.id),
-  );
-  const detection = useDetection();
+  const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
   const [installing, setInstalling] = useState(false);
-  const running = state.servers.filter(
-    (s) => statuses[s.id] === "running",
-  ).length;
 
   return (
-    <>
-      <PageHeader
-        title="Databases"
-        description={
-          state.servers.length
-            ? `${state.servers.length} local database${state.servers.length === 1 ? "" : "s"} · ${running} running`
-            : "PostgreSQL databases on this computer."
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              iconLeft={<Cloud />}
-              onClick={() => openRemoteDialog()}
-            >
-              Add remote
-            </Button>
-            <Button
-              variant="primary"
-              iconLeft={<Plus />}
-              onClick={() => setInstallOpen(true)}
-            >
-              New local database
-            </Button>
-          </div>
-        }
-      />
+    <div className="flex flex-col gap-10">
 
-      {/* ── Local managed databases ─────────────────────────────────────── */}
-      {state.servers.length === 0 ? (
-        <div className="rounded-card border border-dashed border-border-strong">
-          <EmptyState
-            icon={<Database />}
-            title="No databases yet"
-            description="Create a local PostgreSQL database in one click. It runs only on this computer and needs no admin rights."
-            actions={
-              <Button
-                variant="primary"
-                iconLeft={<Plus />}
-                onClick={() => setInstallOpen(true)}
-              >
-                New local database
-              </Button>
-            }
-          />
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-fg">Databases</h1>
+          <p className="mt-0.5 text-sm text-fg-muted">Local and remote PostgreSQL databases.</p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" iconLeft={<Cloud />} onClick={() => openRemoteDialog()}>
+            Add remote
+          </Button>
+          <Button variant="primary" size="sm" iconLeft={<Plus />} onClick={() => setInstallOpen(true)}>
+            New local
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Local databases ──────────────────────────────────────────────── */}
+      <SectionGroup
+        title="Local"
+        description="Managed by PostCompass on this computer."
+        action={
+          <button
+            className="text-xs text-fg-subtle hover:text-fg transition-colors"
+            onClick={() => setInstallOpen(true)}
+          >
+            + New
+          </button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {state.servers.map((server) => (
             <DatabaseCard
               key={server.id}
@@ -84,75 +58,42 @@ export function DatabasesPage() {
               onStatus={(s) => setStatus(server.id, s)}
             />
           ))}
+          {/* Add new tile */}
+          <NewTile
+            icon={<Database className="size-5 text-fg-subtle" />}
+            label="New local database"
+            onClick={() => setInstallOpen(true)}
+          />
         </div>
-      )}
+      </SectionGroup>
 
-      {/* ── Remote connections ──────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-sm font-semibold text-fg">Remote connections</h2>
-            <p className="text-xs text-fg-muted">
-              AWS RDS / Aurora, GCP Cloud SQL, Azure, Cloudflare Hyperdrive, Supabase, Neon, and any other PostgreSQL endpoint.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            iconLeft={<Plus />}
+      {/* ── Remote connections ───────────────────────────────────────────── */}
+      <SectionGroup
+        title="Remote"
+        description="Cloud or self-hosted PostgreSQL endpoints."
+        action={
+          <button
+            className="text-xs text-fg-subtle hover:text-fg transition-colors"
             onClick={() => openRemoteDialog()}
           >
-            Add connection
-          </Button>
+            + Add
+          </button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+          {state.remoteConnections.map((rc) => (
+            <RemoteConnectionCard key={rc.id} remote={rc} />
+          ))}
+          {/* Add new tile */}
+          <NewTile
+            icon={<Cloud className="size-5 text-fg-subtle" />}
+            label="Add remote connection"
+            onClick={() => openRemoteDialog()}
+          />
         </div>
+      </SectionGroup>
 
-        {state.remoteConnections.length === 0 ? (
-          <div className="rounded-card border border-dashed border-border px-6 py-8 text-center">
-            <p className="text-sm text-fg-muted">
-              No remote connections yet.{" "}
-              <button
-                className="text-accent underline underline-offset-2 hover:text-accent-hover"
-                onClick={() => openRemoteDialog()}
-              >
-                Add one
-              </button>{" "}
-              to connect to a cloud Postgres database.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {state.remoteConnections.map((rc) => (
-              <RemoteConnectionCard key={rc.id} remote={rc} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Also on this computer ───────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-sm font-semibold text-fg">
-              Also on this computer
-            </h2>
-            <p className="text-xs text-fg-muted">
-              PostgreSQL installed outside PostCompass.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            iconLeft={<RefreshCw />}
-            loading={detection.state.status === "scanning"}
-            onClick={detection.rescan}
-          >
-            Scan again
-          </Button>
-        </div>
-        <DetectionResults state={detection.state} />
-      </section>
-
-      {/* ── Dialogs ─────────────────────────────────────────────────────── */}
+      {/* ── Dialogs ──────────────────────────────────────────────────────── */}
       <Dialog
         open={installOpen}
         onOpenChange={(open) => (open || !installing) && setInstallOpen(open)}
@@ -160,7 +101,7 @@ export function DatabasesPage() {
         <DialogContent
           title="New local database"
           description="Installs PostgreSQL privately for this computer. No admin rights needed."
-          className="w-[520px]"
+          className="w-130"
           hideClose={installing}
         >
           <InstallFlow
@@ -169,14 +110,64 @@ export function DatabasesPage() {
             onInstalled={() => {
               setInstallOpen(false);
               void refresh();
-              detection.rescan();
             }}
           />
         </DialogContent>
       </Dialog>
 
-      {/* Remote connection add/edit dialog — always mounted so navigation can open it */}
       <RemoteConnectionDialog />
-    </>
+    </div>
+  );
+}
+
+// ── Section wrapper ────────────────────────────────────────────────────────────
+
+function SectionGroup({
+  title,
+  description,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-semibold text-fg">{title}</h2>
+          {description && (
+            <span className="text-xs text-fg-subtle">{description}</span>
+          )}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ── "Add new" dashed tile ──────────────────────────────────────────────────────
+
+function NewTile({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-border py-8 text-center transition-all hover:border-border-strong hover:bg-surface"
+    >
+      <span className="transition-transform group-hover:scale-110">{icon}</span>
+      <span className="text-xs text-fg-subtle group-hover:text-fg">{label}</span>
+    </button>
   );
 }

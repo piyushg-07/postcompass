@@ -1,17 +1,6 @@
-/**
- * Card for a saved remote connection on the Databases page.
- *
- * Shows provider badge, host:port, SSL mode, and lets the user:
- *   • Open the connection in the explorer
- *   • Edit the connection details
- *   • Copy the connection string
- *   • Delete the connection
- */
-
 import {
   Badge,
   Button,
-  Card,
   ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
@@ -21,16 +10,8 @@ import {
   IconButton,
   toast,
 } from "@repo/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Cloud,
-  Copy,
-  ExternalLink,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Unplug,
-} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
@@ -38,37 +19,19 @@ import type { RemoteConnection } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import { useWorkspaceStore } from "../explorer/workspace-store";
+import { PROVIDER_LOGOS, ProviderLogo } from "./provider-logos";
 
-// ── Provider display ──────────────────────────────────────────────────────────
-
-const PROVIDER_LABELS: Record<string, string> = {
-  aws:        "AWS RDS",
-  gcp:        "Cloud SQL",
-  azure:      "Azure",
-  cloudflare: "Hyperdrive",
-  supabase:   "Supabase",
-  neon:       "Neon",
-  railway:    "Railway",
-  render:     "Render",
-  other:      "PostgreSQL",
-};
+// ── SSL labels ────────────────────────────────────────────────────────────────
 
 const SSL_LABELS: Record<string, string> = {
   disable:     "No TLS",
   prefer:      "TLS preferred",
-  require:     "TLS required",
+  require:     "TLS",
   verify_full: "TLS verified",
 };
 
-function providerLabel(id: string) {
-  return PROVIDER_LABELS[id] ?? id;
-}
-
-// ── Connection string ─────────────────────────────────────────────────────────
-
-function remoteConnectionString(rc: RemoteConnection, password: string | null) {
-  const secret = password === null ? "••••••••" : encodeURIComponent(password);
-  return `postgresql://${rc.user}:${secret}@${rc.host}:${rc.port}/${encodeURIComponent(rc.database)}`;
+function remoteConnectionString(rc: RemoteConnection) {
+  return `postgresql://${rc.user}:••••••••@${rc.host}:${rc.port}/${encodeURIComponent(rc.database)}`;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -83,22 +46,8 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
   const [removing, setRemoving] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Session id mirrors what the Rust side generates with `remote_connection_id(id)`
   const connectionId = `remote:${remote.id}`;
-
-  // Check if there's an open session for this remote connection
-  const connectionQuery = useQuery({
-    queryKey: queryKeys.remoteConnection(remote.id),
-    queryFn: async () => {
-      // We don't have a direct "is open?" command; track via open action.
-      return null as null;
-    },
-    staleTime: Infinity,
-    enabled: false,
-  });
-  const isOpen = !!useWorkspaceStore(
-    (s) => s.workspaces[connectionId],
-  );
+  const isOpen = !!useWorkspaceStore((s) => s.workspaces[connectionId]);
 
   const forgetConnection = () => {
     queryClient.removeQueries({ queryKey: queryKeys.remoteConnection(remote.id) });
@@ -118,11 +67,10 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
     }
   };
 
-  const copyConnectionString = () => {
+  const copyConnectionString = () =>
     void navigator.clipboard
-      .writeText(remoteConnectionString(remote, null))
+      .writeText(remoteConnectionString(remote))
       .then(() => toast.success("Connection string copied (password masked)"));
-  };
 
   const handleRemove = async () => {
     const newState = await unwrap(commands.removeRemoteConnection(remote.id));
@@ -131,78 +79,63 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
     toast.success(`${remote.name} removed`);
   };
 
+  const meta = PROVIDER_LOGOS[remote.provider] ?? PROVIDER_LOGOS.other;
+
   return (
     <>
-      <Card className="group flex flex-col transition-colors hover:border-border-strong">
-        <div className="flex items-start gap-3 p-4">
-          {/* Icon */}
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-bg text-fg-muted">
-            <Cloud className="size-4" />
-          </div>
-
-          {/* Name + badges */}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="truncate text-sm font-semibold text-fg">{remote.name}</span>
-              <Badge>{providerLabel(remote.provider)}</Badge>
-              <Badge variant="outline">{SSL_LABELS[remote.sslMode] ?? remote.sslMode}</Badge>
+      <div className="group flex flex-col rounded-card border border-border bg-surface transition-colors hover:border-border-strong">
+        {/* Card body */}
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          {/* Top row: provider logo + menu */}
+          <div className="flex items-start justify-between">
+            <div className="flex size-9 items-center justify-center rounded-control border border-border bg-bg p-1.5">
+              <ProviderLogo provider={remote.provider} className="size-full" />
             </div>
-            <span className="flex items-center gap-1.5 text-xs text-fg-muted">
-              <span className="font-mono">{remote.host}:{remote.port}</span>
-              <span className="text-fg-subtle">·</span>
-              <span>{remote.user}@{remote.database}</span>
-            </span>
-          </div>
-
-          {/* Actions */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="primary"
-              iconLeft={<ExternalLink />}
-              loading={busy}
-              onClick={() => void handleOpen()}
-            >
-              Open
-            </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <IconButton size="sm" label="More actions" icon={<MoreHorizontal />} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem icon={<Pencil />} onSelect={() => openRemoteDialog(remote.id)}>
-                  Edit connection
-                </DropdownMenuItem>
-                <DropdownMenuItem icon={<Copy />} onSelect={copyConnectionString}>
-                  Copy connection string
-                </DropdownMenuItem>
+                <DropdownMenuItem icon={<Pencil />} onSelect={() => openRemoteDialog(remote.id)}>Edit connection</DropdownMenuItem>
+                <DropdownMenuItem icon={<Copy />} onSelect={copyConnectionString}>Copy connection string</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  icon={<Trash2 />}
-                  danger
-                  onSelect={() => setConfirmRemove(true)}
-                >
-                  Remove connection…
-                </DropdownMenuItem>
+                <DropdownMenuItem icon={<Trash2 />} danger onSelect={() => setConfirmRemove(true)}>Remove connection…</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* Name + host */}
+          <div className="flex flex-col gap-0.5">
+            <span className="truncate text-sm font-semibold text-fg">{remote.name}</span>
+            <span className="truncate text-xs text-fg-muted font-mono">{remote.host}:{remote.port}</span>
+          </div>
+
+          {/* Provider badge + SSL */}
+          <div className="flex items-center gap-2">
+            <Badge>{meta.label}</Badge>
+            <span className="text-xs text-fg-subtle">{SSL_LABELS[remote.sslMode] ?? remote.sslMode}</span>
+            {isOpen && (
+              <span className="ml-auto flex items-center gap-1 text-[10px] font-medium text-success">
+                <span className="size-1.5 rounded-full bg-success" />
+                Open
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Connection string footer */}
+        {/* Footer */}
         <div className="flex items-center gap-2 border-t border-border px-4 py-2.5">
-          <span className="min-w-0 flex-1 truncate font-mono text-xs text-fg-muted">
-            {remoteConnectionString(remote, null)}
-          </span>
-          <IconButton
+          <Button
             size="sm"
-            label="Copy connection string"
-            icon={<Copy />}
-            onClick={copyConnectionString}
-          />
+            variant="primary"
+            className="flex-1"
+            loading={busy}
+            onClick={() => void handleOpen()}
+          >
+            {isOpen ? "Switch to" : "Open"}
+          </Button>
         </div>
-      </Card>
+      </div>
 
       <ConfirmDialog
         open={confirmRemove}
@@ -216,9 +149,7 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
           setRemoving(true);
           handleRemove()
             .then(() => setConfirmRemove(false))
-            .catch((e: unknown) =>
-              toast.error("Couldn't remove it", { description: describeError(e).message }),
-            )
+            .catch((e: unknown) => toast.error("Couldn't remove it", { description: describeError(e).message }))
             .finally(() => setRemoving(false));
         }}
       />
