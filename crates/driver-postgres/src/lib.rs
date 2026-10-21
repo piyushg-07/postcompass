@@ -18,12 +18,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
+use native_tls::TlsConnector;
 use pc_core::driver::{
     ApplyResult, CancellationToken, ConnectionConfig, DatabaseDriver, DatabaseInfo, DriverSession, ExecuteResult,
     ExplainResult, ExtensionInfo, ObjectKind, RowChange, RowsPage, RowsRequest, SchemaGraph, SchemaInfo, SchemaObjects,
-    TableInfo, TableStructure, TestResult,
+    SslMode, TableInfo, TableStructure, TestResult,
 };
 use pc_core::{CoreError, CoreResult, DatabaseKind};
+use postgres_native_tls::MakeTlsConnector;
 use tokio::sync::Mutex;
 use tokio_postgres::error::SqlState;
 use tokio_postgres::{Client, NoTls};
@@ -209,16 +211,78 @@ async fn open(config: &ConnectionConfig, database: &str) -> CoreResult<Client> {
         .application_name(APPLICATION_NAME)
         .connect_timeout(CONNECT_TIMEOUT);
 
-    let (client, connection) = tokio::time::timeout(CONNECT_TIMEOUT + Duration::from_secs(2), pg.connect(NoTls))
-        .await
-        .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
-        .map_err(map_error)?;
-
-    // The connection object drives the socket; it ends when the client is dropped.
-    tokio::spawn(async move {
-        let _ = connection.await;
-    });
-    Ok(client)
+    match config.ssl_mode {
+        SslMode::Disable => {
+            let (client, connection) = tokio::time::timeout(CONNECT_TIMEOUT + Duration::from_secs(2), pg.connect(NoTls))
+                .await
+                .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
+                .map_err(map_error)?;
+            tokio::spawn(async move { let _ = connection.await; });
+            Ok(client)
+        }
+        SslMode::Prefer => {
+            // Try TLS first; if the server rejects it, fall back to plain.
+            let connector = TlsConnector::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .map_err(|e| CoreError::ConnectionFailed(format!("TLS init failed: {e}")))?;
+            let tls = MakeTlsConnector::new(connector);
+            let tls_result = tokio::time::timeout(
+                CONNECT_TIMEOUT + Duration::from_secs(2),
+                pg.connect(tls),
+            ).await;
+            match tls_result {
+                Ok(Ok((client, connection))) => {
+                    tokio::spawn(async move { let _ = connection.await; });
+                    Ok(client)
+                }
+                _ => {
+                    // Fall back to NoTls
+                    let (client, connection) = tokio::time::timeout(
+                        CONNECT_TIMEOUT + Duration::from_secs(2),
+                        pg.connect(NoTls),
+                    )
+                    .await
+                    .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
+                    .map_err(map_error)?;
+                    tokio::spawn(async move { let _ = connection.await; });
+                    Ok(client)
+                }
+            }
+        }
+        SslMode::Require => {
+            // Require TLS but don't verify the cert (common for self-signed RDS certs).
+            let connector = TlsConnector::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .map_err(|e| CoreError::ConnectionFailed(format!("TLS init failed: {e}")))?;
+            let tls = MakeTlsConnector::new(connector);
+            let (client, connection) = tokio::time::timeout(
+                CONNECT_TIMEOUT + Duration::from_secs(2),
+                pg.connect(tls),
+            )
+            .await
+            .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
+            .map_err(map_error)?;
+            tokio::spawn(async move { let _ = connection.await; });
+            Ok(client)
+        }
+        SslMode::VerifyFull => {
+            // Full cert verification using the system trust store.
+            let connector = TlsConnector::new()
+                .map_err(|e| CoreError::ConnectionFailed(format!("TLS init failed: {e}")))?;
+            let tls = MakeTlsConnector::new(connector);
+            let (client, connection) = tokio::time::timeout(
+                CONNECT_TIMEOUT + Duration::from_secs(2),
+                pg.connect(tls),
+            )
+            .await
+            .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
+            .map_err(map_error)?;
+            tokio::spawn(async move { let _ = connection.await; });
+            Ok(client)
+        }
+    }
 }
 
 async fn server_version(client: &Client) -> CoreResult<String> {
@@ -262,6 +326,7 @@ mod tests {
             user: "postgres".into(),
             password: "x".into(),
             database: "postgres".into(),
+            ssl_mode: Default::default(),
         };
         let err = PostgresDriver.test_connection(&config).await.unwrap_err();
         assert_eq!(err.code(), pc_core::ErrorCode::ConnectionFailed);
@@ -275,6 +340,7 @@ mod tests {
             user: "u".into(),
             password: "super-secret".into(),
             database: "d".into(),
+            ssl_mode: Default::default(),
         };
         assert!(!format!("{config:?}").contains("super-secret"));
     }

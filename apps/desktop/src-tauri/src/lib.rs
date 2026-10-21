@@ -16,7 +16,7 @@ use crate::state::Store;
 /// Single source of truth for every command the UI can call.
 /// In debug builds this also regenerates `src/lib/bindings.ts`.
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, backup, connections, data, explorer, servers, state};
+    use commands::{app, backup, connections, data, explorer, remote_connections, servers, state};
     Builder::<tauri::Wry>::new().commands(collect_commands![
         app::app_info,
         app::save_text_file,
@@ -41,6 +41,11 @@ fn specta_builder() -> Builder<tauri::Wry> {
         connections::list_databases,
         connections::list_schemas,
         connections::list_tables,
+        remote_connections::add_remote_connection,
+        remote_connections::update_remote_connection,
+        remote_connections::remove_remote_connection,
+        remote_connections::open_remote_connection,
+        remote_connections::test_remote_connection,
         explorer::schema_objects,
         explorer::table_structure,
         explorer::object_definition,

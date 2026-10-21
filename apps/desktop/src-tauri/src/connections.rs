@@ -73,3 +73,8 @@ impl Connections {
 pub fn server_connection_id(server_id: &str) -> String {
     format!("server:{server_id}")
 }
+
+/// Session id for a user-added remote connection.
+pub fn remote_connection_id(remote_id: &str) -> String {
+    format!("remote:{remote_id}")
+}

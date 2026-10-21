@@ -16,6 +16,26 @@ pub type Cell = Option<String>;
 
 /* ── Connecting ───────────────────────────────────────────────────────── */
 
+/// SSL/TLS mode for a connection (maps to PostgreSQL libpq sslmode values).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SslMode {
+    /// Never use TLS.
+    Disable,
+    /// Try TLS; fall back to plain if the server does not support it.
+    Prefer,
+    /// Require TLS; reject if not offered.
+    Require,
+    /// Require TLS and verify the server certificate chain.
+    VerifyFull,
+}
+
+impl Default for SslMode {
+    fn default() -> Self {
+        SslMode::Prefer
+    }
+}
+
 /// Where and how to connect. Lives only in memory; passwords are never persisted here.
 #[derive(Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +46,8 @@ pub struct ConnectionConfig {
     pub password: String,
     /// Database to connect to first.
     pub database: String,
+    #[serde(default)]
+    pub ssl_mode: SslMode,
 }
 
 impl std::fmt::Debug for ConnectionConfig {
@@ -36,6 +58,7 @@ impl std::fmt::Debug for ConnectionConfig {
             .field("user", &self.user)
             .field("password", &"<redacted>")
             .field("database", &self.database)
+            .field("ssl_mode", &self.ssl_mode)
             .finish()
     }
 }

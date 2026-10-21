@@ -9,7 +9,11 @@ use pc_core::{CoreError, CoreResult};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-const STATE_VERSION: u32 = 1;
+// Re-export so `commands::remote_connections` can `use crate::state::SslMode`.
+// Defined once in pc-core::driver; pulling it in here avoids a duplicate-type panic in tauri-specta.
+pub use pc_core::driver::SslMode;
+
+const STATE_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
@@ -66,12 +70,35 @@ impl Default for Settings {
     }
 }
 
+// SslMode is defined in pc-core::driver and re-exported above.
+// It is intentionally NOT redefined here to avoid the duplicate-type error in tauri-specta.
+
+/// A remote PostgreSQL connection saved by the user.
+/// Never contains secrets — password lives in the OS keychain under `remote:<id>`.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteConnection {
+    pub id: String,
+    /// Human-readable label, e.g. "AWS RDS – prod".
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    /// Database to open by default.
+    pub database: String,
+    pub ssl_mode: SslMode,
+    /// Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other".
+    pub provider: String,
+    pub created_at: f64,
+}
+
 /// Everything the UI needs to render; sent whole on load.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppState {
     pub profile: Option<Profile>,
     pub servers: Vec<ManagedServer>,
+    pub remote_connections: Vec<RemoteConnection>,
     pub settings: Settings,
 }
 
@@ -90,6 +117,7 @@ struct Persisted<'a> {
 struct Stored {
     profile: Option<Profile>,
     servers: Vec<ManagedServer>,
+    remote_connections: Vec<RemoteConnection>,
     settings: StoredSettings,
 }
 
@@ -112,6 +140,7 @@ impl From<Stored> for AppState {
         Self {
             profile: stored.profile,
             servers: stored.servers,
+            remote_connections: stored.remote_connections,
             settings: Settings {
                 stop_servers_on_quit: stored.settings.stop_servers_on_quit,
             },
@@ -161,6 +190,14 @@ impl Store {
             .into_iter()
             .find(|s| s.id == id)
             .ok_or_else(|| CoreError::NotFound(format!("server {id}")))
+    }
+
+    pub fn remote_connection(&self, id: &str) -> CoreResult<RemoteConnection> {
+        self.snapshot()
+            .remote_connections
+            .into_iter()
+            .find(|r| r.id == id)
+            .ok_or_else(|| CoreError::NotFound(format!("remote connection {id}")))
     }
 
     fn write(&self, state: &AppState) -> CoreResult<()> {

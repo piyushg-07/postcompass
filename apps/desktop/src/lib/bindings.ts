@@ -45,6 +45,16 @@ export const commands = {
 	listDatabases: (connectionId: string) => typedError<DatabaseInfo[], CoreError>(__TAURI_INVOKE("list_databases", { connectionId })),
 	listSchemas: (connectionId: string, database: string) => typedError<SchemaInfo[], CoreError>(__TAURI_INVOKE("list_schemas", { connectionId, database })),
 	listTables: (connectionId: string, database: string, schema: string) => typedError<TableInfo[], CoreError>(__TAURI_INVOKE("list_tables", { connectionId, database, schema })),
+	/**  Saves a new remote connection. The password goes to the OS keychain; everything else to state. */
+	addRemoteConnection: (request: RemoteConnectionRequest) => typedError<AppState, CoreError>(__TAURI_INVOKE("add_remote_connection", { request })),
+	/**  Updates an existing remote connection. If `password` is an empty string the existing one is kept. */
+	updateRemoteConnection: (id: string, request: RemoteConnectionRequest) => typedError<AppState, CoreError>(__TAURI_INVOKE("update_remote_connection", { id, request })),
+	/**  Removes a saved remote connection and wipes its keychain entry. Closes any open session. */
+	removeRemoteConnection: (id: string) => typedError<AppState, CoreError>(__TAURI_INVOKE("remove_remote_connection", { id })),
+	/**  Opens a session for a saved remote connection. Returns the same `OpenedConnection` shape as `open_server`. */
+	openRemoteConnection: (id: string) => typedError<OpenedConnection, CoreError>(__TAURI_INVOKE("open_remote_connection", { id })),
+	/**  Tests a remote connection form without saving anything. */
+	testRemoteConnection: (request: RemoteConnectionRequest) => typedError<TestResult, CoreError>(__TAURI_INVOKE("test_remote_connection", { request })),
 	schemaObjects: (connectionId: string, database: string, schema: string) => typedError<SchemaObjects, CoreError>(__TAURI_INVOKE("schema_objects", { connectionId, database, schema })),
 	tableStructure: (connectionId: string, database: string, schema: string, table: string) => typedError<TableStructure, CoreError>(__TAURI_INVOKE("table_structure", { connectionId, database, schema, table })),
 	/**  SQL that recreates a table, view, function or sequence. `name` is the function id for functions. */
@@ -80,6 +90,7 @@ export type AppInfo = {
 export type AppState = {
 	profile: Profile | null,
 	servers: ManagedServer[],
+	remoteConnections: RemoteConnection[],
 	settings: Settings,
 };
 
@@ -140,6 +151,7 @@ export type ConnectionConfig = {
 	password: string,
 	/**  Database to connect to first. */
 	database: string,
+	sslMode?: SslMode,
 };
 
 export type ConstraintInfo = {
@@ -352,6 +364,37 @@ export type Profile = {
 	completedAt: number | null,
 };
 
+/**
+ *  A remote PostgreSQL connection saved by the user.
+ *  Never contains secrets — password lives in the OS keychain under `remote:<id>`.
+ */
+export type RemoteConnection = {
+	id: string,
+	/**  Human-readable label, e.g. "AWS RDS – prod". */
+	name: string,
+	host: string,
+	port: number,
+	user: string,
+	/**  Database to open by default. */
+	database: string,
+	sslMode: SslMode,
+	/**  Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other". */
+	provider: string,
+	createdAt: number | null,
+};
+
+/**  Fields the user fills in when creating or editing a remote connection. */
+export type RemoteConnectionRequest = {
+	name: string,
+	host: string,
+	port: number,
+	user: string,
+	password: string,
+	database: string,
+	sslMode: SslMode,
+	provider: string,
+};
+
 export type RestoreRequest = {
 	/**  Target database. Created first when `create_database` is set. */
 	database: string,
@@ -464,6 +507,17 @@ export type SqlError = {
 	/**  SQLSTATE, e.g. `42P01`. */
 	code: string | null,
 };
+
+/**  SSL/TLS mode for a connection (maps to PostgreSQL libpq sslmode values). */
+export type SslMode = 
+/**  Never use TLS. */
+"disable" | 
+/**  Try TLS; fall back to plain if the server does not support it. */
+"prefer" | 
+/**  Require TLS; reject if not offered. */
+"require" | 
+/**  Require TLS and verify the server certificate chain. */
+"verify_full";
 
 export type StatementResult = { type: "rows"; columns: string[]; rows: ((string | null)[])[]; 
 /**  Row cap reached; more rows exist. */

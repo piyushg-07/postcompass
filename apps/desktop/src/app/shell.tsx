@@ -39,7 +39,14 @@ export function Shell() {
   const goTo = useNavigation((s) => s.goTo);
   const closeServer = useNavigation((s) => s.closeServer);
   const setPaletteOpen = useNavigation((s) => s.setPaletteOpen);
-  const openServer = state.servers.find((s) => s.id === openServerId);
+
+  // Resolve the display name of whatever is currently open (local or remote).
+  const openItemName = openServerId
+    ? openServerId.startsWith("remote:")
+      ? (state.remoteConnections.find((r) => r.id === openServerId.replace(/^remote:/, ""))?.name ?? "Remote DB")
+      : (state.servers.find((s) => s.id === openServerId)?.name ?? null)
+    : null;
+
   const collapsed = useUiPrefs((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
   useHotkey("Mod+B", toggleSidebar, { ignoreInputs: false });
@@ -78,7 +85,7 @@ export function Shell() {
           </li>
         </ul>
 
-        {openServer && (
+        {openItemName && (
           <ul className="flex flex-col gap-0.5 px-2">
             {collapsed ? (
               <li className="mx-2 my-1 h-px bg-border" aria-hidden />
@@ -91,7 +98,7 @@ export function Shell() {
               <NavButton
                 active={section === "explorer"}
                 icon={<Table2 />}
-                label={openServer.name}
+                label={openItemName}
                 collapsed={collapsed}
                 onClick={() => goTo("explorer")}
               />
