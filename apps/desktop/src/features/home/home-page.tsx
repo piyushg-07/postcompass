@@ -1,18 +1,20 @@
-import { Button, EmptyState } from "@repo/ui";
-import { ArrowRight, Eye, Plus, Table2, TerminalSquare } from "lucide-react";
+import { Button } from "@repo/ui";
+import { ArrowRight, Eye, Table2, TerminalSquare } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useAppState } from "../../app/app-state";
 import { DataStreams, Mascot } from "../../app/mascot";
 import { useNavigation } from "../../app/navigation";
+import type { RemoteConnection } from "../../lib/bindings";
 import { greeting } from "../../lib/format";
 import {
   useQueryLibrary,
   useWorkspaceStore,
 } from "../explorer/workspace-store";
 import { DatabaseRow } from "../servers/database-card";
+import { PROVIDER_LOGOS, ProviderLogo } from "../servers/provider-logos";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
-/** Start page: a friendly banner, your databases, and where you left off. */
+/** Start page: greeting, shortcuts, every connection (local and cloud), and where you left off. */
 export function HomePage() {
   const { state } = useAppState();
   const nav = useNavigation();
@@ -22,62 +24,48 @@ export function HomePage() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const history = useQueryLibrary((s) => s.history);
 
-  const serverName = (id: string) =>
-    state.servers.find((s) => s.id === id)?.name;
+  // Workspaces are keyed by server id, or `remote:<id>` for cloud connections
+  const nameOf = (id: string) =>
+    id.startsWith("remote:")
+      ? state.remoteConnections.find((r) => `remote:${r.id}` === id)?.name
+      : state.servers.find((s) => s.id === id)?.name;
   const running = state.servers.filter((s) => statuses[s.id] === "running");
-  const hasDatabases = state.servers.length > 0;
+  const localCount = state.servers.length;
+  const remoteCount = state.remoteConnections.length;
+  const hasAny = localCount + remoteCount > 0;
 
   const recentTables = Object.entries(workspaces)
-    .filter(([id]) => serverName(id))
+    .filter(([id]) => nameOf(id))
     .flatMap(([id, ws]) =>
       (ws.recentTables ?? []).map((table) => ({ serverId: id, table })),
     )
     .sort((a, b) => b.table.at - a.table.at)
     .slice(0, 5);
   const recentQueries = Object.entries(history)
-    .filter(([id]) => serverName(id))
+    .filter(([id]) => nameOf(id))
     .flatMap(([id, entries]) =>
       entries.map((entry) => ({ serverId: id, entry })),
     )
     .sort((a, b) => b.entry.at - a.entry.at)
     .slice(0, 5);
 
-  const summary = !hasDatabases
-    ? "Let's set up your first database. It takes about a minute."
-    : running.length === 0
-      ? "Your databases are resting. Start one to get going."
-      : `${running.length} of ${state.servers.length} database${state.servers.length === 1 ? " is" : "s are"} running and ready.`;
+  // Counts live in the Connections list below; the banner just says what to do next
+  const summary = hasAny
+    ? "Pick up where you left off, or open a connection below."
+    : "Create a local database or connect to one in the cloud to get started.";
 
   return (
     <>
       <Hero
         title={greeting(state.profile?.name)}
         summary={summary}
-        sleepy={hasDatabases && running.length === 0}
+        sleepy={localCount > 0 && running.length === 0 && remoteCount === 0}
       />
 
-      {!hasDatabases ? (
-        <Section title="Your databases" delay={100}>
-          <div className="rounded-card border border-dashed border-border-strong">
-            <EmptyState
-              title="No databases yet"
-              description="Create a local PostgreSQL database. It runs only on this computer and needs no admin rights."
-              actions={
-                <Button
-                  variant="primary"
-                  iconLeft={<Plus />}
-                  onClick={nav.startInstall}
-                >
-                  New local database
-                </Button>
-              }
-            />
-          </div>
-        </Section>
-      ) : (
+      {hasAny && (
         <Section
-          title="Your databases"
-          delay={100}
+          title="Connections"
+          delay={120}
           action={
             <Button
               size="sm"
@@ -98,13 +86,20 @@ export function HomePage() {
                 onStatus={(s) => setStatus(server.id, s)}
               />
             ))}
+            {state.remoteConnections.map((remote) => (
+              <RemoteRow
+                key={remote.id}
+                remote={remote}
+                onOpen={() => nav.openServer(`remote:${remote.id}`)}
+              />
+            ))}
           </ul>
         </Section>
       )}
 
       {(recentTables.length > 0 || recentQueries.length > 0) && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Section title="Jump back in" delay={160}>
+          <Section title="Jump back in" delay={180}>
             {recentTables.length === 0 ? (
               <Muted>Tables you open show up here.</Muted>
             ) : (
@@ -121,7 +116,7 @@ export function HomePage() {
                       )
                     }
                     title={table.name}
-                    meta={`${serverName(serverId)} · ${table.database}.${table.schema} · ${timeAgo(table.at)}`}
+                    meta={`${nameOf(serverId)} · ${table.database}.${table.schema} · ${timeAgo(table.at)}`}
                     onClick={() => {
                       const ws = useWorkspaceStore.getState();
                       ws.setLocation(serverId, {
@@ -143,7 +138,7 @@ export function HomePage() {
               </ul>
             )}
           </Section>
-          <Section title="Recent queries" delay={220}>
+          <Section title="Recent queries" delay={240}>
             {recentQueries.length === 0 ? (
               <Muted>Queries you run show up here.</Muted>
             ) : (
@@ -157,7 +152,7 @@ export function HomePage() {
                         {entry.sql.replace(/\s+/g, " ")}
                       </span>
                     }
-                    meta={`${entry.database} · ${timeAgo(entry.at)}${entry.ok ? "" : " · failed"}`}
+                    meta={`${nameOf(serverId)} · ${entry.database} · ${timeAgo(entry.at)}${entry.ok ? "" : " · failed"}`}
                     onClick={() => {
                       useWorkspaceStore
                         .getState()
@@ -172,6 +167,36 @@ export function HomePage() {
         </div>
       )}
     </>
+  );
+}
+
+/** Compact row for a cloud connection, matching the local DatabaseRow. */
+function RemoteRow({
+  remote,
+  onOpen,
+}: {
+  remote: RemoteConnection;
+  onOpen: () => void;
+}) {
+  const provider = (PROVIDER_LOGOS[remote.provider] ?? PROVIDER_LOGOS.other)!;
+  return (
+    <li className="flex items-center gap-3 px-4 py-3">
+      <ProviderLogo provider={remote.provider} className="size-4 shrink-0" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-medium text-fg">
+          {remote.name}
+        </span>
+        <span className="truncate text-xs text-fg-subtle">
+          {provider.label} ·{" "}
+          <span className="font-mono">
+            {remote.host}:{remote.port}
+          </span>
+        </span>
+      </div>
+      <Button size="sm" variant="primary" onClick={onOpen}>
+        Open
+      </Button>
+    </li>
   );
 }
 
@@ -197,16 +222,16 @@ function Hero({
         aria-hidden
       />
 
-      <div className="relative flex items-center gap-6 px-8 py-6">
+      <div className="relative flex items-center gap-6 px-8 py-5">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-fg">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-fg">
             {title}
           </h1>
           <p className="max-w-md text-sm text-fg-muted">{summary}</p>
         </div>
 
         <div className="relative hidden shrink-0 flex-col items-center md:flex">
-          <Mascot size={156} mood={sleepy ? "sleepy" : "happy"} />
+          <Mascot size={128} mood={sleepy ? "sleepy" : "happy"} />
         </div>
       </div>
     </section>
