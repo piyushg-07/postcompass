@@ -1,7 +1,11 @@
 import { Checkbox, Field, Input, Select, Switch } from "@repo/ui";
 import { useState } from "react";
 import type { TableStructure } from "../../../lib/bindings";
-import { addForeignKey, createIndex, suggestIdentifier } from "../../../lib/sql";
+import {
+  addForeignKey,
+  createIndex,
+  suggestIdentifier,
+} from "../../../lib/sql";
 import { useStructure, useTables } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
 
@@ -22,13 +26,22 @@ function ColumnPicker({
       {columns.map((c) => {
         const position = value.indexOf(c);
         return (
-          <label key={c} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-surface-hover">
+          <label
+            key={c}
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-surface-hover"
+          >
             <Checkbox
               checked={position >= 0}
-              onCheckedChange={(checked) => onChange(checked ? [...value, c] : value.filter((x) => x !== c))}
+              onCheckedChange={(checked) =>
+                onChange(checked ? [...value, c] : value.filter((x) => x !== c))
+              }
             />
             <span className="flex-1 font-mono text-xs">{c}</span>
-            {position >= 0 && value.length > 1 && <span className="text-[10px] text-fg-subtle">#{position + 1}</span>}
+            {position >= 0 && value.length > 1 && (
+              <span className="text-[10px] text-fg-subtle">
+                #{position + 1}
+              </span>
+            )}
           </label>
         );
       })}
@@ -51,12 +64,24 @@ export function IndexDialog({
   const [unique, setUnique] = useState(false);
   const [method, setMethod] = useState("btree");
   const [name, setName] = useState("");
-  const suggested = suggestIdentifier(`${structure.name}_${columns.join("_")}_${unique ? "key" : "idx"}`).slice(0, 63);
+  const suggested = suggestIdentifier(
+    `${structure.name}_${columns.join("_")}_${unique ? "key" : "idx"}`,
+  ).slice(0, 63);
   const finalName = name.trim() || suggested;
-  const sql = columns.length ? createIndex(structure.schema, structure.name, finalName, columns, unique, method) : "-- pick at least one column";
+  const sql = columns.length
+    ? createIndex(
+        structure.schema,
+        structure.name,
+        finalName,
+        columns,
+        unique,
+        method,
+      )
+    : "-- pick at least one column";
 
   return (
     <RunSqlDialog
+      wide
       open={open}
       onOpenChange={(next) => {
         if (!next) {
@@ -74,12 +99,24 @@ export function IndexDialog({
     >
       <div className="grid grid-cols-2 gap-3">
         <Field label="Columns">
-          {() => <ColumnPicker columns={structure.columns.map((c) => c.name)} value={columns} onChange={setColumns} />}
+          {() => (
+            <ColumnPicker
+              columns={structure.columns.map((c) => c.name)}
+              value={columns}
+              onChange={setColumns}
+            />
+          )}
         </Field>
         <div className="flex flex-col gap-3">
           <Field label="Name">
             {(p) => (
-              <Input {...p} className="font-mono" placeholder={suggested} value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                {...p}
+                className="font-mono"
+                placeholder={suggested}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             )}
           </Field>
           <Field label="Method">
@@ -121,17 +158,35 @@ export function ForeignKeyDialog({
   const [refTable, setRefTable] = useState("");
   const [refColumns, setRefColumns] = useState<string[]>([]);
   const [onDelete, setOnDelete] = useState("NO ACTION");
-  const target = useStructure(database, structure.schema, refTable || structure.name);
-  const refOptions = refTable && target.data ? target.data.columns.map((c) => c.name) : [];
+  const target = useStructure(
+    database,
+    structure.schema,
+    refTable || structure.name,
+  );
+  const refOptions =
+    refTable && target.data ? target.data.columns.map((c) => c.name) : [];
 
-  const name = suggestIdentifier(`${structure.name}_${columns.join("_")}_fkey`).slice(0, 63);
-  const ready = columns.length > 0 && refTable && refColumns.length === columns.length;
+  const name = suggestIdentifier(
+    `${structure.name}_${columns.join("_")}_fkey`,
+  ).slice(0, 63);
+  const ready =
+    columns.length > 0 && refTable && refColumns.length === columns.length;
   const sql = ready
-    ? addForeignKey(structure.schema, structure.name, name, columns, structure.schema, refTable, refColumns, onDelete)
+    ? addForeignKey(
+        structure.schema,
+        structure.name,
+        name,
+        columns,
+        structure.schema,
+        refTable,
+        refColumns,
+        onDelete,
+      )
     : "-- pick columns, a table, and the same number of referenced columns";
 
   return (
     <RunSqlDialog
+      wide
       open={open}
       onOpenChange={onOpenChange}
       title="Add foreign key"
@@ -142,7 +197,13 @@ export function ForeignKeyDialog({
     >
       <div className="grid grid-cols-2 gap-3">
         <Field label="Columns">
-          {() => <ColumnPicker columns={structure.columns.map((c) => c.name)} value={columns} onChange={setColumns} />}
+          {() => (
+            <ColumnPicker
+              columns={structure.columns.map((c) => c.name)}
+              value={columns}
+              onChange={setColumns}
+            />
+          )}
         </Field>
         <div className="flex flex-col gap-3">
           <Field label="References table">
@@ -157,14 +218,22 @@ export function ForeignKeyDialog({
                   setRefColumns([]);
                 }}
                 options={(tables.data ?? [])
-                  .filter((t) => t.kind === "table" || t.kind === "partitioned_table")
+                  .filter(
+                    (t) => t.kind === "table" || t.kind === "partitioned_table",
+                  )
                   .map((t) => ({ value: t.name, label: t.name }))}
               />
             )}
           </Field>
           {refTable && (
             <Field label="Referenced columns" hint="Usually the primary key">
-              {() => <ColumnPicker columns={refOptions} value={refColumns} onChange={setRefColumns} />}
+              {() => (
+                <ColumnPicker
+                  columns={refOptions}
+                  value={refColumns}
+                  onChange={setRefColumns}
+                />
+              )}
             </Field>
           )}
           <Field label="On delete">
