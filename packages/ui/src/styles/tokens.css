@@ -40,6 +40,9 @@
   /* Same type system as Supabase: Inter for text, Manrope for headings, Source Code Pro for code */
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-heading: "Manrope Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* The PostCompass wordmark only */
+  --font-brand: "Space Grotesk Variable", "Manrope Variable", ui-sans-serif, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
   --font-mono: "Source Code Pro Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   /* Shape */

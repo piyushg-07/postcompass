@@ -195,7 +195,6 @@ function RemoteRow({
   );
 }
 
-/** Greeting banner with Compi. */
 /**
  * Full-width live network banner with Compi and the PostCompass name in the middle.
  * The centre leans towards the cursor (parallax); the network reacts to hover and clicks.
@@ -248,9 +247,11 @@ function Hero() {
         >
           <Mascot size={150} />
           <div className="flex flex-col gap-1">
-            <span className="font-heading text-5xl font-semibold tracking-tight text-fg">
-              Post
-              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text text-transparent">
+            <span className="flex items-baseline gap-0.5 text-5xl text-fg">
+              <span className="font-brand font-bold tracking-tighter">
+                Post
+              </span>
+              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[3.4rem] leading-none text-transparent italic">
                 Compass
               </span>
             </span>

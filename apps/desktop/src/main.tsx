@@ -1,7 +1,9 @@
-// Same fonts as Supabase: Inter (text), Manrope (headings), Source Code Pro (code)
+// Same fonts as Supabase: Inter (text), Manrope (headings), Source Code Pro (code); Space Grotesk + Instrument Serif italic for the wordmark
 import "@fontsource-variable/inter";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/source-code-pro";
+import "@fontsource-variable/space-grotesk";
+import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
 
 import { StrictMode } from "react";
