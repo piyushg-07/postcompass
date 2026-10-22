@@ -118,7 +118,7 @@ export function useRunSql() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ sql, database }: { sql: string; database: string; refreshAll?: boolean }) => {
-      const result: ExecuteResult = await unwrap(commands.executeSql(connectionId, database, sql, newRunId()));
+      const result: ExecuteResult = await unwrap(commands.executeSql(connectionId, database, sql, newRunId(), null, null));
       if (result.error) throw new SqlRunError(result.error);
       return result;
     },

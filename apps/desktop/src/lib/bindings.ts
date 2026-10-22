@@ -69,8 +69,11 @@ export const commands = {
 	previewChanges: (connectionId: string, database: string, schema: string, table: string, changes: RowChange[]) => typedError<string[], CoreError>(__TAURI_INVOKE("preview_changes", { connectionId, database, schema, table, changes })),
 	/**  Saves row changes in one transaction: all or nothing. */
 	applyChanges: (connectionId: string, database: string, schema: string, table: string, changes: RowChange[]) => typedError<ApplyResult, CoreError>(__TAURI_INVOKE("apply_changes", { connectionId, database, schema, table, changes })),
-	/**  Runs SQL from the editor. `run_id` lets `cancel_sql` stop it. */
-	executeSql: (connectionId: string, database: string, sql: string, runId: string) => typedError<ExecuteResult, CoreError>(__TAURI_INVOKE("execute_sql", { connectionId, database, sql, runId })),
+	/**
+	 *  Runs SQL from the editor. `run_id` lets `cancel_sql` stop it. `max_rows` caps the rows kept
+	 *  per result (default 5000); `role` runs it as another role (`SET ROLE`), reset afterwards.
+	 */
+	executeSql: (connectionId: string, database: string, sql: string, runId: string, maxRows: number | null, role: string | null) => typedError<ExecuteResult, CoreError>(__TAURI_INVOKE("execute_sql", { connectionId, database, sql, runId, maxRows, role })),
 	cancelSql: (runId: string) => typedError<null, CoreError>(__TAURI_INVOKE("cancel_sql", { runId })),
 	explainSql: (connectionId: string, database: string, sql: string, analyze: boolean) => typedError<ExplainResult, CoreError>(__TAURI_INVOKE("explain_sql", { connectionId, database, sql, analyze })),
 	/**  Writes a backup of `request.database`. Progress lines stream over `on_log`; `job_id` lets `cancel_job` stop it. */

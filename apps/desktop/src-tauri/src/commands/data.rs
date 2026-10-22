@@ -1,13 +1,18 @@
 //! Reading table pages, editing rows, and running SQL.
 
 use pc_core::CoreError;
-use pc_core::driver::{ApplyResult, ExecuteResult, ExplainResult, RowChange, RowsPage, RowsRequest};
+use pc_core::driver::{
+    ApplyResult, CancellationToken, ExecuteResult, ExplainResult, RowChange, RowsPage, RowsRequest,
+};
 use tauri::State;
 
 use crate::connections::Connections;
 
-/// Rows kept per result set in the SQL editor. More rows are counted but not sent to the UI.
+/// Rows kept per result set in the SQL editor by default. More rows are counted but not sent to
+/// the UI.
 const MAX_RESULT_ROWS: u32 = 5000;
+/// Ceiling for "No limit", so a huge result can't exhaust memory.
+const HARD_MAX_ROWS: u32 = 100_000;
 
 #[tauri::command]
 #[specta::specta]
@@ -62,7 +67,8 @@ pub async fn apply_changes(
         .await
 }
 
-/// Runs SQL from the editor. `run_id` lets `cancel_sql` stop it.
+/// Runs SQL from the editor. `run_id` lets `cancel_sql` stop it. `max_rows` caps the rows kept
+/// per result (default 5000); `role` runs it as another role (`SET ROLE`), reset afterwards.
 #[tauri::command]
 #[specta::specta]
 pub async fn execute_sql(
@@ -71,11 +77,28 @@ pub async fn execute_sql(
     database: String,
     sql: String,
     run_id: String,
+    max_rows: Option<u32>,
+    role: Option<String>,
 ) -> Result<ExecuteResult, CoreError> {
     let session = connections.get(&connection_id).await?;
+    let max_rows = max_rows.unwrap_or(MAX_RESULT_ROWS).clamp(1, HARD_MAX_ROWS);
+    let role = role.filter(|r| !r.is_empty());
+    if let Some(role) = &role {
+        let quoted = format!("\"{}\"", role.replace('"', "\"\""));
+        let set = session
+            .execute(&database, &format!("SET ROLE {quoted}"), 0, CancellationToken::new())
+            .await?;
+        if set.error.is_some() {
+            return Ok(set);
+        }
+    }
     let cancel = connections.begin_run(&run_id).await;
-    let result = session.execute(&database, &sql, MAX_RESULT_ROWS, cancel).await;
+    let result = session.execute(&database, &sql, max_rows, cancel).await;
     connections.end_run(&run_id).await;
+    if role.is_some() {
+        // The editor keeps its connection, so put the role back even if the query failed
+        let _ = session.execute(&database, "RESET ROLE", 0, CancellationToken::new()).await;
+    }
     result
 }
 

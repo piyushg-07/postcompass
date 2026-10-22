@@ -27,10 +27,24 @@ export function toInsertSql(schema: string, table: string, columns: string[], ro
     .join("\n");
 }
 
-export type ExportFormat = "csv" | "json" | "sql";
+/** A Markdown table; pipes and line breaks in values are escaped so the table stays intact. */
+export function toMarkdown(columns: string[], rows: GridCell[][]) {
+  const cell = (v: GridCell) =>
+    v === null || v === undefined
+      ? "NULL"
+      : v.replaceAll("|", "\\|").replace(/\r?\n/g, " ");
+  return [
+    `| ${columns.map(cell).join(" | ")} |`,
+    `| ${columns.map(() => "---").join(" | ")} |`,
+    ...rows.map((r) => `| ${r.map(cell).join(" | ")} |`),
+  ].join("\n");
+}
+
+export type ExportFormat = "csv" | "json" | "sql" | "markdown";
 
 export function exportRows(format: ExportFormat, columns: string[], rows: GridCell[][], target?: { schema: string; table: string }) {
   if (format === "csv") return toCsv(columns, rows);
   if (format === "json") return toJson(columns, rows);
+  if (format === "markdown") return toMarkdown(columns, rows);
   return toInsertSql(target?.schema ?? "public", target?.table ?? "my_table", columns, rows);
 }

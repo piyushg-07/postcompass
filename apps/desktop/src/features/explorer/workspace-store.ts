@@ -19,7 +19,15 @@ export type Tab =
       /** Filters to start with, e.g. when following a foreign key. */
       filters?: FilterSpec[];
     }
-  | { id: string; type: "query"; database: string; title: string; sql: string }
+  | {
+      id: string;
+      type: "query";
+      database: string;
+      title: string;
+      sql: string;
+      /** The saved snippet this tab edits; saving updates it in place. */
+      savedId?: string;
+    }
   | {
       id: string;
       type: "definition";
@@ -98,6 +106,19 @@ function rememberTable(
   return [entry, ...rest].slice(0, MAX_RECENT_TABLES);
 }
 
+/** The lowest "Query N" not taken by an open tab, so closing tabs frees their numbers. */
+function nextQueryNumber(tabs: Tab[]) {
+  const taken = new Set(
+    tabs.flatMap((t) => {
+      const m = t.type === "query" ? /^Query (\d+)$/.exec(t.title) : null;
+      return m ? [Number(m[1])] : [];
+    }),
+  );
+  let n = 1;
+  while (taken.has(n)) n++;
+  return n;
+}
+
 function tabId(tab: NewTab, queryCount: number) {
   switch (tab.type) {
     case "table":
@@ -123,6 +144,12 @@ interface WorkspaceState {
   ) => void;
   openTab: (serverId: string, tab: NewTab) => void;
   newQuery: (serverId: string, database: string, sql?: string) => void;
+  /** Opens a saved snippet, or switches to the tab that already has it. */
+  openSnippet: (
+    serverId: string,
+    database: string,
+    snippet: { id: string; name: string; sql: string },
+  ) => void;
   updateTab: (serverId: string, id: string, patch: Partial<Tab>) => void;
   closeTab: (serverId: string, id: string) => void;
   closeOtherTabs: (serverId: string, id: string) => void;
@@ -197,8 +224,33 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               id: tabId({ type: "query", database, title: "", sql }, count),
               type: "query",
               database,
-              title: `Query ${count}`,
+              title: `Query ${nextQueryNumber(ws.tabs)}`,
               sql,
+            };
+            return {
+              tabs: [...ws.tabs, tab],
+              activeTabId: tab.id,
+              queryCount: count,
+            };
+          }),
+
+        openSnippet: (serverId, database, snippet) =>
+          update(serverId, (ws) => {
+            const open = ws.tabs.find(
+              (t) => t.type === "query" && t.savedId === snippet.id,
+            );
+            if (open) return { activeTabId: open.id };
+            const count = ws.queryCount + 1;
+            const tab: Tab = {
+              id: tabId(
+                { type: "query", database, title: "", sql: snippet.sql },
+                count,
+              ),
+              type: "query",
+              database,
+              title: snippet.name,
+              sql: snippet.sql,
+              savedId: snippet.id,
             };
             return {
               tabs: [...ws.tabs, tab],
@@ -285,6 +337,10 @@ export function useWorkspace(serverId: string) {
     openTab: (tab: NewTab) => actions.openTab(serverId, tab),
     newQuery: (database: string, sql?: string) =>
       actions.newQuery(serverId, database, sql),
+    openSnippet: (
+      database: string,
+      snippet: { id: string; name: string; sql: string },
+    ) => actions.openSnippet(serverId, database, snippet),
     updateTab: (id: string, patch: Partial<Tab>) =>
       actions.updateTab(serverId, id, patch),
     closeTab: (id: string) => actions.closeTab(serverId, id),
@@ -307,15 +363,34 @@ export interface SavedQuery {
   id: string;
   name: string;
   sql: string;
+  /** Folder name; none means it sits at the top level. */
+  folder?: string;
+  favorite?: boolean;
 }
 
 interface QueryLibraryState {
   history: Record<string, HistoryEntry[]>;
   saved: Record<string, SavedQuery[]>;
+  /** Folders per server, including empty ones. */
+  folders: Record<string, string[]>;
   addHistory: (serverId: string, entry: HistoryEntry) => void;
   clearHistory: (serverId: string) => void;
-  saveQuery: (serverId: string, name: string, sql: string) => void;
+  saveQuery: (
+    serverId: string,
+    name: string,
+    sql: string,
+    folder?: string,
+  ) => string;
+  updateSaved: (
+    serverId: string,
+    id: string,
+    patch: Partial<Omit<SavedQuery, "id">>,
+  ) => void;
   deleteSaved: (serverId: string, id: string) => void;
+  addFolder: (serverId: string, name: string) => void;
+  renameFolder: (serverId: string, from: string, to: string) => void;
+  /** Deletes the folder; its queries move to the top level. */
+  deleteFolder: (serverId: string, name: string) => void;
 }
 
 const MAX_HISTORY = 200;
@@ -326,6 +401,7 @@ export const useQueryLibrary = create<QueryLibraryState>()(
     (set) => ({
       history: {},
       saved: {},
+      folders: {},
       addHistory: (serverId, entry) =>
         set((s) => {
           const list = s.history[serverId] ?? [];
@@ -342,14 +418,61 @@ export const useQueryLibrary = create<QueryLibraryState>()(
         }),
       clearHistory: (serverId) =>
         set((s) => ({ history: { ...s.history, [serverId]: [] } })),
-      saveQuery: (serverId, name, sql) =>
+      saveQuery: (serverId, name, sql, folder) => {
+        const id = `${Date.now()}`;
         set((s) => ({
           saved: {
             ...s.saved,
             [serverId]: [
-              { id: `${Date.now()}`, name, sql },
+              { id, name, sql, folder: folder || undefined },
               ...(s.saved[serverId] ?? []),
             ],
+          },
+        }));
+        return id;
+      },
+      updateSaved: (serverId, id, patch) =>
+        set((s) => ({
+          saved: {
+            ...s.saved,
+            [serverId]: (s.saved[serverId] ?? []).map((q) =>
+              q.id === id ? { ...q, ...patch } : q,
+            ),
+          },
+        })),
+      addFolder: (serverId, name) =>
+        set((s) => {
+          const list = s.folders[serverId] ?? [];
+          return list.includes(name)
+            ? s
+            : { folders: { ...s.folders, [serverId]: [...list, name] } };
+        }),
+      renameFolder: (serverId, from, to) =>
+        set((s) => ({
+          folders: {
+            ...s.folders,
+            [serverId]: (s.folders[serverId] ?? []).map((f) =>
+              f === from ? to : f,
+            ),
+          },
+          saved: {
+            ...s.saved,
+            [serverId]: (s.saved[serverId] ?? []).map((q) =>
+              q.folder === from ? { ...q, folder: to } : q,
+            ),
+          },
+        })),
+      deleteFolder: (serverId, name) =>
+        set((s) => ({
+          folders: {
+            ...s.folders,
+            [serverId]: (s.folders[serverId] ?? []).filter((f) => f !== name),
+          },
+          saved: {
+            ...s.saved,
+            [serverId]: (s.saved[serverId] ?? []).map((q) =>
+              q.folder === name ? { ...q, folder: undefined } : q,
+            ),
           },
         })),
       deleteSaved: (serverId, id) =>
@@ -360,6 +483,12 @@ export const useQueryLibrary = create<QueryLibraryState>()(
           },
         })),
     }),
-    { name: "postcompass-queries", version: 1 },
+    {
+      name: "postcompass-queries",
+      version: 2,
+      // v1 had no folders; saved queries stay as they were
+      migrate: (state) =>
+        ({ folders: {}, ...(state as object) }) as QueryLibraryState,
+    },
   ),
 );

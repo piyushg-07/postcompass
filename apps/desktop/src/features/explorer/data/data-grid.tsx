@@ -152,17 +152,19 @@ export function DataGrid({
     () => columns.map((c) => widths[c.id] ?? initialWidth(c)),
     [columns, widths],
   );
+  // Results of a query have no checkboxes or expand buttons, so no column for them
+  const selectWidth = onSelectedChange || onExpandRow ? SELECT_WIDTH : 0;
   const offsets = useMemo(() => {
     const out: number[] = [];
-    let x = SELECT_WIDTH;
+    let x = selectWidth;
     for (const w of colWidths) {
       out.push(x);
       x += w;
     }
     return out;
-  }, [colWidths]);
+  }, [colWidths, selectWidth]);
   const totalWidth =
-    SELECT_WIDTH +
+    selectWidth +
     colWidths.reduce((a, b) => a + b, 0) +
     (onAddColumn ? ADD_COLUMN_WIDTH : 0);
 
@@ -207,8 +209,7 @@ export function DataGrid({
     if (!el) return;
     const left = offsets[col]!;
     const right = left + colWidths[col]!;
-    if (left - SELECT_WIDTH < el.scrollLeft)
-      el.scrollLeft = left - SELECT_WIDTH;
+    if (left - selectWidth < el.scrollLeft) el.scrollLeft = left - selectWidth;
     else if (right > el.scrollLeft + el.clientWidth)
       el.scrollLeft = right - el.clientWidth;
   };
@@ -355,24 +356,30 @@ export function DataGrid({
             className="sticky top-0 z-20 flex border-b border-border bg-surface"
             style={{ height: ROW_HEIGHT }}
           >
-            <div
-              className="sticky left-0 z-10 flex shrink-0 items-center border-r border-border bg-surface pl-3"
-              style={{ width: SELECT_WIDTH }}
-            >
-              {onSelectedChange && (
-                <Checkbox
-                  aria-label="Select all rows"
-                  checked={
-                    allSelected ? true : someSelected ? "indeterminate" : false
-                  }
-                  onCheckedChange={(checked) =>
-                    onSelectedChange(
-                      new Set(checked ? rows.map((r) => r.id) : []),
-                    )
-                  }
-                />
-              )}
-            </div>
+            {selectWidth > 0 && (
+              <div
+                className="sticky left-0 z-10 flex shrink-0 items-center border-r border-border bg-surface pl-3"
+                style={{ width: selectWidth }}
+              >
+                {onSelectedChange && (
+                  <Checkbox
+                    aria-label="Select all rows"
+                    checked={
+                      allSelected
+                        ? true
+                        : someSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      onSelectedChange(
+                        new Set(checked ? rows.map((r) => r.id) : []),
+                      )
+                    }
+                  />
+                )}
+              </div>
+            )}
             {columns.map((column, i) => (
               <HeaderCell
                 key={column.id}
@@ -622,37 +629,39 @@ const GridRowView = memo(function GridRowView({
       )}
       style={{ top, height: ROW_HEIGHT }}
     >
-      <div
-        className={cn(
-          "sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border pl-3",
-          selected ? "bg-surface-hover" : "bg-bg group-hover/row:bg-surface",
-        )}
-        style={{ width: SELECT_WIDTH }}
-      >
-        {onCheck && (
-          <Checkbox
-            aria-label="Select row"
-            checked={selected}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onCheck(e);
-            }}
-          />
-        )}
-        {onExpand && (
-          <Tooltip content="Expand row">
-            <button
-              type="button"
-              aria-label="Expand row"
-              onClick={onExpand}
-              className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/row:flex hover:bg-surface-hover hover:text-fg"
-            >
-              <Maximize2 className="size-3" />
-            </button>
-          </Tooltip>
-        )}
-      </div>
+      {(onCheck || onExpand) && (
+        <div
+          className={cn(
+            "sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border pl-3",
+            selected ? "bg-surface-hover" : "bg-bg group-hover/row:bg-surface",
+          )}
+          style={{ width: SELECT_WIDTH }}
+        >
+          {onCheck && (
+            <Checkbox
+              aria-label="Select row"
+              checked={selected}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onCheck(e);
+              }}
+            />
+          )}
+          {onExpand && (
+            <Tooltip content="Expand row">
+              <button
+                type="button"
+                aria-label="Expand row"
+                onClick={onExpand}
+                className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/row:flex hover:bg-surface-hover hover:text-fg"
+              >
+                <Maximize2 className="size-3" />
+              </button>
+            </Tooltip>
+          )}
+        </div>
+      )}
       {row.cells.map((value, col) => {
         const column = columns[col]!;
         const isEditing = editing?.col === col;
