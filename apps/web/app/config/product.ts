@@ -99,12 +99,17 @@ export type FeatureCategory =
   | "navigation"
   | "visualization"
   | "import-export"
-  | "advanced";
+  | "advanced"
+  | "cloud-connections";
 
 export const FEATURE_CATEGORIES: Record<
   FeatureCategory,
   { label: string; description: string }
 > = {
+  "cloud-connections": {
+    label: "Cloud Postgres",
+    description: "Direct connection to AWS RDS, Supabase, Neon, GCP, and VPS with zero proxy",
+  },
   "data-editing": {
     label: "Data Editing",
     description: "Edit your data as naturally as a spreadsheet",
@@ -140,6 +145,36 @@ export const FEATURE_CATEGORIES: Record<
 };
 
 export const FEATURES: Feature[] = [
+  // Cloud & Multi-Database Connections
+  {
+    id: "multi-cloud-direct",
+    title: "Direct Multi-Cloud Connection",
+    description:
+      "Connect straight from your desktop to AWS RDS, Aurora, Supabase, Neon, GCP Cloud SQL, or self-hosted databases with sub-2ms latency.",
+    details: [
+      "Direct encrypted TLS 1.3 socket connection",
+      "Zero third-party cloud proxy — 100% private",
+      "Native compatibility with PgBouncer connection pools",
+      "Built-in SSH Bastion tunnel for private VPCs",
+      "AWS IAM SigV4 token authentication support",
+    ],
+    category: "cloud-connections",
+    tier: 1,
+  },
+  {
+    id: "cloud-replica-failover",
+    title: "Replica & Branch Routing",
+    description:
+      "Seamlessly switch between read replicas, production clusters, and Neon serverless database branches without leaving the app.",
+    details: [
+      "Automatic replica discovery and read-only routing",
+      "Neon instant branch switching (main / dev / preview)",
+      "Strict lock timeout guards to prevent production freezes",
+      "Multi-region latency telemetry monitoring",
+    ],
+    category: "cloud-connections",
+    tier: 1,
+  },
   // Tier 1 — Core Data Editing
   {
     id: "inline-editing",

@@ -1,0 +1,533 @@
+/* ============================================================
+   PostCompass vs DBeaver Technical Benchmark Comparison
+   Modern, attractive developer aesthetics with graphical meters,
+   crisp matrix tables, and elevated recommendation highlights.
+   ============================================================ */
+
+/* Top 3 Visual Benchmark Performance Meters */
+.benchmarkCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 960px) {
+  .benchmarkCardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.benchmarkCard {
+  background: #101217;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.benchmarkCard:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.08);
+  transform: translateY(-2px);
+}
+
+.cardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.categoryBadge {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.improvementPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+}
+
+.metricTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.metersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.meterRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.meterMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+}
+
+.meterToolName {
+  color: #a1a1aa;
+}
+
+.meterValLegacy {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.meterToolNameModern {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modernDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.meterValModern {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.track {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.barLegacy {
+  height: 100%;
+  background: linear-gradient(90deg, #71717a 0%, #ef4444 100%);
+  border-radius: 999px;
+  transition: width 0.8s ease;
+}
+
+.barModern {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 10px #10b981;
+  transition: width 0.8s ease;
+}
+
+/* ============================================================
+   Detailed Benchmark Matrix Card
+   ============================================================ */
+
+.matrixContainer {
+  background: #0f1116;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7);
+  margin-bottom: 3.5rem;
+}
+
+.matrixToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.65rem;
+  background: #13161c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.matrixToolbarLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.matrixHeading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.matrixSubtitle {
+  font-size: 0.76rem;
+  color: #71717a;
+  font-family: var(--font-mono);
+}
+
+.auditPill {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #a1a1aa;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+
+.tableResponsive {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.matrixTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  table-layout: fixed;
+}
+
+.colFeature {
+  width: 34%;
+}
+
+.colDbeaver {
+  width: 33%;
+}
+
+.colPostcompass {
+  width: 33%;
+}
+
+.matrixTable th {
+  padding: 0.85rem 1.4rem;
+  background: #111319;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #a1a1aa;
+}
+
+.thWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.thBadgeLegacy {
+  background: rgba(255, 255, 255, 0.06);
+  color: #71717a;
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+}
+
+.thModernText {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.thBadgeModern {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  padding: 0.08rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.matrixRow {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.matrixRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.matrixRowHighlight {
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.cellFeature {
+  padding: 0.85rem 1.4rem;
+  vertical-align: middle;
+}
+
+.featureTitle {
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: #ffffff;
+  line-height: 1.35;
+}
+
+.featureCategory {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: #52525b;
+  margin-top: 0.15rem;
+}
+
+.cellDbeaver {
+  padding: 0.85rem 1.4rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.dbeaverContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.crossIcon {
+  color: #ef4444;
+  font-weight: 800;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cellTextLegacy {
+  font-size: 0.82rem;
+  color: #8b8f9a;
+  line-height: 1.45;
+}
+
+.cellPostcompass {
+  padding: 0.85rem 1.4rem;
+  background: rgba(16, 185, 129, 0.04);
+  border-left: 1px solid rgba(16, 185, 129, 0.15);
+  vertical-align: middle;
+}
+
+.postcompassContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.checkIcon {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cellTextModern {
+  font-size: 0.84rem;
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* Matrix Footer */
+.matrixFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #11141a;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.matrixFooterText {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #d4d4d8;
+}
+
+.matrixFooterCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #000000;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 0.45rem 0.95rem;
+  border-radius: 7px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+}
+
+.matrixFooterCta:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   Side-by-Side UI Interface Philosophy Cards
+   ============================================================ */
+
+.uiCompareContainer {
+  margin-top: 3.5rem;
+}
+
+.uiCompareHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.uiCompareTitle {
+  font-family: var(--font-display), 'Fraunces', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 650;
+  color: #ffffff;
+  margin-bottom: 0.4rem;
+}
+
+.uiCompareDesc {
+  font-size: 0.9rem;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+
+.uiGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+}
+
+@media (max-width: 860px) {
+  .uiGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.uiCard {
+  background: #101217;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.uiCardModern {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.1);
+}
+
+.uiCardBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.15rem;
+  background: #14161c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.uiCardBarModern {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.15rem;
+  background: #10151a;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.uiCardTagLegacy {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #a1a1aa;
+}
+
+.uiCardNote {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: #52525b;
+}
+
+.modernCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.uiCardTagModern {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.uiCardNoteModern {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: #71717a;
+}
+
+.uiImageWrapper {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  background: #090a0e;
+  overflow: hidden;
+}
+
+.uiScreenshot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.uiFooterLegacy {
+  padding: 0.65rem 1.15rem;
+  background: #0c0e12;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.74rem;
+  color: #ef4444;
+  font-family: var(--font-mono);
+}
+
+.uiFooterModern {
+  padding: 0.65rem 1.15rem;
+  background: #0b1115;
+  border-top: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 0.74rem;
+  color: #34d399;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}

@@ -44,10 +44,6 @@ export default function InteractiveDemo() {
         <div className="section-header">
           <span className="section-badge">Interactive Demo</span>
           <h2 className="section-title">See PostCompass in action</h2>
-          <p className="section-description">
-            Explore the core workflows that make PostCompass a faster way to
-            work with PostgreSQL.
-          </p>
         </div>
 
         {/* Tabs */}

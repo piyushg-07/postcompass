@@ -1,62 +1,86 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { PRODUCT } from "../config/product";
 import { 
   Download, 
   Github, 
   ChevronRight, 
-  Copy, 
-  Check, 
+  ChevronDown,
   Table, 
   Code, 
   Database,
-  Filter,
-  Zap,
-  Shield,
-  Globe,
-  Cpu,
-  Server,
   WindowsIcon,
   AppleIcon,
   LinuxIcon,
+  Zap,
+  Play,
+  Check,
+  Search,
   Sparkles,
+  RefreshCw,
+  Compass,
+  Settings,
+  Layers,
+  Activity,
+  ArrowRightLeft,
+  Eye,
 } from "./Icons";
 import styles from "./Hero.module.css";
 
 type SupportedOs = "macos" | "windows" | "linux" | "cargo";
+type ActiveDocTab = "customers" | "diagram" | "query";
+type SidebarSection = "tables" | "sql" | "database";
 
-const CLI_COMMANDS: Record<SupportedOs, string> = {
-  macos: "brew install --cask postcompass",
-  windows: "winget install postcompass",
-  linux: "curl -fsSL https://postcompass.dev/install.sh | bash",
-  cargo: "cargo install postcompass-cli",
-};
-
-interface UserRow {
-  id: string;
+interface RealCustomerRow {
+  id: number;
   name: string;
   email: string;
-  role: "ADMIN" | "ENGINEER" | "VIEWER";
-  active: boolean;
+  city: string;
+  country: string;
+  created_at: string;
 }
 
-const INITIAL_ROWS: UserRow[] = [
-  { id: "e2b7a4c9", name: "Sarah Chen", email: "sarah@acme.dev", role: "ADMIN", active: true },
-  { id: "a8f1d392", name: "Marcus Johnson", email: "marcus@acme.dev", role: "ENGINEER", active: true },
-  { id: "c49e7821", name: "Priya Patel", email: "priya@acme.dev", role: "ENGINEER", active: true },
-  { id: "f0284e11", name: "Alex Rivera", email: "alex@acme.dev", role: "VIEWER", active: false },
-  { id: "9b3c5a77", name: "Elena Rostova", email: "elena@acme.dev", role: "ADMIN", active: true },
+const REAL_CUSTOMERS: RealCustomerRow[] = [
+  { id: 1, name: "Diya Sharma", email: "customer1@example.com", city: "Delhi", country: "India", created_at: "2026-10-17 13:33:00.913188+05:30" },
+  { id: 2, name: "Vihaan Sharma", email: "customer2@example.com", city: "Bengaluru", country: "India", created_at: "2026-10-16 13:33:00.913188+05:30" },
+  { id: 3, name: "Ananya Sharma", email: "customer3@example.com", city: "Pune", country: "India", created_at: "2026-10-15 13:33:00.913188+05:30" },
+  { id: 4, name: "Arjun Sharma", email: "customer4@example.com", city: "Chennai", country: "India", created_at: "2026-10-14 13:33:00.913188+05:30" },
+  { id: 5, name: "Isha Sharma", email: "customer5@example.com", city: "Hyderabad", country: "India", created_at: "2026-10-13 13:33:00.913188+05:30" },
+  { id: 6, name: "Kabir Sharma", email: "customer6@example.com", city: "Kolkata", country: "India", created_at: "2026-10-12 13:33:00.913188+05:30" },
+  { id: 7, name: "Meera Sharma", email: "customer7@example.com", city: "Jaipur", country: "India", created_at: "2026-10-11 13:33:00.913188+05:30" },
+  { id: 8, name: "Rohan Sharma", email: "customer8@example.com", city: "Mumbai", country: "India", created_at: "2026-10-10 13:33:00.913188+05:30" },
 ];
 
 export default function Hero() {
   const [selectedOs, setSelectedOs] = useState<SupportedOs>("windows");
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"table" | "sql" | "schema">("table");
-  const [rows, setRows] = useState<UserRow[]>(INITIAL_ROWS);
-  const [editingName, setEditingName] = useState("Marcus Johnson");
-  const [isExecutingQuery, setIsExecutingQuery] = useState(false);
-  const [queryDuration, setQueryDuration] = useState("1.8ms");
+  
+  // Desktop IDE active state
+  const [activeDocTab, setActiveDocTab] = useState<ActiveDocTab>("customers");
+  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("tables");
+  const [selectedTable, setSelectedTable] = useState("customers");
+
+  // Table editor live state
+  const [customers, setCustomers] = useState<RealCustomerRow[]>(REAL_CUSTOMERS);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [lastMutated, setLastMutated] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+
+  // SQL Studio live state
+  const [isQueryRunning, setIsQueryRunning] = useState(false);
+  const [queryLatency, setQueryLatency] = useState("1.8ms");
+  const [queryRows, setQueryRows] = useState([
+    { name: "Arjun Singh", city: "Kolkata", orders: 11, revenue: "1092176.48" },
+    { name: "Meera Nair", city: "Delhi", orders: 11, revenue: "879790.40" },
+    { name: "Meera Das", city: "Pune", orders: 12, revenue: "867482.46" },
+    { name: "Vihaan Khan", city: "Chennai", orders: 9, revenue: "848044.23" },
+    { name: "Diya Reddy", city: "Pune", orders: 10, revenue: "804938.35" },
+    { name: "Kabir Nair", city: "Mumbai", orders: 7, revenue: "782428.70" },
+    { name: "Rohan Khan", city: "Kolkata", orders: 9, revenue: "768098.55" },
+  ]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -67,36 +91,59 @@ export default function Hero() {
     }
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(CLI_COMMANDS[selectedOs]);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const currentOsLabel =
+    selectedOs === "windows"
+      ? "Windows"
+      : selectedOs === "linux"
+      ? "Linux"
+      : "macOS";
 
-  const handleNameChange = (val: string) => {
-    setEditingName(val);
-    setRows((prev) =>
-      prev.map((r, i) => (i === 1 ? { ...r, name: val } : r))
-    );
+  const PlatformIcon =
+    selectedOs === "windows"
+      ? WindowsIcon
+      : selectedOs === "macos"
+      ? AppleIcon
+      : LinuxIcon;
+
+  const handleSaveCell = (id: number) => {
+    if (editName.trim()) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, name: editName.trim() } : c))
+      );
+      setLastMutated(`Auto-saved row #${id} to database in 1.4ms`);
+      setTimeout(() => setLastMutated(null), 3000);
+    }
+    setEditingId(null);
   };
 
   const handleRunQuery = () => {
-    setIsExecutingQuery(true);
+    setIsQueryRunning(true);
     setTimeout(() => {
-      setIsExecutingQuery(false);
-      setQueryDuration(`${(1.2 + Math.random() * 0.8).toFixed(1)}ms`);
-    }, 450);
+      setIsQueryRunning(false);
+      setQueryLatency(`${(1.2 + Math.random() * 0.7).toFixed(1)}ms`);
+    }, 280);
   };
 
-  const currentOsLabel = selectedOs === "windows" ? "Windows" : selectedOs === "linux" ? "Linux" : "macOS";
+  const toggleSelectRow = (id: number) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+    );
+  };
+
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      c.email.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      c.city.toLowerCase().includes(searchFilter.toLowerCase())
+  );
 
   return (
     <section className={styles.hero} id="hero">
       <div className={styles.auroraOrb} />
       <div className={styles.gridBackground} />
-      
+
       <div className={`container ${styles.content}`}>
-        {/* Eyebrow / Version Pill */}
+        {/* Version Pill Badge */}
         <a href="/download" className={styles.badge}>
           <span className={styles.badgeDot} />
           <span className={styles.badgeTag}>v{PRODUCT.version}</span>
@@ -104,49 +151,44 @@ export default function Hero() {
           <ChevronRight size={13} />
         </a>
 
-        {/* Clean, High-Impact Headline */}
+        {/* Headline with Google Font: Fraunces */}
         <h1 className={styles.headline}>
-          The Local-First PostgreSQL Studio.
+          The Local-First PostgreSQL Studio
           <br />
-          <span className={styles.headlineAccent}>Connect Any Cloud. Query in Milliseconds.</span>
+          <span className={styles.headlineAccent}>
+            Chart Your Database at Native Speed.
+          </span>
         </h1>
 
-        {/* Primary CTAs with OS Auto-Detection */}
+        {/* Compact, Professional Action Buttons */}
         <div className={styles.ctaWrapper}>
           <div className={styles.ctas}>
-            <a href="/download" className={styles.primaryDownloadBtn} suppressHydrationWarning>
-              <div className={styles.primaryDownloadIcon}>
-                {selectedOs === "windows" && <WindowsIcon size={20} />}
-                {selectedOs === "macos" && <AppleIcon size={20} />}
-                {selectedOs === "linux" && <LinuxIcon size={20} />}
-                {selectedOs === "cargo" && <Code size={20} />}
-              </div>
-              <div className={styles.primaryDownloadText}>
-                <span className={styles.primaryDownloadMain} suppressHydrationWarning>
-                  {selectedOs === "cargo" ? "Install via Cargo CLI" : `Download for ${currentOsLabel}`}
-                </span>
-                <span className={styles.primaryDownloadSub} suppressHydrationWarning>
-                  {selectedOs === "windows" && ".exe · 64-bit & ARM64 · 14.2 MB"}
-                  {selectedOs === "macos" && "Universal .dmg · Apple Silicon & Intel"}
-                  {selectedOs === "linux" && ".AppImage / .deb · x64 · 14.2 MB"}
-                  {selectedOs === "cargo" && "cargo install postcompass-cli"}
-                </span>
-              </div>
+            <a
+              href="/download"
+              className={styles.primaryDownloadBtn}
+              suppressHydrationWarning
+              aria-label={`Download PostCompass for ${currentOsLabel}`}
+            >
+              <PlatformIcon size={15} />
+              <span>Download for {currentOsLabel}</span>
             </a>
 
             <a
-              href="#waitlist"
+              href={PRODUCT.github}
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.secondaryBtn}
+              aria-label="Star PostCompass on GitHub"
             >
-              <Sparkles size={18} className={styles.earlyAccessIcon} />
-              <span>Get Early Access</span>
-              <span className={styles.earlyAccessArrow}>↓</span>
+              <Github size={14} />
+              <span>Star on GitHub</span>
+              <span className={styles.githubStarPill}>4.2k</span>
             </a>
           </div>
 
-          {/* Quick Platform Switcher */}
+          {/* Platform Switcher */}
           <div className={styles.osSelectorRow}>
-            <span className={styles.osSelectorPrompt}>Other platforms:</span>
+            <span className={styles.osSelectorPrompt}>Also available for:</span>
             <button
               type="button"
               onClick={() => setSelectedOs("windows")}
@@ -185,346 +227,564 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Trust Badges */}
-        <div className={styles.metaBadges}>
-          <span className={styles.metaItem}>
-            <Shield size={14} />
-            <span><strong>100% Local-First</strong> (No cloud proxy)</span>
-          </span>
-          <span className={styles.metaItem}>
-            <Zap size={14} />
-            <span><strong>Direct TCP/SSL</strong> (&lt;2ms latency)</span>
-          </span>
-          <span className={styles.metaItem}>
-            <Cpu size={14} />
-            <span><strong>Tauri + Rust</strong> (14.2 MB RAM)</span>
-          </span>
-          <span className={styles.metaItem}>
-            <Globe size={14} />
-            <span><strong>AWS RDS · Aurora · Supabase · Neon</strong></span>
-          </span>
-        </div>
-
-        {/* Desktop App Window Mockup Container */}
+        {/* ============================================================
+            Authentic PostCompass Desktop Studio Mockup (Pixel-for-Pixel)
+            ============================================================ */}
         <div className={styles.previewContainer}>
-          {/* App Window with Traveling Laser Border-Beam */}
           <div className={styles.previewWrapper}>
             <div className={styles.borderBeam} />
             <div className={styles.previewGlow} />
 
             <div className={styles.preview}>
-              {/* Title Bar with Traffic Lights & Mode Switcher */}
+              {/* Desktop Window Title Bar matching real App */}
               <div className={styles.titleBar}>
-                <div className={styles.trafficLights}>
-                  <span className={styles.dot} data-color="red" />
-                  <span className={styles.dot} data-color="yellow" />
-                  <span className={styles.dot} data-color="green" />
-                </div>
-
-                {/* Interactive Mode Tabs */}
-                <div className={styles.modeTabs}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("table")}
-                    className={`${styles.modeTabBtn} ${activeTab === "table" ? styles.modeTabActive : ""}`}
-                  >
-                    <Table size={13} />
-                    Table Editor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("sql")}
-                    className={`${styles.modeTabBtn} ${activeTab === "sql" ? styles.modeTabActive : ""}`}
-                  >
-                    <Code size={13} />
-                    SQL Studio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("schema")}
-                    className={`${styles.modeTabBtn} ${activeTab === "schema" ? styles.modeTabActive : ""}`}
-                  >
-                    <Database size={13} />
-                    Schema &amp; DDL
-                  </button>
-                </div>
-
-                {/* Status info */}
-                <div className={styles.titleBarStatus}>
-                  <div className={styles.connIndicator}>
+                <div className={styles.titleBarLeft}>
+                  <div className={styles.trafficLights}>
+                    <span className={styles.dot} data-color="red" />
+                    <span className={styles.dot} data-color="yellow" />
+                    <span className={styles.dot} data-color="green" />
+                  </div>
+                  <div className={styles.appBrandTitle}>
+                    <Compass size={14} style={{ color: "var(--accent)" }} />
+                    <span className={styles.appBrandName}>PostCompass</span>
+                  </div>
+                  <div className={styles.connBreadcrumb}>
                     <span className={styles.connDot} />
-                    <span>aws-aurora-pg16:5432 (1.8ms)</span>
+                    <span className={styles.connDb}>Local PostgreSQL 18</span>
+                    <span className={styles.connSep}>›</span>
+                    <span className={styles.connUser}>piyushgres</span>
+                    <span className={styles.connSep}>›</span>
+                    <span className={styles.connSchema}>public</span>
+                  </div>
+                </div>
+
+                <div className={styles.titleBarRight}>
+                  <div className={styles.connectStatusBadge}>
+                    <span className={styles.plugIcon}>🔌</span>
+                    <span>Connect</span>
+                  </div>
+                  <span className={styles.disconnectLink}>Disconnect</span>
+                  <div className={styles.windowControls}>
+                    <span>—</span>
+                    <span>□</span>
+                    <span>✕</span>
                   </div>
                 </div>
               </div>
 
-              {/* App Body */}
-              <div className={styles.appLayout}>
-                {/* Left Tree Sidebar */}
-                <aside className={styles.sidebar}>
-                  <div className={styles.sidebarSection}>
-                    <span className={styles.sidebarLabel}>CONNECTIONS</span>
-                    <div className={`${styles.sidebarItem} ${styles.sidebarItemActive}`}>
-                      <span>production-cluster</span>
-                      <span className={styles.itemCount}>5432</span>
-                    </div>
-                    <div className={styles.sidebarItem}>
-                      <span>aws-rds-staging</span>
-                      <span className={styles.itemCount}>5432</span>
-                    </div>
-                    <div className={styles.sidebarItem}>
-                      <span>local-docker</span>
-                      <span className={styles.itemCount}>5433</span>
-                    </div>
+              {/* IDE Workspace Layout (Dock + Sidebar + Document Canvas) */}
+              <div className={styles.ideWorkspace}>
+                {/* 1. Left-most Narrow Vertical Dock */}
+                <div className={styles.ideDock}>
+                  <div className={styles.dockTop}>
+                    <button type="button" className={styles.dockIconBtn} title="Home">
+                      <span className={styles.dockIcon}>🏠</span>
+                    </button>
+                    <button type="button" className={styles.dockIconBtn} title="Databases">
+                      <Database size={15} />
+                    </button>
+                    <button type="button" className={styles.dockIconBtn} title="Search">
+                      <Search size={14} />
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`${styles.dockIconBtn} ${activeDocTab === "customers" ? styles.dockIconActive : ""}`}
+                      onClick={() => {
+                        setActiveDocTab("customers");
+                        setSidebarSection("tables");
+                      }}
+                      title="Tables"
+                    >
+                      <Table size={15} />
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`${styles.dockIconBtn} ${activeDocTab === "query" ? styles.dockIconActive : ""}`}
+                      onClick={() => {
+                        setActiveDocTab("query");
+                        setSidebarSection("sql");
+                      }}
+                      title="SQL Studio"
+                    >
+                      <Code size={15} />
+                    </button>
+                  </div>
+                  <div className={styles.dockBottom}>
+                    <button type="button" className={styles.dockIconBtn} title="Settings">
+                      <Settings size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Collapsible Navigation Sidebar */}
+                <div className={styles.ideSidebar}>
+                  {/* Segmented Switcher: Tables / SQL / Database */}
+                  <div className={styles.sidebarSegmented}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarSection("tables");
+                        setActiveDocTab("customers");
+                      }}
+                      className={`${styles.sidebarTabBtn} ${sidebarSection === "tables" ? styles.sidebarTabActive : ""}`}
+                    >
+                      Tables
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarSection("sql");
+                        setActiveDocTab("query");
+                      }}
+                      className={`${styles.sidebarTabBtn} ${sidebarSection === "sql" ? styles.sidebarTabActive : ""}`}
+                    >
+                      SQL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSidebarSection("database")}
+                      className={`${styles.sidebarTabBtn} ${sidebarSection === "database" ? styles.sidebarTabActive : ""}`}
+                    >
+                      Database
+                    </button>
                   </div>
 
-                  <div className={styles.sidebarSection}>
-                    <span className={styles.sidebarLabel}>TABLES (public)</span>
-                    <div className={`${styles.sidebarItem} ${activeTab === "table" ? styles.sidebarItemActive : ""}`}>
-                      <span>users</span>
-                      <span className={styles.itemCount}>2.8k</span>
-                    </div>
-                    <div className={styles.sidebarItem}>
-                      <span>orders</span>
-                      <span className={styles.itemCount}>14.2k</span>
-                    </div>
-                    <div className={styles.sidebarItem}>
-                      <span>transactions</span>
-                      <span className={styles.itemCount}>890k</span>
-                    </div>
-                    <div className={styles.sidebarItem}>
-                      <span>audit_logs</span>
-                      <span className={styles.itemCount}>1.2M</span>
-                    </div>
-                  </div>
-                </aside>
-
-                {/* Main Work Area */}
-                <main className={styles.mainArea}>
-                  {/* Laser scanbeam sweep on SQL query run */}
-                  {isExecutingQuery && <div className={styles.scanbeam} />}
-
-                  {/* View 1: Interactive Spreadsheet Table */}
-                  {activeTab === "table" && (
-                    <>
-                      <div className={styles.toolbar}>
-                        <div className={styles.toolbarLeft}>
-                          <span className={styles.tableName}>public.users</span>
-                          <span className={styles.rowCountBadge}>2,847 rows</span>
-                        </div>
-                        <div className={styles.toolbarRight}>
-                          <span className={styles.toolbarBtn}>+ Add Row</span>
-                          <span className={`${styles.toolbarBtn} ${styles.filterActive}`}>
-                            <Filter size={11} /> role = &apos;ENGINEER&apos;
-                          </span>
-                          <span className={styles.toolbarBtn}>Export CSV</span>
-                        </div>
+                  {/* Sidebar View when 'Tables' is active */}
+                  {sidebarSection === "tables" && (
+                    <div className={styles.sidebarSectionBody}>
+                      <div className={styles.schemaRow}>
+                        <span className={styles.schemaPrompt}>schema</span>
+                        <span className={styles.schemaName}>public</span>
+                        <ChevronDown size={12} className={styles.schemaChevron} />
+                        <span className={styles.schemaMore}>···</span>
                       </div>
 
-                      <div className={styles.tableContainer}>
-                        <table className={styles.dataGrid}>
-                          <thead>
-                            <tr>
-                              <th style={{ width: 40 }}>#</th>
-                              <th>id <span className={styles.colType}>uuid</span></th>
-                              <th>full_name <span className={styles.colType}>text</span></th>
-                              <th>email <span className={styles.colType}>text</span></th>
-                              <th>role <span className={styles.colType}>enum</span></th>
-                              <th>is_active <span className={styles.colType}>bool</span></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((row, idx) => (
-                              <tr key={row.id}>
-                                <td style={{ color: "#52525b" }}>{idx + 1}</td>
-                                <td className={styles.uuidCode}>{row.id}</td>
-                                <td className={idx === 1 ? styles.editingCell : undefined}>
-                                  {idx === 1 ? (
-                                    <div style={{ display: "flex", alignItems: "center" }}>
-                                      <input
-                                        type="text"
-                                        value={editingName}
-                                        onChange={(e) => handleNameChange(e.target.value)}
-                                        className={styles.cellInput}
-                                      />
-                                      <span className={styles.cursorBlink} />
-                                    </div>
-                                  ) : (
-                                    <span
-                                      onClick={() => {
-                                        setEditingName(row.name);
-                                      }}
-                                      style={{ cursor: "pointer" }}
-                                      title="Click to edit value inline"
-                                    >
-                                      {row.name}
-                                    </span>
-                                  )}
-                                </td>
-                                <td style={{ color: "#a1a1aa" }}>{row.email}</td>
-                                <td>
-                                  <span
-                                    className={`${styles.roleBadge} ${
-                                      row.role === "ADMIN"
-                                        ? styles.roleAdmin
-                                        : row.role === "ENGINEER"
-                                        ? styles.roleEngineer
-                                        : styles.roleViewer
-                                    }`}
-                                  >
-                                    {row.role}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className={styles.boolBadge}>
-                                    <span
-                                      className={styles.boolDot}
-                                      style={{
-                                        background: row.active ? "#10b981" : "#71717a",
-                                        boxShadow: row.active ? "0 0 6px #10b981" : "none",
-                                      }}
-                                    />
-                                    <span style={{ color: row.active ? "#34d399" : "#71717a" }}>
-                                      {row.active ? "true" : "false"}
-                                    </span>
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
+                      <button type="button" className={styles.newTableBtn}>
+                        <span>+ New table</span>
+                      </button>
 
-                  {/* View 2: SQL Studio */}
-                  {activeTab === "sql" && (
-                    <div className={styles.sqlStudio}>
-                      <div className={styles.sqlEditorHeader}>
-                        <button
-                          type="button"
-                          className={styles.runQueryBtn}
-                          onClick={handleRunQuery}
+                      <div className={styles.searchTablesBox}>
+                        <Search size={11} className={styles.searchTableIcon} />
+                        <span className={styles.searchTablePlaceholder}>Search tables</span>
+                        <RefreshCw size={11} className={styles.refreshIcon} />
+                      </div>
+
+                      <div className={styles.tableItemsList}>
+                        <div 
+                          className={`${styles.tableListItem} ${selectedTable === "customers" ? styles.tableListItemSelected : ""}`}
+                          onClick={() => {
+                            setSelectedTable("customers");
+                            setActiveDocTab("customers");
+                          }}
                         >
-                          <Zap size={13} />
-                          {isExecutingQuery ? "Executing..." : "Run Query (⌘↵)"}
-                        </button>
-                        <span className={styles.queryStats}>
-                          ✓ Returned 5 rows in {queryDuration} (100% cache hit)
-                        </span>
-                      </div>
+                          <div className={styles.tableItemLeft}>
+                            <Table size={12} className={styles.tableIconActive} />
+                            <span>customers</span>
+                          </div>
+                          <span className={styles.tableCount}>200</span>
+                        </div>
 
-                      <pre className={styles.codeArea}>
-                        <span className={styles.sqlComment}>-- Analytical aggregation with index scan on AWS Aurora</span>{"\n"}
-                        <span className={styles.sqlKeyword}>SELECT</span> u.id, u.full_name, u.role,{"\n"}
-                        {"  "}<span className={styles.sqlFunction}>COUNT</span>(p.id) <span className={styles.sqlKeyword}>AS</span> total_posts,{"\n"}
-                        {"  "}<span className={styles.sqlFunction}>MAX</span>(p.created_at) <span className={styles.sqlKeyword}>AS</span> last_active{"\n"}
-                        <span className={styles.sqlKeyword}>FROM</span> public.users u{"\n"}
-                        <span className={styles.sqlKeyword}>LEFT JOIN</span> public.posts p <span className={styles.sqlKeyword}>ON</span> p.author_id = u.id{"\n"}
-                        <span className={styles.sqlKeyword}>WHERE</span> u.is_active = <span className={styles.sqlString}>true</span>{"\n"}
-                        <span className={styles.sqlKeyword}>GROUP BY</span> u.id, u.full_name, u.role{"\n"}
-                        <span className={styles.sqlKeyword}>ORDER BY</span> total_posts <span className={styles.sqlKeyword}>DESC LIMIT</span> 5;
-                      </pre>
+                        <div className={styles.tableListItem} onClick={() => setSelectedTable("order_items")}>
+                          <div className={styles.tableItemLeft}>
+                            <Table size={12} style={{ color: "#71717a" }} />
+                            <span>order_items</span>
+                          </div>
+                          <span className={styles.tableCount}>2.4K</span>
+                        </div>
 
-                      <div className={styles.sqlResultsTable}>
-                        <table className={styles.dataGrid}>
-                          <thead>
-                            <tr>
-                              <th>id</th>
-                              <th>full_name</th>
-                              <th>role</th>
-                              <th>total_posts</th>
-                              <th>last_active</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className={styles.uuidCode}>e2b7a4c9</td>
-                              <td>Sarah Chen</td>
-                              <td><span className={`${styles.roleBadge} ${styles.roleAdmin}`}>ADMIN</span></td>
-                              <td style={{ color: "#34d399", fontWeight: 700 }}>42</td>
-                              <td style={{ color: "#71717a", fontFamily: "monospace" }}>2 mins ago</td>
-                            </tr>
-                            <tr>
-                              <td className={styles.uuidCode}>a8f1d392</td>
-                              <td>Marcus Johnson</td>
-                              <td><span className={`${styles.roleBadge} ${styles.roleEngineer}`}>ENGINEER</span></td>
-                              <td style={{ color: "#34d399", fontWeight: 700 }}>38</td>
-                              <td style={{ color: "#71717a", fontFamily: "monospace" }}>15 mins ago</td>
-                            </tr>
-                          </tbody>
-                        </table>
+                        <div className={styles.tableListItem} onClick={() => setSelectedTable("order_summary")}>
+                          <div className={styles.tableItemLeft}>
+                            <Eye size={12} style={{ color: "#71717a" }} />
+                            <span>order_summary</span>
+                          </div>
+                          <span className={styles.tableCountView}>view</span>
+                        </div>
+
+                        <div className={styles.tableListItem} onClick={() => setSelectedTable("orders")}>
+                          <div className={styles.tableItemLeft}>
+                            <Table size={12} style={{ color: "#71717a" }} />
+                            <span>orders</span>
+                          </div>
+                          <span className={styles.tableCount}>1K</span>
+                        </div>
+
+                        <div className={styles.tableListItem} onClick={() => setSelectedTable("products")}>
+                          <div className={styles.tableItemLeft}>
+                            <Table size={12} style={{ color: "#71717a" }} />
+                            <span>products</span>
+                          </div>
+                          <span className={styles.tableCount}>40</span>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* View 3: Visual Schema & DDL */}
-                  {activeTab === "schema" && (
-                    <div className={styles.schemaViewer}>
-                      <div className={styles.schemaCard}>
-                        <div className={styles.schemaCardTitle}>
-                          <Database size={15} />
-                          <span>Table Definition: public.users</span>
+                  {/* Sidebar View when 'SQL' is active */}
+                  {sidebarSection === "sql" && (
+                    <div className={styles.sidebarSectionBody}>
+                      <button type="button" className={styles.newQueryBtn}>
+                        <span>+ New query</span>
+                        <span className={styles.ctrlShortcut}>Ctrl+T</span>
+                      </button>
+
+                      <div className={styles.queryGroupLabel}>Open 1</div>
+                      <div 
+                        className={`${styles.tableListItem} ${activeDocTab === "query" ? styles.tableListItemSelected : ""}`}
+                        onClick={() => setActiveDocTab("query")}
+                      >
+                        <div className={styles.tableItemLeft}>
+                          <Code size={12} className={styles.tableIconActive} />
+                          <span>Query 20</span>
                         </div>
-                        <div className={styles.schemaColsList}>
-                          <div className={styles.schemaColItem}>
-                            <span><strong>id</strong> UUID</span>
-                            <span className={styles.keyBadge}>PRIMARY KEY</span>
-                          </div>
-                          <div className={styles.schemaColItem}>
-                            <span><strong>full_name</strong> TEXT NOT NULL</span>
-                            <span style={{ color: "#71717a" }}>varchar</span>
-                          </div>
-                          <div className={styles.schemaColItem}>
-                            <span><strong>email</strong> TEXT NOT NULL</span>
-                            <span className={styles.keyBadge} style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8" }}>UNIQUE</span>
-                          </div>
-                          <div className={styles.schemaColItem}>
-                            <span><strong>role</strong> user_role</span>
-                            <span style={{ color: "#71717a" }}>DEFAULT &apos;ENGINEER&apos;</span>
-                          </div>
-                          <div className={styles.schemaColItem}>
-                            <span><strong>is_active</strong> BOOLEAN</span>
-                            <span style={{ color: "#71717a" }}>DEFAULT true</span>
-                          </div>
+                        <span className={styles.queryDbTag}>piyushgres</span>
+                      </div>
+
+                      <div className={styles.queryGroupLabel}>Saved 0</div>
+                      <div className={styles.savedEmptyNotice}>Save a query from its tab to keep it here.</div>
+
+                      <div className={styles.queryGroupLabel}>Recent 3</div>
+                      <div className={styles.recentQueryItem}>-- Top customers by ...</div>
+                      <div className={styles.recentQueryItem}>SELECT * FROM public...</div>
+                      <div className={styles.recentQueryItem}>select now() as serv...</div>
+                    </div>
+                  )}
+
+                  {/* Sidebar View when 'Database' is active */}
+                  {sidebarSection === "database" && (
+                    <div className={styles.sidebarSectionBody}>
+                      <div className={styles.queryGroupLabel}>Connections</div>
+                      <div className={styles.tableListItemSelected}>
+                        <div className={styles.tableItemLeft}>
+                          <span className={styles.connDot} />
+                          <span>Local PostgreSQL 18</span>
+                        </div>
+                      </div>
+                      <div className={styles.dbInfoBox}>
+                        <span>Server: PostgreSQL 18.0</span>
+                        <span>Host: localhost:5432</span>
+                        <span>User: piyushgres</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Document Canvas Area */}
+                <div className={styles.ideCanvas}>
+                  {/* Document Tabs Row matching actual App */}
+                  <div className={styles.docTabsRow}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDocTab("customers");
+                        setSidebarSection("tables");
+                      }}
+                      className={`${styles.docTab} ${activeDocTab === "customers" ? styles.docTabActive : ""}`}
+                    >
+                      <Table size={12} className={activeDocTab === "customers" ? styles.docTabIconActive : ""} />
+                      <span>customers</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveDocTab("diagram")}
+                      className={`${styles.docTab} ${activeDocTab === "diagram" ? styles.docTabActive : ""}`}
+                    >
+                      <Layers size={12} className={activeDocTab === "diagram" ? styles.docTabIconActive : ""} />
+                      <span>Diagram · public</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDocTab("query");
+                        setSidebarSection("sql");
+                      }}
+                      className={`${styles.docTab} ${activeDocTab === "query" ? styles.docTabActive : ""}`}
+                    >
+                      <Code size={12} className={activeDocTab === "query" ? styles.docTabIconActive : ""} />
+                      <span>Query 20</span>
+                    </button>
+
+                    <span className={styles.addTabBtn}>+</span>
+
+                    <div className={styles.canvasRightStatus}>
+                      <Zap size={11} style={{ color: "var(--accent)" }} />
+                      <span>Direct TCP &lt;2ms</span>
+                    </div>
+                  </div>
+
+                  {/* Document Content A: TABLE EDITOR */}
+                  {activeDocTab === "customers" && (
+                    <div className={styles.tableEditorContainer}>
+                      {/* Sub-toolbar */}
+                      <div className={styles.tableToolbar}>
+                        <div className={styles.tableFilterBox}>
+                          <Search size={12} className={styles.searchIcon} />
+                          <input
+                            type="text"
+                            placeholder="Search or filter rows..."
+                            value={searchFilter}
+                            onChange={(e) => setSearchFilter(e.target.value)}
+                            className={styles.filterInput}
+                          />
+                        </div>
+
+                        <div className={styles.tableToolbarActions}>
+                          {lastMutated && (
+                            <span className={styles.liveAutoSaveToast}>
+                              <Check size={11} />
+                              {lastMutated}
+                            </span>
+                          )}
+                          <button type="button" className={styles.sortBtn}>
+                            <span>↑↓ Sort</span>
+                          </button>
+                          <button type="button" className={styles.insertBtn}>
+                            <span>+ Insert</span>
+                            <span className={styles.btnCaret}>▾</span>
+                          </button>
                         </div>
                       </div>
 
-                      <div className={styles.schemaCard}>
-                        <div className={styles.schemaCardTitle}>
-                          <Code size={15} />
-                          <span>Generated PostgreSQL DDL</span>
+                      {/* Spreadsheet Grid */}
+                      <div className={styles.gridViewport}>
+                        <table className={styles.nativeTable}>
+                          <thead>
+                            <tr>
+                              <th className={styles.thCheck}><input type="checkbox" readOnly /></th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.pkKeyIcon}>🔑</span>
+                                  <span className={styles.colName}>id</span>
+                                  <span className={styles.colType}>bigint</span>
+                                </div>
+                              </th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.colName}>name</span>
+                                  <span className={styles.colType}>text</span>
+                                </div>
+                              </th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.colName}>email</span>
+                                  <span className={styles.colType}>text</span>
+                                </div>
+                              </th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.colName}>city</span>
+                                  <span className={styles.colType}>text</span>
+                                </div>
+                              </th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.colName}>country</span>
+                                  <span className={styles.colType}>text</span>
+                                </div>
+                              </th>
+                              <th className={styles.thCol}>
+                                <div className={styles.colHeaderWrapper}>
+                                  <span className={styles.colName}>created_at</span>
+                                  <span className={styles.colType}>timestamp with time zone</span>
+                                </div>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredCustomers.map((c) => {
+                              const isEditing = editingId === c.id;
+                              const isChecked = selectedRows.includes(c.id);
+                              return (
+                                <tr key={c.id} className={isChecked ? styles.rowSelected : ""}>
+                                  <td className={styles.tdCheck}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleSelectRow(c.id)}
+                                    />
+                                  </td>
+                                  <td className={styles.tdId}>{c.id}</td>
+                                  <td
+                                    className={styles.tdName}
+                                    onDoubleClick={() => {
+                                      setEditingId(c.id);
+                                      setEditName(c.name);
+                                    }}
+                                  >
+                                    {isEditing ? (
+                                      <div className={styles.inlineEditWrapper}>
+                                        <input
+                                          type="text"
+                                          value={editName}
+                                          onChange={(e) => setEditName(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleSaveCell(c.id);
+                                            if (e.key === "Escape") setEditingId(null);
+                                          }}
+                                          autoFocus
+                                          className={styles.liveCellInput}
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveCell(c.id)}
+                                          className={styles.cellSaveBtn}
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className={styles.cellContent}>
+                                        <span>{c.name}</span>
+                                        <span className={styles.hoverEditCue}>edit</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className={styles.tdEmail}>{c.email}</td>
+                                  <td>{c.city}</td>
+                                  <td>{c.country}</td>
+                                  <td className={styles.tdDate}>{c.created_at}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Table Status Footer Bar */}
+                      <div className={styles.tableFooterBar}>
+                        <div className={styles.tableFooterLeft}>
+                          <span className={styles.pageNav}>‹ Page 1 of 2 ›</span>
+                          <span className={styles.pageSizePill}>100 rows ▾</span>
+                          <span className={styles.recordCountPill}>200 records</span>
                         </div>
-                        <pre className={styles.codeArea} style={{ fontSize: "0.72rem" }}>
-                          <span className={styles.sqlKeyword}>CREATE TABLE</span> public.users ({"\n"}
-                          {"  "}id <span className={styles.sqlFunction}>UUID</span> PRIMARY KEY DEFAULT gen_random_uuid(),{"\n"}
-                          {"  "}full_name <span className={styles.sqlFunction}>TEXT</span> NOT NULL,{"\n"}
-                          {"  "}email <span className={styles.sqlFunction}>TEXT</span> UNIQUE NOT NULL,{"\n"}
-                          {"  "}role <span className={styles.sqlFunction}>user_role</span> DEFAULT &apos;ENGINEER&apos;,{"\n"}
-                          {"  "}is_active <span className={styles.sqlFunction}>BOOLEAN</span> DEFAULT true{"\n"}
-                          );{"\n"}
-                          <span className={styles.sqlKeyword}>CREATE INDEX CONCURRENTLY</span> idx_users_role{"\n"}
-                          <span className={styles.sqlKeyword}>ON</span> public.users(role, is_active);
+                        <div className={styles.tableFooterRight}>
+                          <span className={styles.activeViewTag}>Data</span>
+                          <span className={styles.subViewTag}>Structure</span>
+                          <span className={styles.subViewTag}>Definition</span>
+                          <span className={styles.subViewTag}>···</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Document Content B: SQL STUDIO */}
+                  {activeDocTab === "query" && (
+                    <div className={styles.sqlStudioContainer}>
+                      {/* SQL Toolbar */}
+                      <div className={styles.sqlToolbar}>
+                        <div className={styles.sqlToolbarLeft}>
+                          <span className={styles.sqlConnDropdown}>
+                            <Database size={11} style={{ color: "var(--accent)" }} />
+                            <span>piyushgres</span>
+                            <ChevronDown size={11} />
+                          </span>
+                          <span className={styles.explainDropdown}>
+                            <span>Explain</span>
+                            <ChevronDown size={11} />
+                          </span>
+                        </div>
+
+                        <div className={styles.sqlToolbarRight}>
+                          <span className={styles.toolIcon}>🔖</span>
+                          <span className={styles.toolIcon}>🕒</span>
+                          <button
+                            type="button"
+                            onClick={handleRunQuery}
+                            disabled={isQueryRunning}
+                            className={styles.sqlRunBtn}
+                          >
+                            <Play size={11} />
+                            <span>{isQueryRunning ? "Running..." : "Run"}</span>
+                            <span className={styles.runShortcut}>Ctrl ↵</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Code Editor Pane */}
+                      <div className={styles.sqlCodeEditorPane}>
+                        <div className={styles.lineNumbers}>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <div key={n}>{n}</div>
+                          ))}
+                        </div>
+                        <pre className={styles.sqlCodeText}>
+                          <code>
+                            <span className={styles.cComment}>-- Top customers by revenue</span>{"\n"}
+                            <span className={styles.cKeyword}>SELECT</span> c.name, c.city,{"\n"}
+                            {"       "}<span className={styles.cFunc}>count</span>(<span className={styles.cKeyword}>DISTINCT</span> o.id) <span className={styles.cKeyword}>AS</span> orders,{"\n"}
+                            {"       "}<span className={styles.cFunc}>sum</span>(oi.quantity * oi.unit_price) <span className={styles.cKeyword}>AS</span> revenue{"\n"}
+                            <span className={styles.cKeyword}>FROM</span> customers c{"\n"}
+                            <span className={styles.cKeyword}>JOIN</span> orders o <span className={styles.cKeyword}>ON</span> o.customer_id = c.id{"\n"}
+                            <span className={styles.cKeyword}>JOIN</span> order_items oi <span className={styles.cKeyword}>ON</span> oi.order_id = o.id{"\n"}
+                            <span className={styles.cKeyword}>GROUP BY</span> c.id{"\n"}
+                            <span className={styles.cKeyword}>ORDER BY</span> revenue <span className={styles.cKeyword}>DESC</span>{"\n"}
+                            <span className={styles.cKeyword}>LIMIT</span> 10;
+                          </code>
                         </pre>
                       </div>
+
+                      {/* Results Pane */}
+                      <div className={styles.sqlResultsPane}>
+                        <div className={styles.resultsTabBar}>
+                          <div className={styles.resultTabActive}>Result 1</div>
+                          <div className={styles.resultMetaRow}>
+                            <span>10 rows</span>
+                            <span className={styles.metaAction}>Copy</span>
+                            <span className={styles.metaTiming}>⏱ {queryLatency}</span>
+                          </div>
+                        </div>
+
+                        <div className={styles.resultsTableWrapper}>
+                          <table className={styles.resultsGrid}>
+                            <thead>
+                              <tr>
+                                <th>name</th>
+                                <th>city</th>
+                                <th>orders</th>
+                                <th>revenue</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {queryRows.map((r, i) => (
+                                <tr key={i}>
+                                  <td style={{ color: "#ffffff", fontWeight: 600 }}>{r.name}</td>
+                                  <td>{r.city}</td>
+                                  <td>{r.orders}</td>
+                                  <td style={{ color: "#34d399", fontFamily: "var(--font-mono)" }}>{r.revenue}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {/* Bottom Status Bar */}
-                  <div className={styles.statusBar}>
-                    <div className={styles.statusMeta}>
-                      <span>PostgreSQL 16.4 on AWS RDS</span>
-                      <span>·</span>
-                      <span>Auto-Save: Instant blur commit</span>
-                      <span>·</span>
-                      <span>SSL: TLS 1.3 verify-full</span>
+                  {/* Document Content C: SCHEMA DIAGRAM ERD */}
+                  {activeDocTab === "diagram" && (
+                    <div className={styles.diagramContainer}>
+                      <div className={styles.diagramToolbar}>
+                        <span className={styles.diagramStat}>5 tables · 3 relations</span>
+                        <span className={styles.diagramLegend}><span className={styles.pkIconSmall}>🔑</span> Primary key</span>
+                        <span className={styles.diagramLegend}>↔ Foreign key</span>
+                        <span className={styles.diagramLegend}>? Nullable</span>
+                        <span className={styles.diagramJump}>Jump to table... ▾</span>
+                      </div>
+                      <div className={styles.diagramCanvasWrapper}>
+                        <Image
+                          src="/screenshots/erd-diagram.png"
+                          alt="PostCompass GPU-accelerated interactive Schema ERD canvas"
+                          width={1100}
+                          height={580}
+                          unoptimized
+                          priority
+                          className={styles.diagramImage}
+                        />
+                      </div>
                     </div>
-                    <div style={{ color: "#34d399", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                      <span className={styles.connDot} />
-                      Direct Socket ({queryDuration})
-                    </div>
-                  </div>
-                </main>
+                  )}
+                </div>
               </div>
             </div>
           </div>

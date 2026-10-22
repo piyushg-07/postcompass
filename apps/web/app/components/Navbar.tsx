@@ -19,8 +19,8 @@ type Platform = "windows" | "macos" | "linux";
 
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
-  { label: "Cloud Postgres", href: "#cloud-postgres", isLive: true },
-  { label: "Early Access", href: "#waitlist", isWaitlist: true },
+  { label: "Compare vs DBeaver", href: "#compare" },
+  { label: "How It Works", href: "#how-it-works" },
   { label: "Download", href: "/download" },
 ];
 
@@ -82,18 +82,16 @@ export default function Navbar() {
         role="banner"
       >
         <nav className={styles.nav} aria-label="Main navigation">
-          {/* Brand Logo & Tech Pill */}
+          {/* Brand Logo */}
           <div className={styles.brandGroup}>
             <a href="#" className={styles.logo} aria-label={`${PRODUCT.name} home`}>
               <div className={styles.logoIconWrap}>
-                <Compass size={18} className={styles.logoIcon} />
+                <Compass size={17} className={styles.logoIcon} />
               </div>
-              <span className={styles.logoText}>{PRODUCT.name}</span>
+              <span className={styles.logoText}>
+                Post<span className={styles.logoAccent}>Compass</span>
+              </span>
             </a>
-            <span className={styles.versionBadge}>
-              <span className={styles.versionDot} />
-              <span>v0.4.2</span>
-            </span>
           </div>
 
           {/* Desktop Navigation Links */}
@@ -102,9 +100,8 @@ export default function Navbar() {
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className={`${styles.link} ${link.isWaitlist ? styles.linkHighlight : ""}`}
+                  className={styles.link}
                 >
-                  {link.isLive && <span className={styles.livePulseDot} />}
                   <span>{link.label}</span>
                 </a>
               </li>
@@ -125,9 +122,9 @@ export default function Navbar() {
               <span className={styles.githubStarCount}>4.2k</span>
             </a>
 
-            <a href="#waitlist" className={styles.waitlistBtn}>
-              <Sparkles size={13} />
-              <span>Early Access</span>
+            <a href="/download" className={styles.downloadNavBtn}>
+              <Download size={13} />
+              <span>Download</span>
             </a>
 
             <button
@@ -165,7 +162,6 @@ export default function Navbar() {
                 onClick={closeMobile}
               >
                 <div className={styles.mobileNavLinkTitle}>
-                  {link.isLive && <span className={styles.livePulseDot} />}
                   <span>{link.label}</span>
                 </div>
                 <span className={styles.mobileNavChevron}>→</span>
@@ -176,15 +172,6 @@ export default function Navbar() {
           <div className={styles.mobileMenuDivider} />
 
           <div className={styles.mobileActions}>
-            <a
-              href="#waitlist"
-              className={styles.mobileWaitlistBtn}
-              onClick={closeMobile}
-            >
-              <Sparkles size={15} />
-              <span>Join Priority Waitlist</span>
-            </a>
-
             <a
               href="/download"
               className={styles.mobileDownloadBtn}

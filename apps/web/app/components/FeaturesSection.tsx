@@ -18,7 +18,7 @@ import {
   Settings,
   Check,
   Layers,
-  ChevronRight,
+  Globe,
   Database,
   ArrowRightLeft,
   Sparkles,
@@ -26,6 +26,7 @@ import {
 import styles from "./FeaturesSection.module.css";
 
 const categoryIcons: Record<FeatureCategory, React.FC<{ size?: number }>> = {
+  "cloud-connections": Globe,
   "data-editing": Table,
   "schema-management": Columns,
   "query-tools": Code,
@@ -37,19 +38,20 @@ const categoryIcons: Record<FeatureCategory, React.FC<{ size?: number }>> = {
 };
 
 const categoryOrder: FeatureCategory[] = [
+  "cloud-connections",
   "data-editing",
   "schema-management",
   "query-tools",
-  "data-types",
   "navigation",
   "visualization",
+  "data-types",
   "import-export",
   "advanced",
 ];
 
 export default function FeaturesSection() {
   const [activeCategory, setActiveCategory] =
-    useState<FeatureCategory>("navigation");
+    useState<FeatureCategory>("cloud-connections");
 
   const featuresInCategory = FEATURES.filter(
     (f) => f.category === activeCategory
@@ -66,11 +68,7 @@ export default function FeaturesSection() {
           <h2 className="section-title">
             Everything you need to manage PostgreSQL
           </h2>
-          <p className="section-description">
-            Combining the best of Supabase Table Editor and pgAdmin 4 into one
-            cohesive experience. Every feature below is built for speed and
-            clarity.
-          </p>
+
         </div>
 
         {/* Category Tabs */}
@@ -81,9 +79,8 @@ export default function FeaturesSection() {
             return (
               <button
                 key={cat}
-                className={`${styles.categoryTab} ${
-                  activeCategory === cat ? styles.active : ""
-                }`}
+                className={`${styles.categoryTab} ${activeCategory === cat ? styles.active : ""
+                  }`}
                 onClick={() => setActiveCategory(cat)}
                 role="tab"
                 aria-selected={activeCategory === cat}
@@ -107,9 +104,8 @@ export default function FeaturesSection() {
           Neither card spans full width, eliminating asymmetric empty spaces.
         */}
         <div
-          className={`${styles.featureGrid} ${
-            featuresInCategory.length === 2 ? styles.balancedGrid : ""
-          }`}
+          className={`${styles.featureGrid} ${featuresInCategory.length === 2 ? styles.balancedGrid : ""
+            }`}
         >
           {featuresInCategory.map((feature, index) => {
             // Only span full width if there is a single card or an odd 3+ layout
@@ -186,7 +182,58 @@ function FeatureCard({
             Contextual Visual Mockup Previews:
             Brings the features to life with realistic GUI controls
             ======================================================== */}
-        
+
+        {/* Preview: Multi-Cloud Direct Connection */}
+        {feature.id === "multi-cloud-direct" && (
+          <div className={styles.previewWidget}>
+            <div className={styles.widgetHeader}>
+              <span className={styles.widgetTitle}>Supported Database Providers</span>
+              <span className={styles.widgetBadge}>Zero Proxy</span>
+            </div>
+
+            <div className={styles.cloudProviderBadges}>
+              <span className={styles.cloudBadge}>AWS RDS &amp; Aurora</span>
+              <span className={styles.cloudBadge}>Supabase</span>
+              <span className={styles.cloudBadge}>Neon Serverless</span>
+              <span className={styles.cloudBadge}>Google Cloud SQL</span>
+              <span className={styles.cloudBadge}>Docker / VPS</span>
+            </div>
+
+            <div className={styles.cloudFooterInfo}>
+              <span>⚡ Direct TCP/SSL Socket</span>
+              <span style={{ color: "#34d399" }}>&lt;2ms Latency</span>
+              <span>🔒 100% Private</span>
+            </div>
+          </div>
+        )}
+
+        {/* Preview: Replica & Branch Routing */}
+        {feature.id === "cloud-replica-failover" && (
+          <div className={styles.previewWidget}>
+            <div className={styles.widgetHeader}>
+              <span className={styles.widgetTitle}>Active Cluster Routing</span>
+              <span className={styles.widgetBadge}>High Availability</span>
+            </div>
+
+            <div className={styles.cloudProviderBadges}>
+              <span className={`${styles.cloudBadge} ${styles.cloudBadgeActive}`}>
+                ● Primary (us-east-1)
+              </span>
+              <span className={styles.cloudBadge}>
+                Replica 1 (us-west-2 · 1.8ms)
+              </span>
+              <span className={styles.cloudBadge}>
+                Neon Branch: main
+              </span>
+            </div>
+
+            <div className={styles.cloudFooterInfo}>
+              <span>✓ Auto-Failover Discovery</span>
+              <span>Lock Timeout: 2000ms</span>
+            </div>
+          </div>
+        )}
+
         {/* Preview: Visual Filter Builder */}
         {feature.id === "filtering-sorting" && (
           <div className={styles.previewWidget}>

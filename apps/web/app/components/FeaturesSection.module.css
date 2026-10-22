@@ -214,6 +214,44 @@
   font-weight: 600;
 }
 
+/* Cloud Badges */
+.cloudProviderBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.cloudBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.78rem;
+  font-family: var(--font-mono, monospace);
+  color: #d4d4d8;
+}
+
+.cloudBadgeActive {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
+  font-weight: 600;
+}
+
+.cloudFooterInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #71717a;
+  font-family: var(--font-mono, monospace);
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
 /* Visual Filter Builder Preview */
 .filterRulesList {
   display: flex;

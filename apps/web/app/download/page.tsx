@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 import { PRODUCT } from "../config/product";
 import {
   WindowsIcon,
@@ -287,7 +286,6 @@ export default function DownloadPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

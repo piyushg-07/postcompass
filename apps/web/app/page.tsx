@@ -1,13 +1,9 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import CloudDbShowcase from "./components/CloudDbShowcase";
-import WaitlistSection from "./components/WaitlistSection";
 import FeaturesSection from "./components/FeaturesSection";
-import InteractiveDemo from "./components/InteractiveDemo";
+import CompareSection from "./components/CompareSection";
 import HowItWorks from "./components/HowItWorks";
 import DownloadSection from "./components/DownloadSection";
-import FaqSection from "./components/FaqSection";
-import Footer from "./components/Footer";
 
 export default function Home() {
   return (
@@ -15,15 +11,11 @@ export default function Home() {
       <Navbar />
       <main id="main-content">
         <Hero />
-        <CloudDbShowcase />
-        <WaitlistSection />
         <FeaturesSection />
-        <InteractiveDemo />
+        <CompareSection />
         <HowItWorks />
         <DownloadSection />
-        {/* <FaqSection /> */}
       </main>
-      <Footer />
     </>
   );
 }
