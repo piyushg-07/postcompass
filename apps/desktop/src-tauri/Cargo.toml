@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-description = "PostCompass desktop app"
+description = "PostCompass: a modern desktop app for PostgreSQL"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
