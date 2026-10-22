@@ -9,7 +9,7 @@ import {
   Settings,
   Table2,
 } from "lucide-react";
-import { lazy, type ReactNode, Suspense } from "react";
+import { lazy, type ReactNode, Suspense, useEffect, useRef } from "react";
 import { BackupDialog, RestoreDialog } from "../features/backup/backup-dialogs";
 import { HomePage } from "../features/home/home-page";
 import { CommandPalette } from "../features/palette/command-palette";
@@ -50,6 +50,28 @@ export function Shell() {
   const collapsed = useUiPrefs((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
   useHotkey("Mod+B", toggleSidebar, { ignoreInputs: false });
+
+  // Opening a database collapses the sidebar to give the explorer room; leaving it brings the
+  // sidebar back, unless it was already collapsed or the user changed it in the meantime.
+  const autoCollapsed = useRef(false);
+  const inExplorer = section === "explorer" && openServerId !== null;
+  useEffect(() => {
+    const prefs = useUiPrefs.getState();
+    if (inExplorer) {
+      if (!prefs.sidebarCollapsed) {
+        prefs.setSidebarCollapsed(true);
+        autoCollapsed.current = true;
+      }
+    } else if (autoCollapsed.current) {
+      autoCollapsed.current = false;
+      if (prefs.sidebarCollapsed) prefs.setSidebarCollapsed(false);
+    }
+  }, [inExplorer]);
+  // A manual toggle in the explorer means the user decides from now on
+  useEffect(() => {
+    if (inExplorer && !collapsed) autoCollapsed.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed]);
 
   return (
     <div className="flex h-full">
