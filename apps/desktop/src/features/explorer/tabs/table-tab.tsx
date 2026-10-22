@@ -12,7 +12,15 @@ import {
   Switch,
   toast,
 } from "@repo/ui";
-import { Copy, Eraser, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Copy,
+  CopyPlus,
+  Eraser,
+  MoreHorizontal,
+  Pencil,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import type { ObjectKind } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
@@ -22,6 +30,7 @@ import {
   renameTable,
   truncateTable,
 } from "../../../lib/sql";
+import { useCreateTableSheet } from "../create-table-sheet";
 import { TableData, TableFooter } from "../data/table-data";
 import { useDefinition, useExplorer } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
@@ -52,6 +61,15 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
       : tab.kind === "materialized_view"
         ? "materialized view"
         : "table";
+
+  const openTableSheet = (mode: "edit" | "duplicate") =>
+    useCreateTableSheet.getState().open({
+      serverId,
+      database: tab.database,
+      schema: tab.schema,
+      table: tab.name,
+      mode,
+    });
 
   const footerRight = (
     <>
@@ -89,6 +107,22 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           >
             Copy name
           </DropdownMenuItem>
+          {!isView && (
+            <DropdownMenuItem
+              icon={<Settings2 />}
+              onSelect={() => openTableSheet("edit")}
+            >
+              Edit table
+            </DropdownMenuItem>
+          )}
+          {!isView && (
+            <DropdownMenuItem
+              icon={<CopyPlus />}
+              onSelect={() => openTableSheet("duplicate")}
+            >
+              Duplicate table
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             icon={<Pencil />}
             onSelect={() => setAction("rename")}

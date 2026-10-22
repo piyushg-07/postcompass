@@ -2,20 +2,33 @@ import {
   Button,
   cn,
   Dialog,
-  DialogContent,
-  Input,
+  IconButton,
   SheetContent,
   Skeleton,
+  Spinner,
 } from "@repo/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useDebouncedValue } from "@tanstack/react-pacer";
-import { ArrowUpRight, KeyRound, Search } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Key,
+  RefreshCw,
+} from "lucide-react";
 import { useState } from "react";
-import type { RowsRequest } from "../../../lib/bindings";
+import type {
+  ColumnInfo,
+  FilterSpec,
+  RowsRequest,
+  SortSpec,
+} from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
+import { shortType } from "../../../lib/pg-types";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer } from "../explorer-context";
 import { useWorkspaceStore } from "../workspace-store";
+import { FilterBar } from "./filter-bar";
+import { SortPopover } from "./filter-sort";
 
 /** Where a foreign-key column points: one column of another table. */
 export interface Reference {
@@ -24,12 +37,9 @@ export interface Reference {
   column: string;
 }
 
-function useRows(
-  database: string,
-  ref: Reference,
-  request: RowsRequest,
-  enabled = true,
-) {
+const PAGE = 100;
+
+function useRows(database: string, ref: Reference, request: RowsRequest) {
   const { connectionId } = useExplorer();
   return useQuery({
     queryKey: queryKeys.explorer.rows(
@@ -50,50 +60,47 @@ function useRows(
         ),
       ),
     placeholderData: keepPreviousData,
-    enabled,
   });
 }
 
-/**
- * The record a foreign-key value points to, like Supabase's "referencing record" panel:
- * every field of that row, and a button that opens the table filtered to it.
- */
-export function ReferenceSheet({
-  database,
-  target,
-  onOpenChange,
-}: {
-  database: string;
-  target: (Reference & { value: string }) | null;
-  onOpenChange: (open: boolean) => void;
-}) {
+function ColumnHead({ column }: { column: ColumnInfo }) {
   return (
-    <Dialog open={target !== null} onOpenChange={onOpenChange}>
-      {target && (
-        <ReferenceBody
-          database={database}
-          target={target}
-          onClose={() => onOpenChange(false)}
-        />
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
+      {column.isPrimaryKey && (
+        <Key className="size-3 shrink-0 rotate-45 text-accent" />
       )}
-    </Dialog>
+      <span className="font-medium text-fg">{column.name}</span>
+      <span className="text-fg-subtle">{shortType(column.dataType)}</span>
+    </span>
   );
 }
 
-function ReferenceBody({
+function Value({ value }: { value: string | null }) {
+  if (value === null) return <span className="text-fg/50">NULL</span>;
+  if (value === "") return <span className="text-fg/50">EMPTY</span>;
+  return <>{value}</>;
+}
+
+/**
+ * The popover behind a foreign-key cell's arrow, like Supabase's: the referenced row in a
+ * small grid, and "Open table" to jump to it.
+ */
+export function ReferencePeek({
   database,
-  target,
+  reference,
+  value,
   onClose,
 }: {
   database: string;
-  target: Reference & { value: string };
+  reference: Reference;
+  value: string;
   onClose: () => void;
 }) {
   const { serverId } = useExplorer();
-  const filters = [
-    { column: target.column, op: "equals" as const, value: target.value },
+  const filters: FilterSpec[] = [
+    { column: reference.column, op: "equals", value },
   ];
-  const rows = useRows(database, target, {
+  const rows = useRows(database, reference, {
     offset: 0,
     limit: 1,
     sort: [],
@@ -105,8 +112,8 @@ function ReferenceBody({
     useWorkspaceStore.getState().openTab(serverId, {
       type: "table",
       database,
-      schema: target.schema,
-      name: target.table,
+      schema: reference.schema,
+      name: reference.table,
       kind: "table",
       view: "data",
       filters,
@@ -115,97 +122,94 @@ function ReferenceBody({
   };
 
   return (
-    <SheetContent
-      title={
-        <>
-          Referencing record from{" "}
-          <span className="font-mono">{`${target.schema}.${target.table}`}</span>
-        </>
-      }
-      description={
-        <>
-          Where <span className="font-mono">{target.column}</span> ={" "}
-          <span className="font-mono text-accent">{target.value}</span>
-        </>
-      }
-      className="w-[520px]"
-      footer={
+    <div className="flex flex-col">
+      <p className="px-3 py-2.5 text-xs text-fg-muted">
+        Referencing record from{" "}
+        <span className="font-mono text-fg">{`${reference.schema}.${reference.table}`}</span>
+        :
+      </p>
+      <div className="h-32 overflow-auto border-y border-border bg-bg text-xs">
+        {rows.isPending ? (
+          <div className="flex flex-col gap-1.5 p-3">
+            <Skeleton className="h-6" />
+            <Skeleton className="h-6" />
+          </div>
+        ) : rows.isError ? (
+          <p className="p-3 text-danger">
+            Failed to find referencing row: {describeError(rows.error).message}
+          </p>
+        ) : !row ? (
+          <p className="p-3 text-fg-subtle">No results were returned</p>
+        ) : (
+          <table className="text-left">
+            <thead className="sticky top-0 bg-surface">
+              <tr>
+                {rows.data.columns.map((c) => (
+                  <th
+                    key={c.name}
+                    className="h-8 border-r border-b border-border px-2 font-normal"
+                  >
+                    <ColumnHead column={c} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {row.map((v, i) => (
+                  <td
+                    key={i}
+                    className="h-8 max-w-60 truncate border-r border-b border-border px-2 text-fg select-text"
+                  >
+                    <Value value={v} />
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        )}
+      </div>
+      <div className="flex justify-end px-3 py-2">
         <Button
-          variant="primary"
-          iconLeft={<ArrowUpRight />}
+          size="sm"
+          variant="secondary"
+          iconRight={<ArrowUpRight />}
           onClick={openTable}
         >
           Open table
         </Button>
-      }
-    >
-      {rows.isPending ? (
-        <div className="flex flex-col gap-2">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-10" />
-          ))}
-        </div>
-      ) : rows.isError ? (
-        <p className="text-sm text-danger">
-          {describeError(rows.error).message}
-        </p>
-      ) : !row ? (
-        <p className="text-sm text-fg-muted">
-          No matching record. It may have been deleted.
-        </p>
-      ) : (
-        <dl className="flex flex-col divide-y divide-border">
-          {rows.data.columns.map((c, i) => (
-            <div
-              key={c.name}
-              className="grid grid-cols-[170px_1fr] gap-4 py-2.5 first:pt-0"
-            >
-              <dt className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex items-center gap-1.5 truncate font-mono text-xs text-fg">
-                  {c.isPrimaryKey && (
-                    <KeyRound className="size-3 shrink-0 text-warning" />
-                  )}
-                  {c.name}
-                </span>
-                <span className="truncate font-mono text-[11px] text-fg-subtle">
-                  {c.dataType}
-                </span>
-              </dt>
-              <dd className="min-w-0 font-mono text-xs break-words whitespace-pre-wrap text-fg select-text">
-                {row[i] === null ? (
-                  <span className="text-fg-subtle italic">NULL</span>
-                ) : (
-                  row[i]
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </SheetContent>
+      </div>
+    </div>
   );
 }
 
-/** Pick a row of the referenced table; returns its referenced column's value. */
+/**
+ * "Select a record to reference", like Supabase's: the referenced table with filter, sort and
+ * paging; clicking a row picks its referenced column's value.
+ */
 export function RecordPicker({
   database,
   reference,
   open,
+  nullable = false,
   onOpenChange,
   onPick,
 }: {
   database: string;
-  reference: Reference;
+  reference: Reference | null;
   open: boolean;
+  /** Offers "Set NULL". */
+  nullable?: boolean;
   onOpenChange: (open: boolean) => void;
-  onPick: (value: string) => void;
+  onPick: (value: string | null) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open && (
+      {open && reference && (
         <PickerBody
           database={database}
           reference={reference}
+          nullable={nullable}
           onPick={(v) => {
             onPick(v);
             onOpenChange(false);
@@ -219,116 +223,147 @@ export function RecordPicker({
 function PickerBody({
   database,
   reference,
+  nullable,
   onPick,
 }: {
   database: string;
   reference: Reference;
-  onPick: (value: string) => void;
+  nullable: boolean;
+  onPick: (value: string | null) => void;
 }) {
-  const [search, setSearch] = useState("");
-  const [query] = useDebouncedValue(search.trim(), { wait: 250 });
+  const [page, setPage] = useState(0);
+  const [filters, setFilters] = useState<FilterSpec[]>([]);
+  const [sort, setSort] = useState<SortSpec[]>([]);
   const rows = useRows(database, reference, {
-    offset: 0,
-    limit: 100,
-    sort: [],
-    filters: query
-      ? [{ column: reference.column, op: "contains", value: query }]
-      : [],
+    offset: page * PAGE,
+    limit: PAGE,
+    sort,
+    filters,
   });
   const data = rows.data;
+  const columns = data?.columns.map((c) => c.name) ?? [];
   const refIndex =
     data?.columns.findIndex((c) => c.name === reference.column) ?? -1;
 
   return (
-    <DialogContent
+    <SheetContent
       title={
         <>
-          Select a record from{" "}
+          Select a record to reference from{" "}
           <span className="font-mono">{`${reference.schema}.${reference.table}`}</span>
         </>
       }
-      description={
-        <>
-          Sets the value to the record's{" "}
-          <span className="font-mono">{reference.column}</span>.
-        </>
-      }
-      className="w-[760px]"
+      className="w-[860px]"
     >
-      <div className="relative">
-        <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-subtle" />
-        <Input
-          autoFocus
-          className="pl-8 font-mono text-xs"
-          placeholder={`Search by ${reference.column}…`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <div className="max-h-[420px] overflow-auto rounded-card border border-border">
-        {rows.isPending ? (
-          <div className="flex flex-col gap-1.5 p-3">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-7" />
-            ))}
-          </div>
-        ) : rows.isError ? (
-          <p className="p-3 text-sm text-danger">
-            {describeError(rows.error).message}
-          </p>
-        ) : !data || data.rows.length === 0 ? (
-          <p className="p-6 text-center text-sm text-fg-subtle">
-            No records found
-          </p>
-        ) : (
-          <table className="w-full text-left font-mono text-xs">
-            <thead className="sticky top-0 bg-surface text-[11px] text-fg-subtle">
-              <tr>
-                {data.columns.map((c) => (
-                  <th
-                    key={c.name}
-                    className={cn(
-                      "border-b border-border px-3 py-2 font-sans font-medium whitespace-nowrap",
-                      c.name === reference.column && "text-accent",
-                    )}
-                  >
-                    {c.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((r, i) => (
-                <tr
-                  key={i}
-                  onClick={() =>
-                    refIndex >= 0 &&
-                    r[refIndex] !== null &&
-                    onPick(r[refIndex]!)
-                  }
-                  className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-surface-hover"
-                >
-                  {r.map((v, j) => (
-                    <td
-                      key={j}
-                      className={cn(
-                        "max-w-56 truncate px-3 py-1.5",
-                        j === refIndex ? "text-accent" : "text-fg",
-                      )}
+      <div className="-mx-5 -mt-4 flex h-full min-h-0 flex-col">
+        <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-3">
+          <IconButton
+            size="sm"
+            label="Refresh"
+            icon={
+              rows.isFetching ? <Spinner className="size-3.5" /> : <RefreshCw />
+            }
+            onClick={() => void rows.refetch()}
+          />
+          <FilterBar
+            columns={columns}
+            applied={filters}
+            disabled={false}
+            onApply={(next) => {
+              setFilters(next);
+              setPage(0);
+            }}
+          />
+          <SortPopover
+            columns={columns}
+            applied={sort}
+            disabled={false}
+            onApply={(next) => {
+              setSort(next);
+              setPage(0);
+            }}
+          />
+          <span className="ml-auto flex items-center gap-1">
+            <IconButton
+              size="sm"
+              label="Previous page"
+              icon={<ChevronLeft />}
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            />
+            <IconButton
+              size="sm"
+              label="Next page"
+              icon={<ChevronRight />}
+              disabled={!data?.hasMore}
+              onClick={() => setPage((p) => p + 1)}
+            />
+            {nullable && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="ml-1"
+                onClick={() => onPick(null)}
+              >
+                Set NULL
+              </Button>
+            )}
+          </span>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto bg-bg text-[13px]">
+          {rows.isPending ? (
+            <div className="flex flex-col gap-1.5 p-3">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-7" />
+              ))}
+            </div>
+          ) : rows.isError ? (
+            <p className="p-3 text-sm text-danger">
+              {describeError(rows.error).message}
+            </p>
+          ) : !data || data.rows.length === 0 ? (
+            <p className="p-10 text-center text-sm text-fg-subtle">
+              No Rows Found
+            </p>
+          ) : (
+            <table className="min-w-full text-left">
+              <thead className="sticky top-0 z-10 bg-surface text-xs">
+                <tr>
+                  {data.columns.map((c) => (
+                    <th
+                      key={c.name}
+                      className="h-[34px] border-r border-b border-border px-2 font-normal"
                     >
-                      {v === null ? (
-                        <span className="text-fg-subtle italic">NULL</span>
-                      ) : (
-                        v
-                      )}
-                    </td>
+                      <ColumnHead column={c} />
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {data.rows.map((r, i) => (
+                  <tr
+                    key={i}
+                    onClick={() => refIndex >= 0 && onPick(r[refIndex] ?? null)}
+                    className="cursor-pointer hover:bg-surface-hover"
+                  >
+                    {r.map((v, j) => (
+                      <td
+                        key={j}
+                        className={cn(
+                          "h-[34px] max-w-64 truncate border-r border-b border-border px-2",
+                          j === refIndex ? "text-fg" : "text-fg-muted",
+                        )}
+                      >
+                        <Value value={v} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </DialogContent>
+    </SheetContent>
   );
 }

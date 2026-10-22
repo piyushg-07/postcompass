@@ -5,6 +5,8 @@ import { cn } from "../lib/cn";
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 export const PopoverClose = PopoverPrimitive.Close;
+/** Positions the popover against an element other than its trigger (e.g. a grid cell). */
+export const PopoverAnchor = PopoverPrimitive.Anchor;
 
 /** Floating panel anchored to its trigger (filter and sort editors, small forms). */
 export function PopoverContent({

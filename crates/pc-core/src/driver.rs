@@ -196,6 +196,8 @@ pub struct TableStructure {
     pub name: String,
     pub kind: TableKind,
     pub comment: Option<String>,
+    /// Row Level Security is switched on.
+    pub rls_enabled: bool,
     pub columns: Vec<ColumnInfo>,
     pub primary_key: Vec<String>,
     pub foreign_keys: Vec<ForeignKeyInfo>,

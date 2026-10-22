@@ -8,7 +8,7 @@ export { toast, Toaster } from "./components/toast";
 export { Dialog, DialogTrigger, DialogClose, DialogContent, DialogFooter, ConfirmDialog, SheetContent } from "./components/dialog";
 export { Input, PasswordInput, NativeSelect, Field, type FieldControlProps } from "./components/input";
 export { Select, type SelectOption } from "./components/select";
-export { Popover, PopoverTrigger, PopoverClose, PopoverContent } from "./components/popover";
+export { Popover, PopoverTrigger, PopoverClose, PopoverContent, PopoverAnchor } from "./components/popover";
 export { Switch, Checkbox, RadioCardGroup, RadioCard } from "./components/controls";
 export { Stepper, TaskSteps, type TaskStepState } from "./components/stepper";
 export { LogViewer } from "./components/log-viewer";

@@ -3,18 +3,34 @@ import {
   cn,
   Dialog,
   DialogClose,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
+  Kbd,
   Select,
   SheetContent,
+  Switch,
   toast,
 } from "@repo/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, KeyRound, TextSearch } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, Key, Maximize2, Pencil } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import type { ColumnInfo, ColumnValue, RowChange } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
+import {
+  baseTypeName,
+  dateFormat,
+  nowFor,
+  shortType,
+  type TypeKind,
+  typeKind,
+} from "../../../lib/pg-types";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer } from "../explorer-context";
+import { ExpandEditor } from "./cell-editors";
 import { RecordPicker, type Reference } from "./reference";
 
 /** The row being edited: its current values and the key that identifies it. */
@@ -23,24 +39,9 @@ export interface EditTarget {
   key: ColumnValue[];
 }
 
-/** Columns the database fills in by itself, so the form leaves them alone. */
-function autoValue(c: ColumnInfo): string | null {
-  if (c.generated) return `Generated: ${c.generated}`;
-  if (c.identity === "always") return "Generated automatically (identity)";
-  return null;
-}
-
-function insertHint(c: ColumnInfo) {
-  if (c.identity === "by_default")
-    return "Leave empty to generate automatically";
-  if (c.default) return `Leave empty for the default: ${c.default}`;
-  if (!c.nullable) return "Required";
-  return "Leave empty for NULL";
-}
-
 /**
- * Row side panel, like Supabase's: one field per column. Inserts a new row, or edits `row`
- * (only changed fields are written). Saves right away.
+ * Row side panel, like Supabase's: required fields first, then the optional ones. Inserts a
+ * new row, or updates `row` (only changed fields are written).
  */
 export function RowSheet({
   open,
@@ -51,6 +52,7 @@ export function RowSheet({
   columns,
   row,
   references = {},
+  enums = new Map(),
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,8 +62,10 @@ export function RowSheet({
   columns: ColumnInfo[];
   /** Present when editing. */
   row?: EditTarget | null;
-  /** Foreign keys by column name; those fields get a record picker. */
+  /** Foreign keys by column name; those fields can pick a record. */
   references?: Record<string, Reference>;
+  /** Enum values by type name. */
+  enums?: ReadonlyMap<string, string[]>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,6 +77,7 @@ export function RowSheet({
           columns={columns}
           row={row ?? null}
           references={references}
+          enums={enums}
           onDone={() => onOpenChange(false)}
         />
       )}
@@ -83,6 +88,15 @@ export function RowSheet({
 /** `undefined` = not set (insert: use the default), `null` = NULL, string = value. */
 type Value = string | null | undefined;
 
+const LONG_TEXT = new Set([
+  "text",
+  "varchar",
+  "bpchar",
+  "char",
+  "citext",
+  "xml",
+]);
+
 function RowForm({
   database,
   schema,
@@ -90,6 +104,7 @@ function RowForm({
   columns,
   row,
   references,
+  enums,
   onDone,
 }: {
   database: string;
@@ -98,28 +113,42 @@ function RowForm({
   columns: ColumnInfo[];
   row: EditTarget | null;
   references: Record<string, Reference>;
+  enums: ReadonlyMap<string, string[]>;
   onDone: () => void;
 }) {
-  const [picking, setPicking] = useState<number | null>(null);
   const { connectionId } = useExplorer();
   const queryClient = useQueryClient();
   const editing = row !== null;
-  const [values, setValues] = useState<Value[]>(() =>
-    columns.map((_, i) => (row ? row.values[i] : undefined)),
+  const blank = () => columns.map((_, i) => (row ? row.values[i] : undefined));
+  const [values, setValues] = useState<Value[]>(blank);
+  const [createMore, setCreateMore] = useState(false);
+  const [picking, setPicking] = useState<number | null>(null);
+  const [expand, setExpand] = useState<{ index: number; json: boolean } | null>(
+    null,
   );
   const set = (index: number, value: Value) =>
     setValues((v) => v.map((x, i) => (i === index ? value : x)));
 
+  const enumNames = new Set(enums.keys());
+  const kinds = columns.map((c) => typeKind(c.dataType, enumNames));
+  const isText = (i: number) =>
+    kinds[i] === "text" || kinds[i] === "array" || kinds[i] === "json";
+  /** Generated columns aren't part of the form, and identity ALWAYS ones can't be written. */
+  const writable = (c: ColumnInfo) => !c.generated && c.identity !== "always";
+
+  // Non-text fields left empty mean "not set" (insert) or NULL (update)
+  const normalized = (i: number): Value => {
+    const v = values[i];
+    if (v === "" && !isText(i)) return editing ? null : undefined;
+    return v;
+  };
+
   const change = (): RowChange | null => {
     if (row) {
       const changed = columns
-        .map((c, i) => ({
-          column: c.name,
-          value: values[i] ?? null,
-          before: row.values[i],
-        }))
-        .filter((x, i) => !autoValue(columns[i]!) && x.value !== x.before)
-        .map(({ column, value }) => ({ column, value }));
+        .map((c, i) => ({ c, i, value: normalized(i) ?? null }))
+        .filter(({ c, i, value }) => writable(c) && value !== row.values[i])
+        .map(({ c, value }) => ({ column: c.name, value }));
       return changed.length
         ? { type: "update", key: row.key, values: changed }
         : null;
@@ -128,10 +157,10 @@ function RowForm({
     return {
       type: "insert",
       values: columns
-        .map((c, i) => ({ column: c.name, value: values[i] }))
+        .map((c, i) => ({ column: c.name, value: normalized(i) }))
         .filter(
           (x, i): x is ColumnValue =>
-            !autoValue(columns[i]!) && x.value !== undefined && x.value !== "",
+            writable(columns[i]!) && x.value !== undefined,
         ),
     };
   };
@@ -161,32 +190,60 @@ function RowForm({
           queryKey: queryKeys.explorer.tables(connectionId, database, schema),
         });
       }
-      onDone();
+      if (createMore && !editing) setValues(blank());
+      else onDone();
     },
   });
+
+  const fields = columns
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !c.generated);
+  const required = fields.filter(
+    ({ c }) => !c.nullable && c.default === null && c.identity === null,
+  );
+  const optional = fields.filter((f) => !required.includes(f));
+
+  const field = ({ c, i }: { c: ColumnInfo; i: number }) => (
+    <FieldRow
+      key={c.name}
+      column={c}
+      kind={kinds[i]!}
+      value={values[i]}
+      editing={editing}
+      reference={references[c.name]}
+      enumValues={enums.get(baseTypeName(c.dataType))}
+      onChange={(v) => set(i, v)}
+      onPick={() => setPicking(i)}
+      onExpand={() => setExpand({ index: i, json: kinds[i] === "json" })}
+    />
+  );
 
   return (
     <SheetContent
       title={
         <>
-          {editing ? "Edit row in " : "Add new row to "}
+          {editing ? "Update row from " : "Add new row to "}
           <span className="font-mono">{table}</span>
         </>
       }
-      description={
-        editing
-          ? "Only the fields you change are saved."
-          : "Empty fields use the column's default value, or NULL."
-      }
-      className="w-[580px]"
+      className="w-[640px]"
       footer={
         <>
+          {!editing && (
+            <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs text-fg-muted">
+              <Switch checked={createMore} onCheckedChange={setCreateMore} />
+              Create more
+            </label>
+          )}
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
           <Button
             variant="primary"
             loading={save.isPending}
+            iconRight={
+              <Kbd className="border-0 bg-black/15 text-current">⌃↵</Kbd>
+            }
             onClick={() => save.mutate()}
           >
             Save
@@ -195,160 +252,317 @@ function RowForm({
       }
     >
       <form
-        className="flex flex-col divide-y divide-border"
+        className="flex flex-col gap-6"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            save.mutate();
+          }
+        }}
       >
-        {columns.map((c, i) => {
-          const auto = autoValue(c);
-          const value = values[i];
-          const id = `row-${c.name}`;
-          const isBool = c.dataType === "boolean";
-          const isLong =
-            /json|text|xml/.test(c.dataType) && (value?.length ?? 0) > 60;
-          const changed = editing && value !== row.values[i];
-          return (
-            <div
-              key={c.name}
-              className="grid grid-cols-[170px_1fr] gap-4 py-3 first:pt-0"
-            >
-              <label
-                htmlFor={id}
-                className="flex min-w-0 flex-col gap-0.5 pt-1.5"
-              >
-                <span className="flex items-center gap-1.5 truncate font-mono text-xs text-fg">
-                  {c.isPrimaryKey && (
-                    <KeyRound className="size-3 shrink-0 text-warning" />
-                  )}
-                  {c.name}
-                  {changed && (
-                    <span className="size-1.5 shrink-0 rounded-full bg-warning" />
-                  )}
-                </span>
-                <span className="truncate font-mono text-[11px] text-fg-subtle">
-                  {c.dataType}
-                </span>
-              </label>
-              <div className="flex min-w-0 flex-col gap-1">
-                {auto ? (
-                  <Input
-                    id={id}
-                    disabled
-                    className="font-mono text-xs"
-                    placeholder={editing ? (value ?? "NULL") : auto}
-                  />
-                ) : (
-                  <div className="flex items-start gap-1.5">
-                    {isBool ? (
-                      <Select
-                        id={id}
-                        className="flex-1"
-                        value={value ?? ""}
-                        onValueChange={(v) => set(i, v)}
-                        placeholder={
-                          value === null
-                            ? "NULL"
-                            : c.default
-                              ? `Default (${c.default})`
-                              : "Choose…"
-                        }
-                        options={[
-                          { value: "true", label: "true" },
-                          { value: "false", label: "false" },
-                        ]}
-                      />
-                    ) : isLong ? (
-                      <textarea
-                        id={id}
-                        rows={4}
-                        className="min-h-20 w-full flex-1 resize-y rounded-control border border-border-strong bg-bg px-2.5 py-1.5 font-mono text-xs text-fg outline-none focus-visible:border-accent"
-                        value={value ?? ""}
-                        onChange={(e) => set(i, e.target.value)}
-                      />
-                    ) : (
-                      <Input
-                        id={id}
-                        autoFocus={
-                          i === columns.findIndex((x) => !autoValue(x))
-                        }
-                        className={cn(
-                          "flex-1 font-mono text-xs",
-                          value === null && "placeholder:italic",
-                        )}
-                        placeholder={
-                          value === null
-                            ? "NULL"
-                            : (c.default ?? (c.nullable ? "NULL" : ""))
-                        }
-                        value={value ?? ""}
-                        onChange={(e) => set(i, e.target.value)}
-                      />
-                    )}
-                    {references[c.name] && (
-                      <button
-                        type="button"
-                        onClick={() => setPicking(i)}
-                        className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-border px-2 text-[11px] text-fg-muted hover:border-fg-subtle hover:text-fg"
-                      >
-                        <TextSearch className="size-3.5" />
-                        Select record
-                      </button>
-                    )}
-                    {c.nullable && (
-                      <button
-                        type="button"
-                        onClick={() => set(i, null)}
-                        className={cn(
-                          "h-8 shrink-0 cursor-pointer rounded-control border px-2 font-mono text-[10px]",
-                          value === null
-                            ? "border-accent/40 bg-accent/10 text-accent"
-                            : "border-border text-fg-subtle hover:border-fg-subtle hover:text-fg",
-                        )}
-                      >
-                        NULL
-                      </button>
-                    )}
-                  </div>
-                )}
-                {references[c.name] && (
-                  <span className="text-[11px] text-fg-subtle">
-                    References{" "}
-                    <span className="font-mono">
-                      {references[c.name]!.table}.{references[c.name]!.column}
-                    </span>
-                  </span>
-                )}
-                {!auto && !editing && (
-                  <span className="text-[11px] text-fg-subtle">
-                    {insertHint(c)}
-                  </span>
-                )}
-                {c.comment && (
-                  <span className="text-[11px] text-fg-muted">{c.comment}</span>
-                )}
+        {required.length > 0 && (
+          <div className="flex flex-col gap-5">{required.map(field)}</div>
+        )}
+        {optional.length > 0 && (
+          <div
+            className={cn(
+              "flex flex-col gap-5",
+              required.length > 0 && "border-t border-border pt-6",
+            )}
+          >
+            {required.length > 0 && (
+              <div className="flex flex-col gap-0.5">
+                <h3 className="text-sm text-fg">Optional Fields</h3>
+                <p className="text-xs text-fg-subtle">
+                  These are columns that do not need any value
+                </p>
               </div>
-            </div>
-          );
-        })}
+            )}
+            {optional.map(field)}
+          </div>
+        )}
         {save.isError && (
-          <div className="mt-3 flex items-start gap-2 rounded-control border border-danger/30 bg-danger/5 p-2.5 text-xs">
+          <div className="flex items-start gap-2 rounded-control border border-danger/30 bg-danger/5 p-2.5 text-xs">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-danger" />
             <span className="text-fg">{describeError(save.error).message}</span>
           </div>
         )}
-        <button type="submit" hidden />
       </form>
-      {picking !== null && references[columns[picking]!.name] && (
-        <RecordPicker
-          database={database}
-          reference={references[columns[picking]!.name]!}
-          open
-          onOpenChange={(o) => !o && setPicking(null)}
-          onPick={(v) => set(picking, v)}
-        />
-      )}
+
+      <RecordPicker
+        database={database}
+        open={picking !== null}
+        reference={
+          picking !== null ? (references[columns[picking]!.name] ?? null) : null
+        }
+        nullable={picking !== null && columns[picking]!.nullable}
+        onOpenChange={(o) => !o && setPicking(null)}
+        onPick={(v) => picking !== null && set(picking, v)}
+      />
+      <ExpandEditor
+        target={
+          expand
+            ? {
+                column: columns[expand.index]!.name,
+                json: expand.json,
+                text: values[expand.index] ?? "",
+              }
+            : null
+        }
+        onClose={() => setExpand(null)}
+        onSave={(v) => expand && set(expand.index, v)}
+      />
     </SheetContent>
+  );
+}
+
+function placeholderFor(
+  c: ColumnInfo,
+  kind: TypeKind,
+  value: Value,
+  editing: boolean,
+) {
+  if (value === null) return "NULL";
+  if (value === "" && (kind === "text" || kind === "array")) return "EMPTY";
+  if (!editing) {
+    if (c.identity) return "Automatically generated as identity";
+    if (c.default) return `Default: ${c.default}`;
+  }
+  if (
+    kind === "date" ||
+    kind === "timestamp" ||
+    kind === "timestamptz" ||
+    kind === "time"
+  )
+    return dateFormat(kind);
+  return c.nullable ? "NULL" : "";
+}
+
+/** One column of the row panel: name and type on the left, the input on the right. */
+function FieldRow({
+  column: c,
+  kind,
+  value,
+  editing,
+  reference,
+  enumValues,
+  onChange,
+  onPick,
+  onExpand,
+}: {
+  column: ColumnInfo;
+  kind: TypeKind;
+  value: Value;
+  editing: boolean;
+  reference?: Reference;
+  enumValues?: string[];
+  onChange: (v: Value) => void;
+  onPick: () => void;
+  onExpand: () => void;
+}) {
+  const id = `row-${c.name}`;
+  const readOnly = c.identity === "always";
+  const placeholder = placeholderFor(c, kind, value, editing);
+  const canDefault = !editing && (c.default !== null || c.identity !== null);
+  const isDate =
+    kind === "date" ||
+    kind === "timestamp" ||
+    kind === "timestamptz" ||
+    kind === "time";
+
+  const menu = (items: ReactNode) => <FieldMenu>{items}</FieldMenu>;
+  const nullItem = c.nullable && (
+    <DropdownMenuItem onSelect={() => onChange(null)}>
+      Set to NULL
+    </DropdownMenuItem>
+  );
+  const defaultItem = canDefault && (
+    <DropdownMenuItem onSelect={() => onChange(undefined)}>
+      Set to Default
+    </DropdownMenuItem>
+  );
+
+  let control: ReactNode;
+  let actions: ReactNode = null;
+  if (readOnly) {
+    control = (
+      <Input
+        id={id}
+        disabled
+        className="text-xs"
+        placeholder={editing ? (value ?? "NULL") : placeholder}
+      />
+    );
+  } else if (reference) {
+    control = (
+      <Input
+        id={id}
+        className="font-mono text-xs"
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+    actions = menu(
+      <>
+        {nullItem}
+        <DropdownMenuItem onSelect={onPick}>Select record</DropdownMenuItem>
+      </>,
+    );
+  } else if (kind === "bool") {
+    control = (
+      <Select
+        id={id}
+        value={value ?? ""}
+        placeholder={
+          value === null ? "NULL" : canDefault ? placeholder : "Select a value"
+        }
+        onValueChange={(v) => onChange(v === "__null__" ? null : v)}
+        options={[
+          { value: "true", label: "TRUE" },
+          { value: "false", label: "FALSE" },
+          ...(c.nullable ? [{ value: "__null__", label: "NULL" }] : []),
+        ]}
+      />
+    );
+  } else if (kind === "enum") {
+    control = (
+      <Select
+        id={id}
+        mono
+        value={value ?? ""}
+        placeholder={canDefault && value === undefined ? placeholder : "---"}
+        onValueChange={(v) => onChange(v === "__null__" ? null : v)}
+        options={[
+          ...(c.nullable ? [{ value: "__null__", label: "---" }] : []),
+          ...(enumValues ?? []).map((v) => ({ value: v, label: v })),
+        ]}
+      />
+    );
+  } else if (
+    (kind === "text" && LONG_TEXT.has(baseTypeName(c.dataType))) ||
+    kind === "array"
+  ) {
+    control = (
+      <textarea
+        id={id}
+        rows={5}
+        spellCheck={false}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full resize-y rounded-control border border-border-strong bg-bg px-2.5 py-1.5 font-mono text-xs text-fg outline-none placeholder:text-fg-subtle focus-visible:border-accent"
+      />
+    );
+    actions = menu(
+      <>
+        {nullItem}
+        {defaultItem}
+        {(nullItem || defaultItem) && <DropdownMenuSeparator />}
+        <DropdownMenuItem icon={<Maximize2 />} onSelect={onExpand}>
+          Expand editor
+        </DropdownMenuItem>
+      </>,
+    );
+  } else if (kind === "json") {
+    control = (
+      <Input
+        id={id}
+        className="font-mono text-xs"
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+    actions = menu(
+      <>
+        {nullItem}
+        {defaultItem}
+        {(nullItem || defaultItem) && <DropdownMenuSeparator />}
+        <DropdownMenuItem icon={<Maximize2 />} onSelect={onExpand}>
+          Expand editor
+        </DropdownMenuItem>
+      </>,
+    );
+  } else {
+    control = (
+      <Input
+        id={id}
+        className="font-mono text-xs"
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+    if (isDate)
+      actions = menu(
+        <>
+          {nullItem}
+          <DropdownMenuItem onSelect={() => onChange(nowFor(kind))}>
+            Set to now
+          </DropdownMenuItem>
+        </>,
+      );
+    else if (c.nullable || canDefault)
+      actions = menu(
+        <>
+          {nullItem}
+          {defaultItem}
+        </>,
+      );
+  }
+
+  return (
+    <div className="grid grid-cols-[1fr_2fr] items-start gap-4">
+      <label htmlFor={id} className="flex min-w-0 flex-col gap-0.5 pt-1.5">
+        <span className="flex items-center gap-1.5 truncate text-sm text-fg-muted">
+          {c.isPrimaryKey && (
+            <Key className="size-3 shrink-0 rotate-45 text-accent" />
+          )}
+          {c.name}
+        </span>
+        <span className="truncate font-mono text-xs text-fg-subtle">
+          {shortType(c.dataType)}
+        </span>
+      </label>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex items-start gap-1.5">
+          <div className="min-w-0 flex-1">{control}</div>
+          {actions}
+        </div>
+        {reference && (
+          <span className="text-xs text-fg-subtle">
+            Has a foreign key relation to{" "}
+            <span className="font-mono text-fg-muted">
+              {reference.schema}.{reference.table}.{reference.column}
+            </span>
+          </span>
+        )}
+        {c.comment && (
+          <span className="text-xs text-fg-subtle">{c.comment}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FieldMenu({ children }: { children: ReactNode }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Field options"
+          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control border border-border text-fg-subtle hover:border-border-strong hover:text-fg data-[state=open]:text-fg"
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+    </DropdownMenu>
   );
 }

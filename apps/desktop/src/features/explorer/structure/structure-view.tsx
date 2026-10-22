@@ -7,7 +7,7 @@ import { describeError } from "../../../lib/ipc";
 import { dropColumn, dropConstraint, dropIndex } from "../../../lib/sql";
 import { useStructure } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
-import { ColumnDialog } from "./column-dialog";
+import { ColumnSheet } from "./add-column-sheet";
 import { ForeignKeyDialog, IndexDialog } from "./index-dialogs";
 
 interface PendingSql {
@@ -322,16 +322,14 @@ export function StructureView({
         </Section>
       )}
 
-      {columnDialog && (
-        <ColumnDialog
-          open
-          onOpenChange={(open) => !open && setColumnDialog(null)}
-          database={database}
-          schema={schema}
-          table={table}
-          column={columnDialog.column}
-        />
-      )}
+      <ColumnSheet
+        open={columnDialog !== null}
+        onOpenChange={(open) => !open && setColumnDialog(null)}
+        database={database}
+        schema={schema}
+        table={table}
+        column={columnDialog?.column}
+      />
       {indexOpen && (
         <IndexDialog
           open

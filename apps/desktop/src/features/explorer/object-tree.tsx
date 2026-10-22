@@ -25,6 +25,7 @@ import {
   ChevronsUpDown,
   Code,
   Copy,
+  CopyPlus,
   Eye,
   FunctionSquare,
   Hash,
@@ -35,6 +36,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   Table2,
   TerminalSquare,
   Trash2,
@@ -366,6 +368,15 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                             }
                             onQuery={(sql) => ws.newQuery(database, sql)}
                             onRefresh={() => void refresh()}
+                            onTableSheet={(mode) =>
+                              useCreateTableSheet.getState().open({
+                                serverId,
+                                database,
+                                schema,
+                                table: t.name,
+                                mode,
+                              })
+                            }
                           />
                         )
                       }
@@ -616,6 +627,7 @@ function TableMenu({
   onView,
   onQuery,
   onRefresh,
+  onTableSheet,
 }: {
   name: string;
   isView: boolean;
@@ -623,6 +635,7 @@ function TableMenu({
   onView: (view: "data" | "structure" | "definition") => void;
   onQuery: (sql: string) => void;
   onRefresh: () => void;
+  onTableSheet: (mode: "edit" | "duplicate") => void;
 }) {
   const copy = (text: string, what: string) =>
     void navigator.clipboard
@@ -648,6 +661,23 @@ function TableMenu({
       >
         Query in SQL editor
       </ContextMenuItem>
+      {!isView && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            icon={<Settings2 />}
+            onSelect={() => onTableSheet("edit")}
+          >
+            Edit table
+          </ContextMenuItem>
+          <ContextMenuItem
+            icon={<CopyPlus />}
+            onSelect={() => onTableSheet("duplicate")}
+          >
+            Duplicate table
+          </ContextMenuItem>
+        </>
+      )}
       <ContextMenuSeparator />
       <ContextMenuItem icon={<Copy />} onSelect={() => copy(name, "Name")}>
         Copy name

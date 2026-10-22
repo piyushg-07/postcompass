@@ -2,6 +2,8 @@ import {
   Button,
   cn,
   ConfirmDialog,
+  ContextMenuItem,
+  ContextMenuSeparator,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -29,7 +31,9 @@ import {
   Columns3,
   Copy,
   Download,
+  Filter,
   Lock,
+  Maximize2,
   Pencil,
   Plus,
   RefreshCw,
@@ -47,15 +51,25 @@ import type {
 } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
 import { queryKeys } from "../../../lib/query";
-import { useExplorer, useStructure } from "../explorer-context";
+import { shortType, typeKind } from "../../../lib/pg-types";
+import {
+  useExplorer,
+  useSchemaObjects,
+  useStructure,
+} from "../explorer-context";
 import { ColumnSheet } from "../structure/add-column-sheet";
 import { RunSqlDialog } from "../run-sql-dialog";
 import { dropColumn } from "../../../lib/sql";
-import { DataGrid, type GridColumn, type GridRow } from "./data-grid";
+import {
+  type CellTarget,
+  DataGrid,
+  type GridColumn,
+  type GridRow,
+} from "./data-grid";
 import { FilterBar } from "./filter-bar";
 import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
-import { type Reference, ReferenceSheet } from "./reference";
+import { RecordPicker, type Reference, ReferencePeek } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
 
 const EMPTY_PAGE: RowsPage = {
@@ -89,23 +103,39 @@ export function TableData({
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState<SortSpec[]>([]);
   const [filters, setFilters] = useState<FilterSpec[]>(initialFilters ?? []);
-  const [reference, setReference] = useState<
-    (Reference & { value: string }) | null
-  >(null);
+  /** A foreign-key cell being edited by picking a record. */
+  const [picking, setPicking] = useState<CellTarget | null>(null);
   // Single-column foreign keys make a column a link to another table
   const structure = useStructure(database, schema, table);
   const references = useMemo(() => {
-    const out: Record<string, Reference> = {};
+    const out: Record<
+      string,
+      Reference & { onUpdate: string; onDelete: string }
+    > = {};
     for (const fk of structure.data?.foreignKeys ?? []) {
       if (fk.columns.length === 1 && fk.referencedColumns.length === 1)
         out[fk.columns[0]!] = {
           schema: fk.referencedSchema,
           table: fk.referencedTable,
           column: fk.referencedColumns[0]!,
+          onUpdate: fk.onUpdate,
+          onDelete: fk.onDelete,
         };
     }
     return out;
   }, [structure.data]);
+  // Enum columns get a list of their values
+  const objects = useSchemaObjects(database, schema);
+  const enums = useMemo(
+    () =>
+      new Map(
+        (objects.data?.enums ?? []).map((e) => [
+          e.name.toLowerCase(),
+          e.values,
+        ]),
+      ),
+    [objects.data],
+  );
   const [insert, setInsert] = useState<"row" | "column" | null>(null);
   const [editRow, setEditRow] = useState<EditTarget | null>(null);
   const [editColumn, setEditColumn] = useState<ColumnInfo | null>(null);
@@ -135,19 +165,41 @@ export function TableData({
   const data = rowsQuery.data ?? EMPTY_PAGE;
   const editable = data.keyColumns.length > 0;
 
-  const columns: GridColumn[] = useMemo(
-    () =>
-      data.columns.map((c) => ({
+  const columns: GridColumn[] = useMemo(() => {
+    const enumNames = new Set(enums.keys());
+    return data.columns.map((c) => {
+      const kind = typeKind(c.dataType, enumNames);
+      const ref = references[c.name];
+      return {
         id: c.name,
         name: c.name,
-        dataType: c.dataType,
+        format: shortType(c.dataType),
+        kind,
         isKey: c.isPrimaryKey,
-        references: references[c.name]
-          ? `${references[c.name]!.schema}.${references[c.name]!.table}`
+        nullable: c.nullable,
+        comment: c.comment,
+        enumValues:
+          kind === "enum"
+            ? enums.get(
+                c.dataType.split(".").pop()!.replaceAll('"', "").toLowerCase(),
+              )
+            : undefined,
+        // Like Supabase, keys and generated values aren't edited in place
+        editable:
+          editable &&
+          !c.isPrimaryKey &&
+          !c.generated &&
+          c.identity !== "always",
+        references: ref
+          ? {
+              target: `${ref.schema}.${ref.table}.${ref.column}`,
+              onUpdate: ref.onUpdate,
+              onDelete: ref.onDelete,
+            }
           : undefined,
-      })),
-    [data.columns, references],
-  );
+      };
+    });
+  }, [data.columns, references, enums, editable]);
   const keyIndexes = useMemo(
     () =>
       data.keyColumns.map((k) => data.columns.findIndex((c) => c.name === k)),
@@ -268,6 +320,26 @@ export function TableData({
       toast.error("Couldn't delete", { description: describeError(e).message }),
   });
 
+  const expandRow = (id: string) => {
+    const values = originalRows.get(id);
+    if (values) setEditRow({ values, key: keyOf(id) });
+  };
+
+  const copyRowJson = (id: string) => {
+    const row = gridRows.find((r) => r.id === id);
+    if (!row) return;
+    const text = JSON.stringify(
+      Object.fromEntries(
+        data.columns.map((c, i) => [c.name, row.cells[i] ?? null]),
+      ),
+      null,
+      2,
+    );
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => toast.success("Copied row to clipboard"));
+  };
+
   /* ── Sorting, paging, copying ── */
 
   const copy = (format: ExportFormat) => {
@@ -318,15 +390,13 @@ export function TableData({
   const from = data.rows.length ? page * pageSize + 1 : 0;
   const to = page * pageSize + data.rows.length;
   const total =
-    data.total === null
-      ? null
-      : `${data.totalIsEstimate ? "~" : ""}${Math.round(data.total).toLocaleString()}`;
+    data.total === null ? null : Math.round(data.total).toLocaleString();
   // Paging, sorting and filtering wait until in-flight saves land
   const locked = saving.size > 0;
   const pages =
     data.total === null
       ? null
-      : `${data.totalIsEstimate ? "~" : ""}${Math.max(1, Math.ceil(data.total / pageSize)).toLocaleString()}`;
+      : Math.max(1, Math.ceil(data.total / pageSize)).toLocaleString();
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -460,13 +530,13 @@ export function TableData({
           <DataGrid
             columns={columns}
             rows={gridRows}
-            startIndex={page * pageSize}
             sort={sort}
             headerMenu={(column) => (
               <ColumnMenu
                 name={column.name}
                 sort={sort.find((x) => x.column === column.id)}
                 disabled={locked}
+                editable={editable}
                 onSort={(descending) => {
                   setSort(
                     descending === null
@@ -484,29 +554,69 @@ export function TableData({
                 onCopy={() =>
                   void navigator.clipboard
                     .writeText(column.name)
-                    .then(() => toast.success("Column name copied"))
+                    .then(() => toast.success("Copied column name"))
                 }
               />
             )}
-            onOpenReference={(col, value) => {
-              const ref = references[data.columns[col]!.name];
-              if (ref) setReference({ ...ref, value });
+            renderReference={(target, close) => {
+              const ref = references[data.columns[target.col]!.name];
+              return ref && target.value ? (
+                <ReferencePeek
+                  database={database}
+                  reference={ref}
+                  value={target.value}
+                  onClose={close}
+                />
+              ) : null;
             }}
-            onExpandRow={
-              editable
-                ? (id) => {
-                    const values = originalRows.get(id);
-                    if (values) setEditRow({ values, key: keyOf(id) });
-                  }
-                : undefined
-            }
+            onEditReference={setPicking}
+            onExpandRow={editable ? expandRow : undefined}
             selected={selected}
             onSelectedChange={setSelected}
             onEdit={editable ? editCell : undefined}
-            emptyText={
-              filters.length
-                ? "No rows match these filters"
-                : "This table is empty"
+            onAddColumn={editable ? () => setInsert("column") : undefined}
+            cellMenu={(target) => (
+              <CellMenu
+                target={target}
+                editable={editable}
+                onCopyRow={() => copyRowJson(target.rowId)}
+                onFilter={() => {
+                  const column = data.columns[target.col]!.name;
+                  setFilters([
+                    ...filters,
+                    target.value === null
+                      ? { column, op: "is_null", value: null }
+                      : { column, op: "equals", value: target.value ?? "" },
+                  ]);
+                  setPage(0);
+                }}
+                onEditRow={() => expandRow(target.rowId)}
+                onDeleteRow={() => {
+                  setSelected(new Set([target.rowId]));
+                  setConfirmDelete(true);
+                }}
+              />
+            )}
+            empty={
+              filters.length ? (
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <p className="text-sm text-fg-muted">
+                    The filters applied have returned no results from this table
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setFilters([]);
+                      setPage(0);
+                    }}
+                  >
+                    Remove all filters
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-fg-muted">This table is empty</p>
+              )
             }
           />
         )}
@@ -521,17 +631,19 @@ export function TableData({
           disabled={page === 0 || locked}
           onClick={() => setPage((p) => p - 1)}
         />
-        <span className="text-xs text-fg-muted">
-          Page{" "}
-          <span className="font-mono text-fg">
-            {(page + 1).toLocaleString()}
-          </span>
-          {pages !== null && (
-            <>
-              {" "}
-              of <span className="font-mono">{pages}</span>
-            </>
-          )}
+        <span className="flex items-center gap-1.5 text-xs text-fg-muted">
+          Page
+          <PageInput
+            page={page}
+            disabled={locked}
+            max={
+              data.total === null
+                ? null
+                : Math.max(1, Math.ceil(data.total / pageSize))
+            }
+            onChange={setPage}
+          />
+          {pages !== null && <>of {pages}</>}
         </span>
         <IconButton
           size="sm"
@@ -540,26 +652,25 @@ export function TableData({
           disabled={!data.hasMore || locked}
           onClick={() => setPage((p) => p + 1)}
         />
-        <span className="mx-1 h-4 w-px bg-border" />
         <Select
           aria-label="Rows per page"
           size="sm"
           side="top"
-          className="w-[104px]"
+          className="ml-1 w-[96px]"
           value={String(pageSize)}
           disabled={locked}
           onValueChange={(v) => {
             setPageSize(Number(v));
             setPage(0);
           }}
-          options={[50, 100, 500, 1000].map((n) => ({
+          options={[100, 500, 1000].map((n) => ({
             value: String(n),
             label: `${n} rows`,
           }))}
         />
-        <span className="ml-1 font-mono text-xs text-fg-subtle">
+        <span className="ml-1 text-xs text-fg-muted">
           {total !== null
-            ? `${total} records`
+            ? `${total} records${data.totalIsEstimate ? " (estimated)" : ""}`
             : `${from.toLocaleString()}–${to.toLocaleString()}`}
         </span>
       </TableFooter>
@@ -578,6 +689,7 @@ export function TableData({
         columns={data.columns}
         row={editRow}
         references={references}
+        enums={enums}
       />
       <ConfirmDialog
         open={confirmDelete}
@@ -589,10 +701,17 @@ export function TableData({
         loading={removeRows.isPending}
         onConfirm={() => removeRows.mutate()}
       />
-      <ReferenceSheet
+      <RecordPicker
         database={database}
-        target={reference}
-        onOpenChange={(o) => !o && setReference(null)}
+        open={picking !== null}
+        reference={
+          picking ? (references[data.columns[picking.col]!.name] ?? null) : null
+        }
+        nullable={picking ? data.columns[picking.col]!.nullable : false}
+        onOpenChange={(o) => !o && setPicking(null)}
+        onPick={(value) =>
+          picking && editCell(picking.rowId, picking.col, value)
+        }
       />
       <ColumnSheet
         open={insert === "column" || editColumn !== null}
@@ -703,11 +822,12 @@ function InsertOption({
   );
 }
 
-/** The menu behind each column header's button, like Supabase's. */
+/** The menu behind each column header's button, in Supabase's order. */
 function ColumnMenu({
   name,
   sort,
   disabled,
+  editable,
   onSort,
   onEdit,
   onDrop,
@@ -716,6 +836,7 @@ function ColumnMenu({
   name: string;
   sort?: SortSpec;
   disabled: boolean;
+  editable: boolean;
   onSort: (descending: boolean | null) => void;
   onEdit: () => void;
   onDrop: () => void;
@@ -727,47 +848,139 @@ function ColumnMenu({
         <button
           type="button"
           aria-label={`${name} column options`}
-          className="flex size-5 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-raised hover:text-fg data-[state=open]:bg-surface-raised data-[state=open]:text-fg"
+          className="flex size-5 cursor-pointer items-center justify-center rounded text-fg-subtle opacity-50 hover:bg-surface-hover hover:text-fg hover:opacity-100 data-[state=open]:bg-surface-hover data-[state=open]:opacity-100"
         >
           <ChevronDown className="size-3.5" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="font-sans">
+      <DropdownMenuContent align="end" className="w-48">
+        {/* Picking the active sort again removes it */}
         <DropdownMenuItem
           icon={<ArrowUp />}
           disabled={disabled}
-          onSelect={() => onSort(false)}
+          className={cn(sort && !sort.descending && "bg-surface-hover text-fg")}
+          onSelect={() => onSort(sort && !sort.descending ? null : false)}
         >
-          Sort ascending
+          Sort Ascending
         </DropdownMenuItem>
         <DropdownMenuItem
           icon={<ArrowDown />}
           disabled={disabled}
-          onSelect={() => onSort(true)}
+          className={cn(sort?.descending && "bg-surface-hover text-fg")}
+          onSelect={() => onSort(sort?.descending ? null : true)}
         >
-          Sort descending
+          Sort Descending
         </DropdownMenuItem>
-        {sort && (
-          <DropdownMenuItem
-            icon={<X />}
-            disabled={disabled}
-            onSelect={() => onSort(null)}
-          >
-            Remove sort
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem icon={<Pencil />} onSelect={onEdit}>
-          Edit column
-        </DropdownMenuItem>
         <DropdownMenuItem icon={<Copy />} onSelect={onCopy}>
           Copy name
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem icon={<Trash2 />} danger onSelect={onDrop}>
-          Delete column
-        </DropdownMenuItem>
+        {editable && (
+          <DropdownMenuItem icon={<Pencil />} onSelect={onEdit}>
+            Edit column
+          </DropdownMenuItem>
+        )}
+        {editable && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem icon={<Trash2 />} danger onSelect={onDrop}>
+              Delete column
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** Right-click menu on a cell, like Supabase's. */
+function CellMenu({
+  target,
+  editable,
+  onCopyRow,
+  onFilter,
+  onEditRow,
+  onDeleteRow,
+}: {
+  target: CellTarget;
+  editable: boolean;
+  onCopyRow: () => void;
+  onFilter: () => void;
+  onEditRow: () => void;
+  onDeleteRow: () => void;
+}) {
+  // Long or structured values make poor filters
+  const simple =
+    target.value === null ||
+    (target.value !== undefined &&
+      target.value.length <= 200 &&
+      !/^[[{]/.test(target.value.trim()));
+  return (
+    <>
+      <ContextMenuItem
+        icon={<Copy />}
+        onSelect={() =>
+          void navigator.clipboard
+            .writeText(target.value ?? "")
+            .then(() => toast.success("Copied cell value to clipboard"))
+        }
+      >
+        Copy cell
+      </ContextMenuItem>
+      <ContextMenuItem icon={<Copy />} onSelect={onCopyRow}>
+        Copy row
+      </ContextMenuItem>
+      {simple && (
+        <ContextMenuItem icon={<Filter />} onSelect={onFilter}>
+          Filter by value
+        </ContextMenuItem>
+      )}
+      {editable && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem icon={<Maximize2 />} onSelect={onEditRow}>
+            Edit row
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem icon={<Trash2 />} danger onSelect={onDeleteRow}>
+            Delete row
+          </ContextMenuItem>
+        </>
+      )}
+    </>
+  );
+}
+
+/** The page number box in the footer; Enter jumps to that page. */
+function PageInput({
+  page,
+  max,
+  disabled,
+  onChange,
+}: {
+  page: number;
+  max: number | null;
+  disabled: boolean;
+  onChange: (page: number) => void;
+}) {
+  const [text, setText] = useState<string | null>(null);
+  const go = () => {
+    const n = Number(text);
+    if (Number.isInteger(n) && n >= 1) onChange(Math.min(n, max ?? n) - 1);
+    setText(null);
+  };
+  return (
+    <input
+      aria-label="Page"
+      disabled={disabled}
+      value={text ?? String(page + 1)}
+      onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") go();
+        if (e.key === "Escape") setText(null);
+      }}
+      onBlur={() => setText(null)}
+      className="h-6 w-12 rounded-control border border-border-strong bg-bg px-1.5 text-center font-mono text-xs text-fg outline-none focus:border-accent disabled:opacity-50"
+    />
   );
 }

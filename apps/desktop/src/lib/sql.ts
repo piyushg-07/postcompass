@@ -63,41 +63,6 @@ export function isSafeTypeName(type: string) {
   );
 }
 
-export interface ColumnDraft {
-  name: string;
-  type: string;
-  nullable: boolean;
-  /** Raw SQL expression, e.g. `now()` or `'pending'`. Empty means no default. */
-  defaultValue: string;
-  primaryKey: boolean;
-  unique: boolean;
-}
-
-export function createTable(
-  schema: string,
-  table: string,
-  columns: ColumnDraft[],
-) {
-  const lines = columns.map((c) => {
-    let line = `  ${ident(c.name)} ${c.type.trim()}`;
-    if (!c.nullable && !c.primaryKey) line += " NOT NULL";
-    if (c.defaultValue.trim()) line += ` DEFAULT ${c.defaultValue.trim()}`;
-    if (c.unique && !c.primaryKey) line += " UNIQUE";
-    return line;
-  });
-  const pk = columns.filter((c) => c.primaryKey).map((c) => ident(c.name));
-  if (pk.length) lines.push(`  PRIMARY KEY (${pk.join(", ")})`);
-  return `CREATE TABLE ${qualified(schema, table)} (\n${lines.join(",\n")}\n);`;
-}
-
-export function addColumn(schema: string, table: string, c: ColumnDraft) {
-  let sql = `ALTER TABLE ${qualified(schema, table)} ADD COLUMN ${ident(c.name)} ${c.type.trim()}`;
-  if (!c.nullable) sql += " NOT NULL";
-  if (c.defaultValue.trim()) sql += ` DEFAULT ${c.defaultValue.trim()}`;
-  if (c.unique) sql += " UNIQUE";
-  return `${sql};`;
-}
-
 /** ALTER statements that turn column `before` into `after`. Empty when nothing changed. */
 export function alterColumn(
   schema: string,

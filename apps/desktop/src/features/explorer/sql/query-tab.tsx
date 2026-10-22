@@ -547,7 +547,9 @@ function ResultGrid({
     <DataGrid
       columns={gridColumns}
       rows={gridRows}
-      emptyText="The query returned no rows"
+      empty={
+        <p className="text-sm text-fg-muted">The query returned no rows</p>
+      }
     />
   );
 }

@@ -1,26 +1,28 @@
-import { Checkbox, cn } from "@repo/ui";
 import {
-  createColumnHelper,
-  tableFeatures,
-  useTable,
-} from "@tanstack/react-table";
+  Checkbox,
+  cn,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  toast,
+  Tooltip,
+} from "@repo/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  ArrowDown,
-  ArrowRight,
-  ArrowUp,
-  KeyRound,
-  Maximize2,
-} from "lucide-react";
+import { ArrowRight, Key, Link2, Maximize2, Plus } from "lucide-react";
 import {
   type KeyboardEvent,
-  type MouseEvent,
   memo,
+  type MouseEvent,
   type ReactNode,
   useMemo,
   useRef,
   useState,
 } from "react";
+import type { TypeKind } from "../../../lib/pg-types";
+import { CellEditor, ExpandEditor } from "./cell-editors";
 
 /** `undefined` means "not set" (a new row's column that will use its DEFAULT). */
 export type GridCell = string | null | undefined;
@@ -28,10 +30,17 @@ export type GridCell = string | null | undefined;
 export interface GridColumn {
   id: string;
   name: string;
-  dataType?: string;
+  /** Short type shown in the header, e.g. `int8`. */
+  format?: string;
+  kind?: TypeKind;
   isKey?: boolean;
-  /** Foreign key: cells get a button that opens the referenced record. */
-  references?: string;
+  nullable?: boolean;
+  enumValues?: string[];
+  /** Cells can be edited in place (not primary keys or generated columns). */
+  editable?: boolean;
+  comment?: string | null;
+  /** Foreign key: `schema.table.column` it points to, plus its ON UPDATE / ON DELETE rules. */
+  references?: { target: string; onUpdate: string; onDelete: string };
 }
 
 export interface GridRow {
@@ -47,157 +56,139 @@ export interface GridSort {
   descending: boolean;
 }
 
-const ROW_HEIGHT = 28;
-const ROW_NUMBER_WIDTH = 52;
-const features = tableFeatures({});
-const helper = createColumnHelper<typeof features, GridRow>();
-
-let measureCtx: CanvasRenderingContext2D | null | undefined;
-
-/** Width of `text` in the given CSS font, measured like the browser renders it. */
-function textWidth(text: string, font: string, fallbackPerChar: number) {
-  if (measureCtx === undefined)
-    measureCtx = document.createElement("canvas").getContext("2d");
-  if (!measureCtx) return text.length * fallbackPerChar;
-  measureCtx.font = font;
-  return measureCtx.measureText(text).width;
+/** A cell, as handed to the context menu and reference callbacks. */
+export interface CellTarget {
+  rowId: string;
+  col: number;
+  value: GridCell;
 }
 
-/** Space for everything in a header besides the two labels: padding, gaps, menu button, resize handle. */
-const HEADER_CHROME = 8 + 6 + 6 + 20 + 14;
+const ROW_HEIGHT = 34;
+const SELECT_WIDTH = 65;
+const ADD_COLUMN_WIDTH = 100;
+const MIN_WIDTH = 100;
 
-/** The full header (name + type) always fits; long cell values are capped so one column can't hog the grid. */
-function initialWidth(column: GridColumn, rows: GridRow[], index: number) {
+/** Supabase's default widths: narrow for numbers and booleans, wide for text. */
+function initialWidth(column: GridColumn) {
+  const byKind =
+    column.kind === "number" || column.kind === "bool"
+      ? 120
+      : column.kind === "date" ||
+          column.kind === "time" ||
+          column.kind === "timestamp" ||
+          column.kind === "timestamptz" ||
+          column.kind === "enum"
+        ? 150
+        : 250;
   const header =
-    textWidth(
-      column.name,
-      "500 12px 'Inter Variable', Inter, sans-serif",
-      7.2,
-    ) +
-    (column.dataType
-      ? textWidth(
-          column.dataType,
-          "10px 'Source Code Pro Variable', monospace",
-          6.1,
-        )
-      : 0) +
-    (column.isKey ? 18 : 0) +
-    HEADER_CHROME;
-  let widest = 0;
-  for (const row of rows.slice(0, 50))
-    widest = Math.max(widest, row.cells[index]?.length ?? 4);
-  const content = Math.min(
-    360,
-    widest * 7.2 + 24 + (column.references ? 26 : 0),
-  );
-  return Math.ceil(Math.max(90, header, content));
+    (column.name.length + (column.format?.length ?? 0)) * 9 +
+    (column.isKey ? 16 : 0) +
+    (column.references ? 16 : 0) +
+    40;
+  return Math.max(MIN_WIDTH, byKind, header);
 }
 
 export interface DataGridProps {
   columns: GridColumn[];
   rows: GridRow[];
-  /** Row number of the first row (for paging). */
-  startIndex?: number;
   sort?: GridSort[];
-  onSort?: (column: string) => void;
   selected?: ReadonlySet<string>;
   onSelectedChange?: (selected: Set<string>) => void;
-  /** When set, double-clicking a cell edits it. */
+  /** When set, cells can be edited in place. */
   onEdit?: (rowId: string, columnIndex: number, value: string | null) => void;
-  emptyText?: string;
+  /** Editing a foreign-key cell picks a record instead (Supabase's "Select a record"). */
+  onEditReference?: (target: CellTarget) => void;
+  /** Contents of the popover opened from a foreign-key cell's arrow. */
+  renderReference?: (target: CellTarget, close: () => void) => ReactNode;
+  /** Shown instead of rows when there are none. */
+  empty?: ReactNode;
   /** Menu shown from a button in each column header (sort, edit, delete…). */
   headerMenu?: (column: GridColumn) => ReactNode;
   /** When set, each row shows an expand button that calls this (e.g. to edit it in a panel). */
   onExpandRow?: (rowId: string) => void;
-  /** Called from a foreign-key cell's link button. */
-  onOpenReference?: (columnIndex: number, value: string) => void;
+  /** Right-click menu items for a cell. */
+  cellMenu?: (target: CellTarget) => ReactNode;
+  /** The "+" column at the end of the header. */
+  onAddColumn?: () => void;
 }
 
 export function DataGrid({
   columns,
   rows,
-  startIndex = 0,
   sort = [],
-  onSort,
   selected,
   onSelectedChange,
   onEdit,
-  emptyText = "No rows",
+  onEditReference,
+  renderReference,
+  empty,
   headerMenu,
   onExpandRow,
-  onOpenReference,
+  cellMenu,
+  onAddColumn,
 }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
-  const [editing, setEditing] = useState<{ rowId: string; col: number } | null>(
+  /** The selected cell (row index, column index). */
+  const [active, setActive] = useState<{ row: number; col: number } | null>(
     null,
   );
-  const lastClicked = useRef<number | null>(null);
-
-  const tableColumns = useMemo(
-    () =>
-      helper.columns(
-        columns.map((c, i) =>
-          helper.accessor((row: GridRow) => row.cells[i], {
-            id: c.id,
-            header: c.name,
-          }),
-        ),
-      ),
-    [columns],
-  );
-  const table = useTable({
-    features,
-    columns: tableColumns,
-    data: rows,
-    getRowId: (row: GridRow) => row.id,
-  });
-  const modelRows = table.getRowModel().rows;
+  const [editing, setEditing] = useState<{
+    rowId: string;
+    col: number;
+    initial?: string;
+  } | null>(null);
+  const [expand, setExpand] = useState<{
+    rowId: string;
+    col: number;
+    column: string;
+    json: boolean;
+    text: string;
+  } | null>(null);
+  const [menuTarget, setMenuTarget] = useState<CellTarget | null>(null);
+  const lastChecked = useRef<number | null>(null);
 
   const colWidths = useMemo(
-    () => columns.map((c, i) => widths[c.id] ?? initialWidth(c, rows, i)),
-    // Initial widths only depend on the first page of data
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => columns.map((c) => widths[c.id] ?? initialWidth(c)),
     [columns, widths],
   );
-  const totalWidth = ROW_NUMBER_WIDTH + colWidths.reduce((a, b) => a + b, 0);
+  const offsets = useMemo(() => {
+    const out: number[] = [];
+    let x = SELECT_WIDTH;
+    for (const w of colWidths) {
+      out.push(x);
+      x += w;
+    }
+    return out;
+  }, [colWidths]);
+  const totalWidth =
+    SELECT_WIDTH +
+    colWidths.reduce((a, b) => a + b, 0) +
+    (onAddColumn ? ADD_COLUMN_WIDTH : 0);
 
   const virtualizer = useVirtualizer({
-    count: modelRows.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    getItemKey: (index) => modelRows[index]!.id,
+    getItemKey: (index) => rows[index]!.id,
     overscan: 12,
   });
 
-  const toggleRow = (index: number, rowId: string, event: MouseEvent) => {
-    if (!onSelectedChange || !selected) return;
-    const next = new Set(event.metaKey || event.ctrlKey ? selected : []);
-    if (event.shiftKey && lastClicked.current !== null) {
-      const [a, b] = [lastClicked.current, index].sort((x, y) => x - y);
-      for (let i = a!; i <= b!; i++) next.add(modelRows[i]!.id);
-    } else if (next.has(rowId) && (event.metaKey || event.ctrlKey)) {
-      next.delete(rowId);
-    } else {
-      next.add(rowId);
-    }
-    lastClicked.current = index;
-    onSelectedChange(next);
-  };
+  /* ── Selection ── */
 
   /** A row's checkbox adds or removes just that row; Shift selects the range from the last one. */
   const checkRow = (index: number, rowId: string, event: MouseEvent) => {
     if (!onSelectedChange || !selected) return;
     const next = new Set(selected);
-    if (event.shiftKey && lastClicked.current !== null) {
-      const [a, b] = [lastClicked.current, index].sort((x, y) => x - y);
-      for (let i = a!; i <= b!; i++) next.add(modelRows[i]!.id);
+    if (event.shiftKey && lastChecked.current !== null) {
+      const [a, b] = [lastChecked.current, index].sort((x, y) => x - y);
+      for (let i = a!; i <= b!; i++) next.add(rows[i]!.id);
     } else if (next.has(rowId)) {
       next.delete(rowId);
     } else {
       next.add(rowId);
     }
-    lastClicked.current = index;
+    lastChecked.current = index;
     onSelectedChange(next);
   };
 
@@ -207,6 +198,116 @@ export function DataGrid({
     selected !== undefined &&
     rows.length > 0 &&
     rows.every((r) => selected.has(r.id));
+
+  /* ── Active cell & keyboard ── */
+
+  const reveal = (row: number, col: number) => {
+    virtualizer.scrollToIndex(row);
+    const el = scrollRef.current;
+    if (!el) return;
+    const left = offsets[col]!;
+    const right = left + colWidths[col]!;
+    if (left - SELECT_WIDTH < el.scrollLeft)
+      el.scrollLeft = left - SELECT_WIDTH;
+    else if (right > el.scrollLeft + el.clientWidth)
+      el.scrollLeft = right - el.clientWidth;
+  };
+
+  const moveTo = (row: number, col: number) => {
+    const r = Math.max(0, Math.min(rows.length - 1, row));
+    const c = Math.max(0, Math.min(columns.length - 1, col));
+    setActive({ row: r, col: c });
+    reveal(r, c);
+  };
+
+  const canEdit = (row: GridRow, col: number) =>
+    !!onEdit && row.state !== "deleted" && columns[col]?.editable === true;
+
+  const startEdit = (rowIndex: number, col: number, initial?: string) => {
+    const row = rows[rowIndex];
+    if (!row || !canEdit(row, col)) return;
+    const column = columns[col]!;
+    if (column.references) {
+      onEditReference?.({ rowId: row.id, col, value: row.cells[col] });
+      return;
+    }
+    if (column.kind === "binary") return;
+    setEditing({ rowId: row.id, col, initial });
+  };
+
+  const copyCell = (value: GridCell) =>
+    void navigator.clipboard
+      .writeText(value ?? "")
+      .then(() => toast.success("Copied cell value to clipboard"));
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // Only while the grid itself has focus, not an editor, menu or panel inside it
+    if (e.target !== e.currentTarget || editing || !active || rows.length === 0)
+      return;
+    const { row, col } = active;
+    const current = rows[row];
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        return moveTo(row - 1, col);
+      case "ArrowDown":
+        e.preventDefault();
+        return moveTo(row + 1, col);
+      case "ArrowLeft":
+        e.preventDefault();
+        return moveTo(row, col - 1);
+      case "ArrowRight":
+        e.preventDefault();
+        return moveTo(row, col + 1);
+      case "Tab":
+        e.preventDefault();
+        return moveTo(row, col + (e.shiftKey ? -1 : 1));
+      case "Home":
+        e.preventDefault();
+        return moveTo(e.ctrlKey ? 0 : row, 0);
+      case "End":
+        e.preventDefault();
+        return moveTo(e.ctrlKey ? rows.length - 1 : row, columns.length - 1);
+      case "PageDown":
+        e.preventDefault();
+        return moveTo(row + 15, col);
+      case "PageUp":
+        e.preventDefault();
+        return moveTo(row - 15, col);
+      case "Enter":
+      case "F2":
+        e.preventDefault();
+        return startEdit(row, col);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      if (current) copyCell(current.cells[col]);
+      return;
+    }
+    // Typing starts editing, like a spreadsheet; T / F set a boolean directly
+    if (
+      e.key.length === 1 &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      current
+    ) {
+      const column = columns[col]!;
+      if (column.kind === "bool") {
+        const k = e.key.toLowerCase();
+        if ((k === "t" || k === "f") && canEdit(current, col)) {
+          e.preventDefault();
+          onEdit?.(current.id, col, k === "t" ? "true" : "false");
+        }
+        return;
+      }
+      if (column.kind === "enum") return;
+      e.preventDefault();
+      startEdit(row, col, e.key);
+    }
+  };
+
+  /* ── Column resizing ── */
 
   const startResize = (
     columnId: string,
@@ -219,7 +320,10 @@ export function DataGrid({
     const move = (e: globalThis.MouseEvent) =>
       setWidths((w) => ({
         ...w,
-        [columnId]: Math.max(60, Math.round(startWidth + e.clientX - startX)),
+        [columnId]: Math.max(
+          MIN_WIDTH,
+          Math.round(startWidth + e.clientX - startX),
+        ),
       }));
     const up = () => {
       window.removeEventListener("mousemove", move);
@@ -229,142 +333,245 @@ export function DataGrid({
     window.addEventListener("mouseup", up);
   };
 
+  const commit = (rowId: string, col: number, value: string | null | false) => {
+    setEditing(null);
+    scrollRef.current?.focus({ preventScroll: true });
+    const row = rows.find((r) => r.id === rowId);
+    if (value !== false && row && row.cells[col] !== value)
+      onEdit?.(rowId, col, value);
+  };
+
   return (
-    <div
-      ref={scrollRef}
-      className="relative h-full min-h-0 overflow-auto bg-bg font-mono text-xs select-none"
-    >
-      <div style={{ width: totalWidth, minWidth: "100%" }}>
-        {/* Header */}
-        <div
-          className="sticky top-0 z-10 flex border-b border-border-strong bg-surface"
-          style={{ height: ROW_HEIGHT + 4 }}
-        >
+    <>
+      <div
+        ref={scrollRef}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        className="group/grid relative h-full min-h-0 overflow-auto bg-bg text-[13px] outline-none select-none"
+      >
+        <div style={{ width: totalWidth, minWidth: "100%" }}>
+          {/* Header */}
           <div
-            className="flex shrink-0 items-center border-r border-border pl-2.5"
-            style={{ width: ROW_NUMBER_WIDTH }}
+            className="sticky top-0 z-20 flex border-b border-border bg-surface"
+            style={{ height: ROW_HEIGHT }}
           >
-            {onSelectedChange && (
-              <Checkbox
-                aria-label="Select all rows"
-                checked={
-                  allSelected ? true : someSelected ? "indeterminate" : false
-                }
-                onCheckedChange={(checked) =>
-                  onSelectedChange(
-                    new Set(checked ? rows.map((r) => r.id) : []),
-                  )
-                }
+            <div
+              className="sticky left-0 z-10 flex shrink-0 items-center border-r border-border bg-surface pl-3"
+              style={{ width: SELECT_WIDTH }}
+            >
+              {onSelectedChange && (
+                <Checkbox
+                  aria-label="Select all rows"
+                  checked={
+                    allSelected ? true : someSelected ? "indeterminate" : false
+                  }
+                  onCheckedChange={(checked) =>
+                    onSelectedChange(
+                      new Set(checked ? rows.map((r) => r.id) : []),
+                    )
+                  }
+                />
+              )}
+            </div>
+            {columns.map((column, i) => (
+              <HeaderCell
+                key={column.id}
+                column={column}
+                width={colWidths[i]!}
+                sort={sort.find((s) => s.column === column.id)}
+                menu={headerMenu?.(column)}
+                onResize={(e) => startResize(column.id, colWidths[i]!, e)}
               />
+            ))}
+            {onAddColumn && (
+              <div
+                className="flex shrink-0 items-center justify-center"
+                style={{ width: ADD_COLUMN_WIDTH }}
+              >
+                <Tooltip content="Add new column">
+                  <button
+                    type="button"
+                    aria-label="Add new column"
+                    onClick={onAddColumn}
+                    className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-hover hover:text-fg"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </Tooltip>
+              </div>
             )}
           </div>
-          {table.getHeaderGroups()[0]?.headers.map((header, i) => {
-            const column = columns[i]!;
-            const sortState = sort.find((s) => s.column === column.id);
-            return (
-              <div
-                key={header.id}
-                className={cn(
-                  "group relative flex shrink-0 items-center gap-1.5 border-r border-border px-2 font-sans",
-                  onSort && "cursor-pointer hover:bg-surface-hover",
-                )}
-                style={{ width: colWidths[i] }}
-                onClick={() => onSort?.(column.id)}
-              >
-                {column.isKey && (
-                  <KeyRound
-                    className="size-3 shrink-0 text-warning"
-                    aria-label="Primary key"
-                  />
-                )}
-                <span className="truncate text-xs font-medium text-fg">
-                  {column.name}
-                </span>
-                {column.dataType && (
-                  <span className="truncate font-mono text-[10px] text-fg-subtle">
-                    {column.dataType}
-                  </span>
-                )}
-                <span className="ml-auto flex shrink-0 items-center gap-0.5">
-                  {sortState &&
-                    (sortState.descending ? (
-                      <ArrowDown className="size-3 shrink-0 text-accent" />
-                    ) : (
-                      <ArrowUp className="size-3 shrink-0 text-accent" />
-                    ))}
-                  {headerMenu && (
-                    <span
-                      className="opacity-0 group-hover:opacity-100 has-[[data-state=open]]:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {headerMenu(column)}
-                    </span>
-                  )}
-                </span>
-                <span
-                  className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
-                  onMouseDown={(e) => startResize(column.id, colWidths[i]!, e)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            );
-          })}
-        </div>
 
-        {/* Body */}
-        {modelRows.length === 0 ? (
-          <div className="p-6 text-center font-sans text-sm text-fg-subtle">
-            {emptyText}
-          </div>
-        ) : (
-          <div
-            className="relative"
-            style={{ height: virtualizer.getTotalSize() }}
-          >
-            {virtualizer.getVirtualItems().map((item) => {
-              const row = modelRows[item.index]!;
-              const original = row.original;
-              const isSelected = selected?.has(original.id) ?? false;
-              return (
-                <GridRowView
-                  key={original.id}
-                  row={original}
-                  index={item.index}
-                  number={startIndex + item.index + 1}
-                  top={item.start}
-                  widths={colWidths}
-                  selected={isSelected}
-                  editingCol={
-                    editing?.rowId === original.id ? editing.col : null
-                  }
-                  onSelect={(e) => toggleRow(item.index, original.id, e)}
-                  references={columns.map((c) => c.references)}
-                  onReference={onOpenReference}
-                  onCheck={
-                    onSelectedChange
-                      ? (e) => checkRow(item.index, original.id, e)
-                      : undefined
-                  }
-                  onExpand={
-                    onExpandRow && !original.state
-                      ? () => onExpandRow(original.id)
-                      : undefined
-                  }
-                  onStartEdit={
-                    onEdit && original.state !== "deleted"
-                      ? (col) => setEditing({ rowId: original.id, col })
-                      : undefined
-                  }
-                  onCommit={(col, value) => {
-                    setEditing(null);
-                    if (value !== false) onEdit?.(original.id, col, value);
+          {/* Body */}
+          {rows.length === 0 ? (
+            <div
+              className="sticky left-0 flex items-center justify-center p-10"
+              style={{ width: scrollRef.current?.clientWidth ?? "100%" }}
+            >
+              {empty}
+            </div>
+          ) : (
+            <ContextMenu>
+              <ContextMenuTrigger asChild disabled={!cellMenu}>
+                <div
+                  className="relative"
+                  style={{ height: virtualizer.getTotalSize() }}
+                  onContextMenu={(e) => {
+                    const cell = (e.target as HTMLElement).closest<HTMLElement>(
+                      "[data-col]",
+                    );
+                    const rowIndex = Number(
+                      cell?.closest<HTMLElement>("[data-index]")?.dataset.index,
+                    );
+                    const col = Number(cell?.dataset.col);
+                    const row = rows[rowIndex];
+                    if (!cell || !row || Number.isNaN(col)) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setActive({ row: rowIndex, col });
+                    setMenuTarget({
+                      rowId: row.id,
+                      col,
+                      value: row.cells[col],
+                    });
                   }}
-                />
-              );
-            })}
-          </div>
-        )}
+                >
+                  {virtualizer.getVirtualItems().map((item) => {
+                    const row = rows[item.index]!;
+                    return (
+                      <GridRowView
+                        key={row.id}
+                        row={row}
+                        index={item.index}
+                        top={item.start}
+                        widths={colWidths}
+                        columns={columns}
+                        selected={selected?.has(row.id) ?? false}
+                        activeCol={
+                          active?.row === item.index ? active.col : null
+                        }
+                        editing={editing?.rowId === row.id ? editing : null}
+                        addColumnWidth={onAddColumn ? ADD_COLUMN_WIDTH : 0}
+                        renderReference={renderReference}
+                        onCellClick={(col) => {
+                          setActive({ row: item.index, col });
+                          scrollRef.current?.focus({ preventScroll: true });
+                        }}
+                        onCellDoubleClick={(col) => startEdit(item.index, col)}
+                        onCheck={
+                          onSelectedChange
+                            ? (e) => checkRow(item.index, row.id, e)
+                            : undefined
+                        }
+                        onExpand={
+                          onExpandRow && !row.state
+                            ? () => onExpandRow(row.id)
+                            : undefined
+                        }
+                        onCommit={(col, value) => commit(row.id, col, value)}
+                        onExpandValue={(col, text) =>
+                          setExpand({
+                            rowId: row.id,
+                            col,
+                            column: columns[col]!.name,
+                            json: columns[col]!.kind === "json",
+                            text,
+                          })
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </ContextMenuTrigger>
+              {cellMenu && menuTarget && (
+                <ContextMenuContent className="w-44">
+                  {cellMenu(menuTarget)}
+                </ContextMenuContent>
+              )}
+            </ContextMenu>
+          )}
+        </div>
       </div>
+      <ExpandEditor
+        target={expand}
+        onClose={() => setExpand(null)}
+        onSave={(value) => {
+          if (expand) commit(expand.rowId, expand.col, value);
+        }}
+      />
+    </>
+  );
+}
+
+function HeaderCell({
+  column,
+  width,
+  sort,
+  menu,
+  onResize,
+}: {
+  column: GridColumn;
+  width: number;
+  sort?: GridSort;
+  menu?: ReactNode;
+  onResize: (e: MouseEvent) => void;
+}) {
+  const name = (
+    <span className="truncate text-xs font-medium text-fg">{column.name}</span>
+  );
+  return (
+    <div
+      className="relative flex shrink-0 items-center gap-1.5 border-r border-border px-2"
+      style={{ width }}
+    >
+      {column.references && (
+        <Tooltip
+          content={
+            <span className="flex flex-col gap-0.5">
+              <span className="text-fg-muted">Foreign key relation:</span>
+              <span className="font-mono">
+                {column.name} → {column.references.target}
+              </span>
+              {column.references.onUpdate !== "NO ACTION" && (
+                <span className="text-fg-muted">
+                  On update: {column.references.onUpdate}
+                </span>
+              )}
+              {column.references.onDelete !== "NO ACTION" && (
+                <span className="text-fg-muted">
+                  On delete: {column.references.onDelete}
+                </span>
+              )}
+            </span>
+          }
+        >
+          <Link2 className="size-3.5 shrink-0 -rotate-45 text-accent" />
+        </Tooltip>
+      )}
+      {column.isKey && (
+        <Tooltip content="Primary key">
+          <Key className="size-3 shrink-0 rotate-45 text-accent" />
+        </Tooltip>
+      )}
+      {column.comment ? (
+        <Tooltip content={column.comment}>{name}</Tooltip>
+      ) : (
+        name
+      )}
+      {column.format && (
+        <span className="truncate text-xs text-fg-subtle">{column.format}</span>
+      )}
+      {sort && (
+        <span className="shrink-0 text-[10px] text-accent">
+          {sort.descending ? "↓" : "↑"}
+        </span>
+      )}
+      <span className="ml-auto flex shrink-0 items-center">{menu}</span>
+      <span
+        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
+        onMouseDown={onResize}
+      />
     </div>
   );
 }
@@ -372,54 +579,59 @@ export function DataGrid({
 const GridRowView = memo(function GridRowView({
   row,
   index,
-  number,
   top,
   widths,
+  columns,
   selected,
-  editingCol,
-  onSelect,
-  references,
-  onReference,
+  activeCol,
+  editing,
+  addColumnWidth,
+  renderReference,
+  onCellClick,
+  onCellDoubleClick,
   onCheck,
   onExpand,
-  onStartEdit,
   onCommit,
+  onExpandValue,
 }: {
   row: GridRow;
   index: number;
-  number: number;
   top: number;
   widths: number[];
+  columns: GridColumn[];
   selected: boolean;
-  editingCol: number | null;
-  onSelect: (e: MouseEvent) => void;
-  references?: (string | undefined)[];
-  onReference?: (col: number, value: string) => void;
+  activeCol: number | null;
+  editing: { col: number; initial?: string } | null;
+  addColumnWidth: number;
+  renderReference?: (target: CellTarget, close: () => void) => ReactNode;
+  onCellClick: (col: number) => void;
+  onCellDoubleClick: (col: number) => void;
   onCheck?: (e: MouseEvent) => void;
   onExpand?: () => void;
-  onStartEdit?: (col: number) => void;
-  /** `false` = cancelled. */
   onCommit: (col: number, value: string | null | false) => void;
+  onExpandValue: (col: number, text: string) => void;
 }) {
   return (
     <div
       data-index={index}
       className={cn(
-        "absolute left-0 flex w-full border-b border-border/50",
-        selected ? "bg-accent-muted" : index % 2 ? "bg-surface/40" : "bg-bg",
+        "group/row absolute left-0 flex w-full border-b border-border",
+        selected ? "bg-surface-hover" : "bg-bg hover:bg-surface/60",
         row.state === "new" && "bg-accent/5",
         row.state === "deleted" && "bg-danger/10 text-fg-subtle line-through",
       )}
       style={{ top, height: ROW_HEIGHT }}
     >
       <div
-        className="group/num relative flex shrink-0 cursor-pointer items-center gap-1 border-r border-border pl-2.5 text-[10px] text-fg-subtle"
-        style={{ width: ROW_NUMBER_WIDTH }}
-        onClick={onSelect}
+        className={cn(
+          "sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border pl-3",
+          selected ? "bg-surface-hover" : "bg-bg group-hover/row:bg-surface",
+        )}
+        style={{ width: SELECT_WIDTH }}
       >
         {onCheck && (
           <Checkbox
-            aria-label={`Select row ${number}`}
+            aria-label="Select row"
             checked={selected}
             onClick={(e) => {
               e.stopPropagation();
@@ -428,106 +640,119 @@ const GridRowView = memo(function GridRowView({
             }}
           />
         )}
-        {row.state === "new" ? (
-          <span className="text-accent">new</span>
-        ) : (
-          onExpand && (
+        {onExpand && (
+          <Tooltip content="Expand row">
             <button
               type="button"
               aria-label="Expand row"
-              onClick={(e) => {
-                e.stopPropagation();
-                onExpand();
-              }}
-              className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/num:flex hover:bg-surface-hover hover:text-fg"
+              onClick={onExpand}
+              className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/row:flex hover:bg-surface-hover hover:text-fg"
             >
               <Maximize2 className="size-3" />
             </button>
-          )
+          </Tooltip>
         )}
       </div>
-      {row.cells.map((value, col) => (
-        <div
-          key={col}
-          className={cn(
-            "relative flex shrink-0 items-center overflow-hidden border-r border-border/50 px-2",
-            row.modified?.has(col) && "bg-warning/10",
-          )}
-          style={{ width: widths[col] }}
-          onDoubleClick={() => onStartEdit?.(col)}
-        >
-          {editingCol === col ? (
-            <CellEditor value={value} onCommit={(v) => onCommit(col, v)} />
-          ) : value === null ? (
-            <span className="text-fg-subtle italic">NULL</span>
-          ) : value === undefined ? (
-            <span className="text-fg-subtle italic">DEFAULT</span>
-          ) : (
-            <>
-              <span className="truncate whitespace-pre text-fg">
-                {value.replaceAll("\n", "↵ ")}
-              </span>
-              {references?.[col] && onReference && row.state !== "new" && (
-                <button
-                  type="button"
-                  aria-label={`Open referenced record in ${references[col]}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReference(col, value);
-                  }}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className="ml-auto flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border border-border-strong bg-surface-raised text-fg-subtle hover:border-accent hover:text-accent"
-                >
-                  <ArrowRight className="size-3" />
-                </button>
+      {row.cells.map((value, col) => {
+        const column = columns[col]!;
+        const isEditing = editing?.col === col;
+        return (
+          <div
+            key={col}
+            data-col={col}
+            className={cn(
+              "relative flex shrink-0 items-center border-r border-border px-2",
+              row.modified?.has(col) && "bg-warning/10",
+            )}
+            style={{ width: widths[col] }}
+            onClick={() => onCellClick(col)}
+            onDoubleClick={() => onCellDoubleClick(col)}
+          >
+            {activeCol === col && !isEditing && (
+              <span className="pointer-events-none absolute inset-0 hidden ring-1 ring-accent ring-inset group-focus-within/grid:block" />
+            )}
+            {isEditing ? (
+              <CellEditor
+                column={{
+                  name: column.name,
+                  kind: column.kind ?? "text",
+                  nullable: column.nullable ?? true,
+                  enumValues: column.enumValues,
+                }}
+                value={value}
+                initial={editing.initial}
+                width={widths[col]!}
+                rowHeight={ROW_HEIGHT}
+                onCommit={(v) => onCommit(col, v)}
+                onExpand={(text) => onExpandValue(col, text)}
+              />
+            ) : (
+              <CellValue value={value} kind={column.kind} />
+            )}
+            {column.references &&
+              value !== null &&
+              value !== undefined &&
+              renderReference &&
+              row.state !== "new" && (
+                <ReferenceButton
+                  render={(close) =>
+                    renderReference({ rowId: row.id, col, value }, close)
+                  }
+                />
               )}
-            </>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
+      {addColumnWidth > 0 && (
+        <div className="shrink-0" style={{ width: addColumnWidth }} />
+      )}
     </div>
   );
 });
 
-function CellEditor({
-  value,
-  onCommit,
-}: {
-  value: GridCell;
-  onCommit: (value: string | null | false) => void;
-}) {
-  const [text, setText] = useState(value ?? "");
-  const done = useRef(false);
-  const finish = (v: string | null | false) => {
-    if (done.current) return;
-    done.current = true;
-    onCommit(v);
-  };
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") finish(text);
-    if (e.key === "Escape") finish(false);
-  };
+/** NULL, EMPTY and DEFAULT in muted text, like Supabase. */
+function CellValue({ value, kind }: { value: GridCell; kind?: TypeKind }) {
+  if (value === null) return <span className="text-fg/50">NULL</span>;
+  if (value === undefined) return <span className="text-fg/50">DEFAULT</span>;
+  if (value === "" && kind !== "bool")
+    return <span className="text-fg/50">EMPTY</span>;
   return (
-    <div className="absolute inset-0 z-10 flex items-center gap-1 bg-surface-raised px-1 ring-2 ring-accent">
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={() => finish(text)}
-        className="h-full min-w-0 flex-1 bg-transparent font-mono text-xs text-fg outline-none select-text"
-      />
-      <button
-        type="button"
-        // mousedown so the input's blur doesn't commit the text first
-        onMouseDown={(e) => {
-          e.preventDefault();
-          finish(null);
-        }}
-        className="shrink-0 cursor-pointer rounded px-1 font-sans text-[10px] text-fg-subtle hover:bg-surface-hover hover:text-fg"
+    <span className="truncate whitespace-pre text-fg">
+      {kind === "bool" ? value.toUpperCase() : value.replaceAll("\n", " ")}
+    </span>
+  );
+}
+
+function ReferenceButton({
+  render,
+}: {
+  render: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip content="View referencing record">
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="View referencing record"
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="ml-auto flex size-6 shrink-0 cursor-pointer items-center justify-center rounded border border-border-strong bg-surface text-fg-subtle hover:border-fg-subtle hover:text-fg"
+          >
+            <ArrowRight className="size-3.5" />
+          </button>
+        </PopoverTrigger>
+      </Tooltip>
+      <PopoverContent
+        align="end"
+        className="w-96 overflow-hidden p-0"
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
-        NULL
-      </button>
-    </div>
+        {open && render(() => setOpen(false))}
+      </PopoverContent>
+    </Popover>
   );
 }

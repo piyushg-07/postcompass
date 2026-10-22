@@ -99,12 +99,13 @@ pub struct Relation {
     pub kind: TableKind,
     pub row_estimate: f64,
     pub comment: Option<String>,
+    pub rls_enabled: bool,
 }
 
 pub async fn relation(client: &Client, schema: &str, name: &str) -> CoreResult<Relation> {
     let row = client
         .query_opt(
-            "select c.oid, c.relkind::text, c.reltuples::float8, obj_description(c.oid, 'pg_class')
+            "select c.oid, c.relkind::text, c.reltuples::float8, obj_description(c.oid, 'pg_class'), c.relrowsecurity
                from pg_class c
                join pg_namespace n on n.oid = c.relnamespace
               where n.nspname = $1 and c.relname = $2 and c.relkind in ('r', 'p', 'v', 'm', 'f')",
@@ -118,6 +119,7 @@ pub async fn relation(client: &Client, schema: &str, name: &str) -> CoreResult<R
         kind: table_kind(row.get(1)),
         row_estimate: row.get(2),
         comment: row.get(3),
+        rls_enabled: row.get(4),
     })
 }
 
@@ -238,6 +240,7 @@ pub async fn structure(client: &Client, schema: &str, name: &str) -> CoreResult<
         name: name.to_owned(),
         kind: rel.kind,
         comment: rel.comment,
+        rls_enabled: rel.rls_enabled,
         columns,
         primary_key,
         foreign_keys: fks

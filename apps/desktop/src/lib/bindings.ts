@@ -577,6 +577,8 @@ export type TableStructure = {
 	name: string,
 	kind: TableKind,
 	comment: string | null,
+	/**  Row Level Security is switched on. */
+	rlsEnabled: boolean,
 	columns: ColumnInfo[],
 	primaryKey: string[],
 	foreignKeys: ForeignKeyInfo[],

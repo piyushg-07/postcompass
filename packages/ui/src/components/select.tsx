@@ -26,6 +26,8 @@ export function Select({
   className,
   side,
   align = "start",
+  defaultOpen,
+  onOpenChange,
   ...controlProps
 }: {
   value: string;
@@ -40,6 +42,9 @@ export function Select({
   className?: string;
   side?: "top" | "bottom";
   align?: "start" | "end";
+  /** Open the list as soon as it mounts (e.g. a grid cell editor). */
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   id?: string;
   "aria-label"?: string;
   "aria-describedby"?: string;
@@ -51,6 +56,8 @@ export function Select({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
+      defaultOpen={defaultOpen}
+      onOpenChange={onOpenChange}
     >
       <SelectPrimitive.Trigger
         {...controlProps}
