@@ -1,5 +1,6 @@
 import { Dialog, DialogContent } from "@repo/ui";
-import { Cloud, Database } from "lucide-react";
+import { Cloud, Database, HardDrive } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
@@ -14,23 +15,28 @@ export function DatabasesPage() {
   const installOpen = useNavigation((s) => s.installDialogOpen);
   const setInstallOpen = useNavigation((s) => s.setInstallDialogOpen);
   const openRemoteDialog = useNavigation((s) => s.openRemoteDialog);
-  const { statuses, setStatus } = useServerStatuses(state.servers.map((s) => s.id));
+  const { statuses, setStatus } = useServerStatuses(
+    state.servers.map((s) => s.id),
+  );
   const [installing, setInstalling] = useState(false);
 
   return (
     <div className="flex flex-col gap-10">
-
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      {/* Adding happens from the dashed tile in each section */}
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-fg">Databases</h1>
-        <p className="mt-0.5 text-sm text-fg-muted">Local and remote PostgreSQL databases.</p>
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-fg">
+          Databases
+        </h1>
+        <p className="text-sm text-fg-muted">
+          Local and cloud PostgreSQL in one place.
+        </p>
       </div>
 
       {/* ── Local databases ──────────────────────────────────────────────── */}
       <SectionGroup
+        icon={<HardDrive />}
         title="Local"
-        description="Managed by PostCompass on this computer."
+        count={state.servers.length}
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {state.servers.map((server) => (
@@ -43,7 +49,7 @@ export function DatabasesPage() {
           ))}
           {/* Add new tile */}
           <NewTile
-            icon={<Database className="size-5 text-fg-subtle" />}
+            icon={<Database />}
             label="New local database"
             onClick={() => setInstallOpen(true)}
           />
@@ -52,8 +58,9 @@ export function DatabasesPage() {
 
       {/* ── Remote connections ───────────────────────────────────────────── */}
       <SectionGroup
+        icon={<Cloud />}
         title="Remote"
-        description="Cloud or self-hosted PostgreSQL endpoints."
+        count={state.remoteConnections.length}
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {state.remoteConnections.map((rc) => (
@@ -61,7 +68,7 @@ export function DatabasesPage() {
           ))}
           {/* Add new tile */}
           <NewTile
-            icon={<Cloud className="size-5 text-fg-subtle" />}
+            icon={<Cloud />}
             label="Add remote connection"
             onClick={() => openRemoteDialog()}
           />
@@ -98,27 +105,25 @@ export function DatabasesPage() {
 // ── Section wrapper ────────────────────────────────────────────────────────────
 
 function SectionGroup({
+  icon,
   title,
-  description,
-  action,
+  count,
   children,
 }: {
+  icon: ReactNode;
   title: string;
-  description?: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  count: number;
+  children: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-sm font-semibold text-fg">{title}</h2>
-          {description && (
-            <span className="text-xs text-fg-subtle">{description}</span>
-          )}
-        </div>
-        {action}
-      </div>
+      <h2 className="flex items-center gap-2 text-sm font-medium text-fg [&_svg]:size-4 [&_svg]:text-fg-subtle">
+        {icon}
+        {title}
+        <span className="text-xs font-normal text-fg-subtle tabular-nums">
+          {count}
+        </span>
+      </h2>
       {children}
     </section>
   );
@@ -131,7 +136,7 @@ function NewTile({
   label,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
 }) {
@@ -139,10 +144,12 @@ function NewTile({
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-border py-8 text-center transition-all hover:border-border-strong hover:bg-surface"
+      className="group flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-card border border-dashed border-border-strong transition-colors hover:border-accent/50 hover:bg-surface"
     >
-      <span className="transition-transform group-hover:scale-110">{icon}</span>
-      <span className="text-xs text-fg-subtle group-hover:text-fg">{label}</span>
+      <span className="flex size-9 items-center justify-center rounded-full border border-border bg-surface text-fg-subtle transition-colors group-hover:text-accent [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="text-sm text-fg-muted group-hover:text-fg">{label}</span>
     </button>
   );
 }
