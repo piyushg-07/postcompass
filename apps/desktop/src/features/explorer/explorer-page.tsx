@@ -97,15 +97,8 @@ export function ExplorerPage({
     );
   }
 
-  // ── Display label & subtitle ───────────────────────────────────────────────
+  // ── Display label ───────────────────────────────────────────────
   const displayName = server?.name ?? remote?.name ?? "Remote database";
-  const displaySubtitle = connection.data
-    ? server
-      ? `PostgreSQL ${connection.data.serverVersion} · ${server.host}:${server.port}`
-      : remote
-        ? `PostgreSQL ${connection.data.serverVersion} · ${remote.host}:${remote.port}`
-        : undefined
-    : undefined;
 
   const error = connection.isError ? describeError(connection.error) : null;
 
@@ -115,10 +108,7 @@ export function ExplorerPage({
         aria-label="Location"
         className="flex min-w-0 items-center gap-1 text-sm"
       >
-        <span
-          className="flex shrink-0 items-center gap-2 px-1 text-fg-muted"
-          title={displaySubtitle}
-        >
+        <span className="flex shrink-0 items-center gap-2 px-1 text-fg-muted">
           {remote ? (
             <Cloud className="size-3.5 text-accent" />
           ) : (

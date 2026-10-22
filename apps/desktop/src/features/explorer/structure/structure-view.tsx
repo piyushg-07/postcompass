@@ -17,9 +17,19 @@ interface PendingSql {
 }
 
 /** Columns, keys, indexes, constraints and triggers of a table, with editors for each. */
-export function StructureView({ database, schema, table }: { database: string; schema: string; table: string }) {
+export function StructureView({
+  database,
+  schema,
+  table,
+}: {
+  database: string;
+  schema: string;
+  table: string;
+}) {
   const structure = useStructure(database, schema, table);
-  const [columnDialog, setColumnDialog] = useState<{ column?: ColumnInfo } | null>(null);
+  const [columnDialog, setColumnDialog] = useState<{
+    column?: ColumnInfo;
+  } | null>(null);
   const [indexOpen, setIndexOpen] = useState(false);
   const [fkOpen, setFkOpen] = useState(false);
   const [pending, setPending] = useState<PendingSql | null>(null);
@@ -33,7 +43,12 @@ export function StructureView({ database, schema, table }: { database: string; s
       </div>
     );
   }
-  if (structure.isError) return <p className="p-4 text-sm text-danger">{describeError(structure.error).message}</p>;
+  if (structure.isError)
+    return (
+      <p className="p-4 text-sm text-danger">
+        {describeError(structure.error).message}
+      </p>
+    );
 
   const s = structure.data;
   const isTable = s.kind === "table" || s.kind === "partitioned_table";
@@ -45,36 +60,69 @@ export function StructureView({ database, schema, table }: { database: string; s
       <Section
         title="Columns"
         count={s.columns.length}
-        action={isTable && <AddButton onClick={() => setColumnDialog({})}>Add column</AddButton>}
+        action={
+          isTable && (
+            <AddButton onClick={() => setColumnDialog({})}>
+              Add column
+            </AddButton>
+          )
+        }
       >
         <Table head={["Name", "Type", "Nullable", "Default", "Comment", ""]}>
           {s.columns.map((c) => (
-            <tr key={c.name} className="group border-b border-border/60 hover:bg-surface-hover/50">
+            <tr
+              key={c.name}
+              className="group border-b border-border/60 hover:bg-surface-hover/50"
+            >
               <Cell>
                 <span className="flex items-center gap-1.5 font-mono text-fg">
-                  {c.isPrimaryKey && <KeyRound className="size-3 text-warning" aria-label="Primary key" />}
+                  {c.isPrimaryKey && (
+                    <KeyRound
+                      className="size-3 text-warning"
+                      aria-label="Primary key"
+                    />
+                  )}
                   {s.foreignKeys.some((fk) => fk.columns.includes(c.name)) && (
-                    <Link2 className="size-3 text-info" aria-label="Foreign key" />
+                    <Link2
+                      className="size-3 text-info"
+                      aria-label="Foreign key"
+                    />
                   )}
                   {c.name}
                 </span>
               </Cell>
               <Cell mono>{c.dataType}</Cell>
-              <Cell>{c.nullable ? <span className="text-fg-subtle">yes</span> : "NOT NULL"}</Cell>
+              <Cell>
+                {c.nullable ? (
+                  <span className="text-fg-subtle">yes</span>
+                ) : (
+                  "NOT NULL"
+                )}
+              </Cell>
               <Cell mono>
                 {c.identity ? (
-                  <Badge>identity · {c.identity === "always" ? "always" : "by default"}</Badge>
+                  <Badge>
+                    identity ·{" "}
+                    {c.identity === "always" ? "always" : "by default"}
+                  </Badge>
                 ) : c.generated ? (
-                  <span title={c.generated}>generated: {c.generated}</span>
+                  <span>generated: {c.generated}</span>
                 ) : (
                   (c.default ?? <span className="text-fg-subtle">—</span>)
                 )}
               </Cell>
-              <Cell>{c.comment ?? <span className="text-fg-subtle">—</span>}</Cell>
+              <Cell>
+                {c.comment ?? <span className="text-fg-subtle">—</span>}
+              </Cell>
               <Cell>
                 {isTable && (
                   <RowActions>
-                    <IconButton size="sm" label="Edit column" icon={<Pencil />} onClick={() => setColumnDialog({ column: c })} />
+                    <IconButton
+                      size="sm"
+                      label="Edit column"
+                      icon={<Pencil />}
+                      onClick={() => setColumnDialog({ column: c })}
+                    />
                     <IconButton
                       size="sm"
                       label="Drop column"
@@ -98,14 +146,21 @@ export function StructureView({ database, schema, table }: { database: string; s
       <Section
         title="Indexes"
         count={s.indexes.length}
-        action={isTable && <AddButton onClick={() => setIndexOpen(true)}>Add index</AddButton>}
+        action={
+          isTable && (
+            <AddButton onClick={() => setIndexOpen(true)}>Add index</AddButton>
+          )
+        }
       >
         {s.indexes.length === 0 ? (
           <Empty>No indexes</Empty>
         ) : (
           <Table head={["Name", "Columns", "Type", "Size", "Definition", ""]}>
             {s.indexes.map((i) => (
-              <tr key={i.name} className="group border-b border-border/60 hover:bg-surface-hover/50">
+              <tr
+                key={i.name}
+                className="group border-b border-border/60 hover:bg-surface-hover/50"
+              >
                 <Cell mono>{i.name}</Cell>
                 <Cell mono>{i.columns.join(", ")}</Cell>
                 <Cell>
@@ -120,18 +175,24 @@ export function StructureView({ database, schema, table }: { database: string; s
                   {i.definition}
                 </Cell>
                 <Cell>
-                  {isTable && !i.isPrimary && !s.constraints.some((c) => c.name === i.name) && (
-                    <RowActions>
-                      <IconButton
-                        size="sm"
-                        label="Drop index"
-                        icon={<Trash2 />}
-                        onClick={() =>
-                          setPending({ title: `Drop index ${i.name}?`, sql: dropIndex(schema, i.name), success: `Index ${i.name} dropped` })
-                        }
-                      />
-                    </RowActions>
-                  )}
+                  {isTable &&
+                    !i.isPrimary &&
+                    !s.constraints.some((c) => c.name === i.name) && (
+                      <RowActions>
+                        <IconButton
+                          size="sm"
+                          label="Drop index"
+                          icon={<Trash2 />}
+                          onClick={() =>
+                            setPending({
+                              title: `Drop index ${i.name}?`,
+                              sql: dropIndex(schema, i.name),
+                              success: `Index ${i.name} dropped`,
+                            })
+                          }
+                        />
+                      </RowActions>
+                    )}
                 </Cell>
               </tr>
             ))}
@@ -142,18 +203,38 @@ export function StructureView({ database, schema, table }: { database: string; s
       <Section
         title="Foreign keys"
         count={s.foreignKeys.length}
-        action={isTable && <AddButton onClick={() => setFkOpen(true)}>Add foreign key</AddButton>}
+        action={
+          isTable && (
+            <AddButton onClick={() => setFkOpen(true)}>
+              Add foreign key
+            </AddButton>
+          )
+        }
       >
         {s.foreignKeys.length === 0 ? (
           <Empty>No foreign keys</Empty>
         ) : (
-          <Table head={["Name", "Columns", "References", "On update", "On delete", ""]}>
+          <Table
+            head={[
+              "Name",
+              "Columns",
+              "References",
+              "On update",
+              "On delete",
+              "",
+            ]}
+          >
             {s.foreignKeys.map((fk) => (
-              <tr key={fk.name} className="group border-b border-border/60 hover:bg-surface-hover/50">
+              <tr
+                key={fk.name}
+                className="group border-b border-border/60 hover:bg-surface-hover/50"
+              >
                 <Cell mono>{fk.name}</Cell>
                 <Cell mono>{fk.columns.join(", ")}</Cell>
                 <Cell mono>
-                  {fk.referencedSchema === schema ? "" : `${fk.referencedSchema}.`}
+                  {fk.referencedSchema === schema
+                    ? ""
+                    : `${fk.referencedSchema}.`}
                   {fk.referencedTable} ({fk.referencedColumns.join(", ")})
                 </Cell>
                 <Cell>{fk.onUpdate}</Cell>
@@ -186,7 +267,10 @@ export function StructureView({ database, schema, table }: { database: string; s
         <Section title="Constraints" count={s.constraints.length}>
           <Table head={["Name", "Type", "Definition", ""]}>
             {s.constraints.map((c) => (
-              <tr key={c.name} className="group border-b border-border/60 hover:bg-surface-hover/50">
+              <tr
+                key={c.name}
+                className="group border-b border-border/60 hover:bg-surface-hover/50"
+              >
                 <Cell mono>{c.name}</Cell>
                 <Cell>
                   <Badge>{c.kind}</Badge>
@@ -222,7 +306,13 @@ export function StructureView({ database, schema, table }: { database: string; s
             {s.triggers.map((t) => (
               <tr key={t.name} className="border-b border-border/60">
                 <Cell mono>{t.name}</Cell>
-                <Cell>{t.enabled ? "yes" : <span className="text-fg-subtle">disabled</span>}</Cell>
+                <Cell>
+                  {t.enabled ? (
+                    "yes"
+                  ) : (
+                    <span className="text-fg-subtle">disabled</span>
+                  )}
+                </Cell>
                 <Cell mono truncate>
                   {t.definition}
                 </Cell>
@@ -242,8 +332,22 @@ export function StructureView({ database, schema, table }: { database: string; s
           column={columnDialog.column}
         />
       )}
-      {indexOpen && <IndexDialog open onOpenChange={setIndexOpen} database={database} structure={s} />}
-      {fkOpen && <ForeignKeyDialog open onOpenChange={setFkOpen} database={database} structure={s} />}
+      {indexOpen && (
+        <IndexDialog
+          open
+          onOpenChange={setIndexOpen}
+          database={database}
+          structure={s}
+        />
+      )}
+      {fkOpen && (
+        <ForeignKeyDialog
+          open
+          onOpenChange={setFkOpen}
+          database={database}
+          structure={s}
+        />
+      )}
       {pending && (
         <RunSqlDialog
           open
@@ -261,7 +365,17 @@ export function StructureView({ database, schema, table }: { database: string; s
   );
 }
 
-function Section({ title, count, action, children }: { title: string; count: number; action?: ReactNode; children: ReactNode }) {
+function Section({
+  title,
+  count,
+  action,
+  children,
+}: {
+  title: string;
+  count: number;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -275,7 +389,13 @@ function Section({ title, count, action, children }: { title: string; count: num
   );
 }
 
-function AddButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function AddButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <Button size="sm" variant="ghost" iconLeft={<Plus />} onClick={onClick}>
       {children}
@@ -302,18 +422,36 @@ function Table({ head, children }: { head: string[]; children: ReactNode }) {
   );
 }
 
-function Cell({ children, mono, truncate }: { children: ReactNode; mono?: boolean; truncate?: boolean }) {
+function Cell({
+  children,
+  mono,
+  truncate,
+}: {
+  children: ReactNode;
+  mono?: boolean;
+  truncate?: boolean;
+}) {
   return (
-    <td className={`px-3 py-1.5 text-fg-muted ${mono ? "font-mono" : ""} ${truncate ? "max-w-md truncate" : ""}`}>
+    <td
+      className={`px-3 py-1.5 text-fg-muted ${mono ? "font-mono" : ""} ${truncate ? "max-w-md truncate" : ""}`}
+    >
       {children}
     </td>
   );
 }
 
 function RowActions({ children }: { children: ReactNode }) {
-  return <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">{children}</div>;
+  return (
+    <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+      {children}
+    </div>
+  );
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-card border border-dashed border-border px-3 py-3 text-xs text-fg-subtle">{children}</p>;
+  return (
+    <p className="rounded-card border border-dashed border-border px-3 py-3 text-xs text-fg-subtle">
+      {children}
+    </p>
+  );
 }

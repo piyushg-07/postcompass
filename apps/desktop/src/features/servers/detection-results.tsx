@@ -58,10 +58,7 @@ function ReportList({ report }: { report: DetectionReport }) {
                 </span>
               )}
             </span>
-            <span
-              className="truncate font-mono text-xs text-fg-subtle"
-              title={install.binDir}
-            >
+            <span className="truncate font-mono text-xs text-fg-subtle">
               {install.binDir}
             </span>
           </div>

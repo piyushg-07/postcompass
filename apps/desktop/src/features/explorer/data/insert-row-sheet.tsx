@@ -224,10 +224,7 @@ function RowForm({
                   )}
                   {c.name}
                   {changed && (
-                    <span
-                      className="size-1.5 shrink-0 rounded-full bg-warning"
-                      title="Changed"
-                    />
+                    <span className="size-1.5 shrink-0 rounded-full bg-warning" />
                   )}
                 </span>
                 <span className="truncate font-mono text-[11px] text-fg-subtle">
@@ -292,7 +289,6 @@ function RowForm({
                     {references[c.name] && (
                       <button
                         type="button"
-                        title={`Select a record from ${references[c.name]!.table}`}
                         onClick={() => setPicking(i)}
                         className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-border px-2 text-[11px] text-fg-muted hover:border-fg-subtle hover:text-fg"
                       >
@@ -303,7 +299,6 @@ function RowForm({
                     {c.nullable && (
                       <button
                         type="button"
-                        title="Set to NULL"
                         onClick={() => set(i, null)}
                         className={cn(
                           "h-8 shrink-0 cursor-pointer rounded-control border px-2 font-mono text-[10px]",

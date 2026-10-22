@@ -44,7 +44,7 @@ const DiagramTab = lazy(() =>
   import("./tabs/diagram-tab").then((m) => ({ default: m.DiagramTab })),
 );
 
-function tabLabel(tab: Tab): { icon: ReactNode; label: string; hint?: string } {
+function tabLabel(tab: Tab): { icon: ReactNode; label: string } {
   switch (tab.type) {
     case "table":
       return {
@@ -55,10 +55,9 @@ function tabLabel(tab: Tab): { icon: ReactNode; label: string; hint?: string } {
             <Table2 />
           ),
         label: tab.name,
-        hint: `${tab.database}.${tab.schema}.${tab.name}`,
       };
     case "query":
-      return { icon: <TerminalSquare />, label: tab.title, hint: tab.database };
+      return { icon: <TerminalSquare />, label: tab.title };
     case "definition":
       return {
         icon: tab.kind === "function" ? <FunctionSquare /> : <Hash />,
@@ -196,14 +195,13 @@ export function Workspace() {
         className="flex h-9 shrink-0 items-end gap-px overflow-x-auto overflow-y-hidden border-b border-border bg-surface px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab) => {
-          const { icon, label, hint } = tabLabel(tab);
+          const { icon, label } = tabLabel(tab);
           const isActive = tab.id === activeTabId;
           return (
             <ContextMenu key={tab.id}>
               <ContextMenuTrigger asChild>
                 <div
                   data-tab-id={tab.id}
-                  title={hint}
                   onMouseDown={(e) => onTabMouseDown(e, tab.id)}
                   onDoubleClick={() => closeOtherTabs(tab.id)}
                   className={cn(
@@ -265,7 +263,6 @@ export function Workspace() {
           <button
             type="button"
             aria-label="New query"
-            title="New query"
             onClick={() => newQuery(database)}
             className="mb-1 ml-1 flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-surface-hover hover:text-fg"
           >

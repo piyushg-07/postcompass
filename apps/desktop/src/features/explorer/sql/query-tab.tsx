@@ -176,7 +176,6 @@ export function QueryTab({ tab }: { tab: QueryTabModel }) {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title="Database this query runs in"
                 className="flex h-7 max-w-56 cursor-pointer items-center gap-2 rounded-control border border-border-strong bg-bg px-2 text-xs hover:border-fg-subtle data-[state=open]:border-fg-subtle"
               >
                 <Database className="size-3.5 shrink-0 text-accent" />

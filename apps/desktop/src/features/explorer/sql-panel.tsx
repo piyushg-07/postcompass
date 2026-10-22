@@ -115,7 +115,6 @@ export function SqlPanel({ database }: { database: string }) {
               key={q.id}
               icon={<Bookmark />}
               label={q.name}
-              title={q.sql}
               onClick={() => ws.newQuery(database, q.sql)}
               menu={
                 <>
@@ -155,7 +154,6 @@ export function SqlPanel({ database }: { database: string }) {
               icon={<History className={h.ok ? undefined : "text-danger"} />}
               label={h.sql.replace(/\s+/g, " ").trim()}
               meta={h.database === database ? undefined : h.database}
-              title={h.sql}
               mono
               onClick={() => ws.newQuery(h.database, h.sql)}
               menu={
@@ -219,7 +217,6 @@ function Row({
   icon,
   label,
   meta,
-  title,
   mono,
   active,
   onClick,
@@ -228,7 +225,6 @@ function Row({
   icon: ReactNode;
   label: string;
   meta?: string;
-  title?: string;
   mono?: boolean;
   active?: boolean;
   onClick: () => void;
@@ -241,7 +237,6 @@ function Row({
         <ContextMenuTrigger asChild>
           <button
             type="button"
-            title={title ?? label}
             onClick={onClick}
             className={cn(
               "flex h-7 w-full cursor-pointer items-center gap-2 pr-2 pl-4 text-left text-xs text-fg-muted hover:bg-surface-hover hover:text-fg data-[state=open]:bg-surface-hover [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-subtle",

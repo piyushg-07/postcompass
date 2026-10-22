@@ -270,11 +270,6 @@ export function DataGrid({
                 )}
                 style={{ width: colWidths[i] }}
                 onClick={() => onSort?.(column.id)}
-                title={
-                  column.dataType
-                    ? `${column.name} · ${column.dataType}`
-                    : column.name
-                }
               >
                 {column.isKey && (
                   <KeyRound
@@ -421,7 +416,6 @@ const GridRowView = memo(function GridRowView({
         className="group/num relative flex shrink-0 cursor-pointer items-center gap-1 border-r border-border pl-2.5 text-[10px] text-fg-subtle"
         style={{ width: ROW_NUMBER_WIDTH }}
         onClick={onSelect}
-        title={`Row ${number}`}
       >
         {onCheck && (
           <Checkbox
@@ -441,7 +435,6 @@ const GridRowView = memo(function GridRowView({
             <button
               type="button"
               aria-label="Expand row"
-              title="Expand row"
               onClick={(e) => {
                 e.stopPropagation();
                 onExpand();
@@ -462,7 +455,6 @@ const GridRowView = memo(function GridRowView({
           )}
           style={{ width: widths[col] }}
           onDoubleClick={() => onStartEdit?.(col)}
-          title={value ?? undefined}
         >
           {editingCol === col ? (
             <CellEditor value={value} onCommit={(v) => onCommit(col, v)} />
@@ -479,7 +471,6 @@ const GridRowView = memo(function GridRowView({
                 <button
                   type="button"
                   aria-label={`Open referenced record in ${references[col]}`}
-                  title={`Open the ${references[col]} record`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onReference(col, value);
@@ -534,7 +525,6 @@ function CellEditor({
           finish(null);
         }}
         className="shrink-0 cursor-pointer rounded px-1 font-sans text-[10px] text-fg-subtle hover:bg-surface-hover hover:text-fg"
-        title="Set to NULL"
       >
         NULL
       </button>

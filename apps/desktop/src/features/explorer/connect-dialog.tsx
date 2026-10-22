@@ -132,10 +132,7 @@ function ConnectDialogBody({
           ))}
         </div>
         <div className="flex items-center gap-1 rounded-control border border-border-strong bg-bg py-1 pr-1 pl-3">
-          <code
-            className="min-w-0 flex-1 truncate font-mono text-xs text-fg select-text"
-            title={shown}
-          >
+          <code className="min-w-0 flex-1 truncate font-mono text-xs text-fg select-text">
             {shown}
           </code>
           <IconButton

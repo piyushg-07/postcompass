@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatBytes, formatCount } from "../../lib/format";
+import { formatCount } from "../../lib/format";
 import { describeError } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import {
@@ -344,7 +344,6 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                         t.kind === "view" ? "view" : formatCount(t.rowEstimate)
                       }
                       active={isActive(t.name)}
-                      title={`${t.name} · ~${Math.round(t.rowEstimate ?? 0).toLocaleString()} rows · ${formatBytes(t.sizeBytes)}${t.comment ? ` · ${t.comment}` : ""}`}
                       onClick={() => open(t.name, t.kind)}
                       menu={
                         schema && (
@@ -559,7 +558,6 @@ function Item({
   icon,
   label,
   meta,
-  title,
   active,
   plain,
   onClick,
@@ -568,7 +566,6 @@ function Item({
   icon: ReactNode;
   label: string;
   meta?: string;
-  title?: string;
   active?: boolean;
   /** Regular text instead of monospace, for page names rather than object names. */
   plain?: boolean;
@@ -579,7 +576,6 @@ function Item({
   const button = (
     <button
       type="button"
-      title={title ?? label}
       onClick={onClick}
       disabled={!onClick}
       className={cn(

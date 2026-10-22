@@ -49,7 +49,6 @@ export function SidePanel({ children }: { children: ReactNode }) {
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize table list"
-        title="Drag to resize · double-click to reset"
         onPointerDown={startResize}
         onDoubleClick={() => setExplorerWidth(PANEL_DEFAULT)}
         className="group absolute top-0 -right-1.5 z-10 flex h-full w-3 cursor-col-resize items-center justify-center"

@@ -162,7 +162,6 @@ export function FilterBar({
             <button
               type="button"
               className="flex cursor-pointer items-center gap-1"
-              title="Edit filter"
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -170,9 +169,7 @@ export function FilterBar({
               }}
             >
               <span className="font-mono text-fg">{f.column}</span>
-              <span className="font-mono text-fg-muted" title={opLabel(f.op)}>
-                {opSymbol(f.op)}
-              </span>
+              <span className="font-mono text-fg-muted">{opSymbol(f.op)}</span>
               {f.value !== null && needsValue(f.op) && (
                 <span className="font-mono text-accent">{f.value}</span>
               )}
@@ -195,9 +192,7 @@ export function FilterBar({
           <span className="flex h-5 shrink-0 items-center gap-1 rounded bg-surface-hover px-1.5 text-[11px]">
             <span className="font-mono text-fg">{column}</span>
             {op && (
-              <span className="font-mono text-fg-muted" title={opLabel(op)}>
-                {opSymbol(op)}
-              </span>
+              <span className="font-mono text-fg-muted">{opSymbol(op)}</span>
             )}
           </span>
         )}
@@ -223,7 +218,6 @@ export function FilterBar({
         <button
           type="button"
           aria-label="Clear all filters"
-          title="Clear all filters"
           className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-hover hover:text-fg"
           onMouseDown={(e) => {
             e.preventDefault();
