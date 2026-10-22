@@ -1,6 +1,5 @@
 import {
   Button,
-  ConfirmDialog,
   Dialog,
   DialogClose,
   DropdownMenu,
@@ -281,7 +280,6 @@ function TextEditor({
   onExpand: (text: string) => void;
 }) {
   const [text, setText] = useState(initial);
-  const [confirmNull, setConfirmNull] = useState(false);
   const finish = useOnce(onCommit);
 
   const save = () => {
@@ -307,65 +305,48 @@ function TextEditor({
   };
 
   return (
-    <>
-      <CellPopover
-        width={Math.max(width, 360)}
-        rowHeight={rowHeight}
-        onOutside={() => confirmNull || !save()}
-        onEscape={() => finish(false)}
-      >
-        <textarea
-          autoFocus
-          spellCheck={false}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-          onFocus={(e) => {
-            const end = e.currentTarget.value.length;
-            e.currentTarget.setSelectionRange(end, end);
-          }}
-          className="block h-[200px] w-full resize-none bg-bg p-2.5 font-mono text-xs leading-relaxed text-fg outline-none select-text"
-        />
-        <div className="flex items-center gap-2 border-t border-border bg-surface px-2.5 py-1.5">
-          <KeyHints />
-          <span className="ml-auto flex items-center gap-1">
-            <Tooltip content="Expand editor">
-              <button
-                type="button"
-                aria-label="Expand editor"
-                onClick={() => {
-                  finish(false);
-                  onExpand(text);
-                }}
-                className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-hover hover:text-fg"
-              >
-                <Maximize2 className="size-3.5" />
-              </button>
-            </Tooltip>
-            {nullable && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setConfirmNull(true)}
-              >
-                Set to NULL
-              </Button>
-            )}
-          </span>
-        </div>
-      </CellPopover>
-      <ConfirmDialog
-        open={confirmNull}
-        onOpenChange={(o) => !o && setConfirmNull(false)}
-        title="Confirm setting value to NULL"
-        description="Are you sure you wish to set this value to NULL? This action cannot be undone."
-        confirmLabel="Set to NULL"
-        onConfirm={() => {
-          setConfirmNull(false);
-          finish(null);
+    <CellPopover
+      width={Math.max(width, 360)}
+      rowHeight={rowHeight}
+      onOutside={() => !save()}
+      onEscape={() => finish(false)}
+    >
+      <textarea
+        autoFocus
+        spellCheck={false}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={onKeyDown}
+        onFocus={(e) => {
+          const end = e.currentTarget.value.length;
+          e.currentTarget.setSelectionRange(end, end);
         }}
+        className="block h-[200px] w-full resize-none bg-bg p-2.5 font-mono text-xs leading-relaxed text-fg outline-none select-text"
       />
-    </>
+      <div className="flex items-center gap-2 border-t border-border bg-surface px-2.5 py-1.5">
+        <KeyHints />
+        <span className="ml-auto flex items-center gap-1">
+          <Tooltip content="Expand editor">
+            <button
+              type="button"
+              aria-label="Expand editor"
+              onClick={() => {
+                finish(false);
+                onExpand(text);
+              }}
+              className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-hover hover:text-fg"
+            >
+              <Maximize2 className="size-3.5" />
+            </button>
+          </Tooltip>
+          {nullable && (
+            <Button size="sm" variant="secondary" onClick={() => finish(null)}>
+              Set to NULL
+            </Button>
+          )}
+        </span>
+      </div>
+    </CellPopover>
   );
 }
 
