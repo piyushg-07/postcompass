@@ -51,7 +51,7 @@ export function SidePanel({ children }: { children: ReactNode }) {
         aria-label="Resize table list"
         onPointerDown={startResize}
         onDoubleClick={() => setExplorerWidth(PANEL_DEFAULT)}
-        className="group absolute top-0 -right-1.5 z-10 flex h-full w-3 cursor-col-resize items-center justify-center"
+        className="group absolute top-0 -right-1.5 z-30 flex h-full w-3 cursor-col-resize items-center justify-center"
       >
         <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors group-hover:bg-accent group-active:bg-accent" />
         <span className="relative flex h-6 w-3 items-center justify-center rounded-sm border border-border-strong bg-surface text-fg-subtle transition-colors group-hover:border-accent group-hover:text-accent [&_svg]:size-3">
