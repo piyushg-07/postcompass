@@ -5,6 +5,7 @@ import {
   ArchiveRestore,
   Blocks,
   Bookmark,
+  Cloud,
   Database,
   DatabaseBackup,
   Eye,
@@ -13,6 +14,7 @@ import {
   Layers,
   Network,
   PanelLeft,
+  Pencil,
   Play,
   Plus,
   Search,
@@ -27,6 +29,7 @@ import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
 import { useUiPrefs } from "../../app/ui-prefs";
 import type {
+  DatabaseInfo,
   OpenedConnection,
   SchemaObjects,
   ServerStatus,
@@ -40,6 +43,7 @@ import {
   useQueryLibrary,
   useWorkspaceStore,
 } from "../explorer/workspace-store";
+import { PROVIDER_LOGOS } from "../servers/provider-logos";
 import { fuzzyScore } from "./fuzzy";
 
 interface Command {
@@ -85,18 +89,20 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const haystacks = useMemo(
+    () =>
+      commandsList.map((c) => `${c.label} ${c.keywords ?? ""}`.toLowerCase()),
+    [commandsList],
+  );
   const results = useMemo(() => {
     if (!query.trim()) return commandsList.slice(0, MAX_RESULTS);
     return commandsList
-      .map((c) => ({
-        c,
-        score: fuzzyScore(query, `${c.label} ${c.keywords ?? ""}`),
-      }))
+      .map((c, i) => ({ c, score: fuzzyScore(query, haystacks[i]!) }))
       .filter((r): r is { c: Command; score: number } => r.score !== null)
       .sort((a, b) => b.score - a.score)
       .slice(0, MAX_RESULTS)
       .map((r) => r.c);
-  }, [commandsList, query]);
+  }, [commandsList, haystacks, query]);
 
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
@@ -190,7 +196,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
                     {command.label}
                   </span>
                   {command.hint && (
-                    <span className="shrink-0 truncate font-mono text-[11px] text-fg-subtle">
+                    <span className="max-w-[40%] shrink-0 truncate font-mono text-[11px] text-fg-subtle">
                       {command.hint}
                     </span>
                   )}
@@ -334,6 +340,24 @@ function useCommands(): Command[] {
           },
         });
       }
+      const databases =
+        queryClient.getQueryData<DatabaseInfo[]>(
+          queryKeys.explorer.databases(connection.connectionId),
+        ) ?? [];
+      for (const d of databases) {
+        if (!d.allowConnections || d.name === database) continue;
+        list.push({
+          id: `db:${d.name}`,
+          group: "Switch database",
+          label: d.name,
+          keywords: "database switch",
+          icon: <Database />,
+          run: () => {
+            ws.setLocation(openServerId, { database: d.name, schema: null });
+            nav.goTo("explorer");
+          },
+        });
+      }
       const actions: [string, string, ReactNode, () => void][] = [
         [
           "new-query",
@@ -372,30 +396,32 @@ function useCommands(): Command[] {
           run: () => (run(), nav.goTo("explorer")),
         });
       }
-      list.push(
-        {
-          id: "backup",
-          group: "Actions",
-          label: `Back up ${database}…`,
-          keywords: "backup dump export pg_dump",
-          icon: <DatabaseBackup />,
-          run: () =>
-            useBackupDialogs
-              .getState()
-              .openBackup({ serverId: openServerId, database }),
-        },
-        {
-          id: "restore",
-          group: "Actions",
-          label: `Restore a backup into ${database}…`,
-          keywords: "restore import pg_restore",
-          icon: <ArchiveRestore />,
-          run: () =>
-            useBackupDialogs
-              .getState()
-              .openRestore({ serverId: openServerId, database }),
-        },
-      );
+      // Backup and restore use the bundled pg_dump, so only local servers have them
+      if (!openServerId.startsWith("remote:"))
+        list.push(
+          {
+            id: "backup",
+            group: "Actions",
+            label: `Back up ${database}…`,
+            keywords: "backup dump export pg_dump",
+            icon: <DatabaseBackup />,
+            run: () =>
+              useBackupDialogs
+                .getState()
+                .openBackup({ serverId: openServerId, database }),
+          },
+          {
+            id: "restore",
+            group: "Actions",
+            label: `Restore a backup into ${database}…`,
+            keywords: "restore import pg_restore",
+            icon: <ArchiveRestore />,
+            run: () =>
+              useBackupDialogs
+                .getState()
+                .openRestore({ serverId: openServerId, database }),
+          },
+        );
     }
 
     // Databases
@@ -442,6 +468,41 @@ function useCommands(): Command[] {
             ),
       });
     }
+    for (const remote of state.remoteConnections) {
+      list.push(
+        {
+          id: `open:remote:${remote.id}`,
+          group: "Databases",
+          label: `Open ${remote.name}`,
+          keywords: `${remote.host} ${remote.provider} remote cloud`,
+          hint: (PROVIDER_LOGOS[remote.provider] ?? PROVIDER_LOGOS.other)!.label,
+          icon: <Cloud />,
+          run: () => nav.openServer(`remote:${remote.id}`),
+        },
+        {
+          id: `edit:remote:${remote.id}`,
+          group: "Databases",
+          label: `Edit ${remote.name}`,
+          keywords: `${remote.host} remote connection settings`,
+          icon: <Pencil />,
+          run: () => {
+            nav.goTo("databases");
+            nav.openRemoteDialog(remote.id);
+          },
+        },
+      );
+    }
+    list.push({
+      id: "add-remote",
+      group: "Databases",
+      label: "Add remote connection",
+      keywords: "cloud aws rds supabase neon azure gcp connect",
+      icon: <Cloud />,
+      run: () => {
+        nav.goTo("databases");
+        nav.openRemoteDialog();
+      },
+    });
     list.push({
       id: "install",
       group: "Databases",
@@ -482,6 +543,8 @@ function useCommands(): Command[] {
     return list;
   }, [
     state.servers,
+    state.remoteConnections,
+    queryClient,
     statuses,
     openServerId,
     connection,

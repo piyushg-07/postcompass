@@ -3,11 +3,12 @@
  * matches at the start, at word starts and in a row score higher.
  * Returns `null` when the text doesn't match.
  */
+/** `text` must already be lower-case (the palette lower-cases each command once). */
 export function fuzzyScore(query: string, text: string): number | null {
   const phrase = query.toLowerCase().trim().replace(/\s+/g, " ");
   const q = phrase.replaceAll(" ", "");
   if (!q) return 0;
-  const t = text.toLowerCase();
+  const t = text;
 
   // The exact phrase (spaces included) beats everything, earlier is better: "back up" → "Back up …"
   const phraseIndex = t.indexOf(phrase);

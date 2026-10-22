@@ -31,7 +31,11 @@ type DialogKind = "create" | "rename" | "drop";
  * The database part of the explorer breadcrumb: shows the open database, switches to another one,
  * and holds everything you can do to a database (new, rename, extensions, backup, drop).
  */
-export function DatabaseSwitcher({ defaultDatabase }: { defaultDatabase: string }) {
+export function DatabaseSwitcher({
+  defaultDatabase,
+}: {
+  defaultDatabase: string;
+}) {
   const { serverId } = useExplorer();
   const ws = useWorkspace(serverId);
   const database = ws.database ?? defaultDatabase;
@@ -43,9 +47,11 @@ export function DatabaseSwitcher({ defaultDatabase }: { defaultDatabase: string 
     setName(initialName);
     setDialog(kind);
   };
-  const switchTo = (next: string) => ws.setLocation({ database: next, schema: null });
+  const switchTo = (next: string) =>
+    ws.setLocation({ database: next, schema: null });
   // A database can't be renamed or dropped while connected to it, so run that from another one
-  const maintenanceDb = database === defaultDatabase ? "template1" : defaultDatabase;
+  const maintenanceDb =
+    database === defaultDatabase ? "template1" : defaultDatabase;
 
   return (
     <>
@@ -63,47 +69,83 @@ export function DatabaseSwitcher({ defaultDatabase }: { defaultDatabase: string 
         <DropdownMenuContent className="w-64">
           <DropdownMenuLabel>Databases</DropdownMenuLabel>
           <div className="max-h-72 overflow-y-auto">
-            {(databases.data ?? [{ name: database, sizeBytes: null, allowConnections: true }]).map((d) => (
+            {(
+              databases.data ?? [
+                { name: database, sizeBytes: null, allowConnections: true },
+              ]
+            ).map((d) => (
               <DropdownMenuItem
                 key={d.name}
                 disabled={!d.allowConnections}
-                icon={<Check className={d.name === database ? "text-accent" : "invisible"} />}
+                icon={
+                  <Check
+                    className={
+                      d.name === database ? "text-accent" : "invisible"
+                    }
+                  />
+                }
                 onSelect={() => d.name !== database && switchTo(d.name)}
               >
                 <span className="flex items-center justify-between gap-3">
                   <span className="truncate font-mono">{d.name}</span>
                   {d.sizeBytes ? (
-                    <span className="shrink-0 font-mono text-[10px] text-fg-subtle">{formatBytes(d.sizeBytes)}</span>
+                    <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
+                      {formatBytes(d.sizeBytes)}
+                    </span>
                   ) : null}
                 </span>
               </DropdownMenuItem>
             ))}
           </div>
-          <DropdownMenuItem icon={<Plus />} onSelect={() => openDialog("create")}>
+          <DropdownMenuItem
+            icon={<Plus />}
+            onSelect={() => openDialog("create")}
+          >
             New database…
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>{database}</DropdownMenuLabel>
-          <DropdownMenuItem icon={<Blocks />} onSelect={() => ws.openTab({ type: "extensions", database })}>
+          <DropdownMenuItem
+            icon={<Blocks />}
+            onSelect={() => ws.openTab({ type: "extensions", database })}
+          >
             Extensions
           </DropdownMenuItem>
+          {/* Backup and restore use the bundled pg_dump, so only local servers have them */}
+          {!serverId.startsWith("remote:") && (
+            <>
+              <DropdownMenuItem
+                icon={<DatabaseBackup />}
+                onSelect={() =>
+                  useBackupDialogs.getState().openBackup({ serverId, database })
+                }
+              >
+                Back up…
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                icon={<ArchiveRestore />}
+                onSelect={() =>
+                  useBackupDialogs
+                    .getState()
+                    .openRestore({ serverId, database })
+                }
+              >
+                Restore a backup…
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuItem
-            icon={<DatabaseBackup />}
-            onSelect={() => useBackupDialogs.getState().openBackup({ serverId, database })}
+            icon={<Pencil />}
+            onSelect={() => openDialog("rename", database)}
           >
-            Back up…
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            icon={<ArchiveRestore />}
-            onSelect={() => useBackupDialogs.getState().openRestore({ serverId, database })}
-          >
-            Restore a backup…
-          </DropdownMenuItem>
-          <DropdownMenuItem icon={<Pencil />} onSelect={() => openDialog("rename", database)}>
             Rename…
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem icon={<Trash2 />} danger onSelect={() => openDialog("drop")}>
+          <DropdownMenuItem
+            icon={<Trash2 />}
+            danger
+            onSelect={() => openDialog("drop")}
+          >
             Drop database…
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -121,7 +163,11 @@ export function DatabaseSwitcher({ defaultDatabase }: { defaultDatabase: string 
           onOpenChange={(o) => !o && setDialog(null)}
           title={`Rename ${database}`}
           description="Open connections to this database are closed first."
-          sql={name.trim() && name.trim() !== database ? renameDatabase(database, name.trim()) : "-- type a new name"}
+          sql={
+            name.trim() && name.trim() !== database
+              ? renameDatabase(database, name.trim())
+              : "-- type a new name"
+          }
           database={maintenanceDb}
           confirmLabel="Rename"
           successMessage={`Renamed to ${name.trim()}`}
