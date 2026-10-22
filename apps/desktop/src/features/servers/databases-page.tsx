@@ -19,6 +19,9 @@ export function DatabasesPage() {
     state.servers.map((s) => s.id),
   );
   const [installing, setInstalling] = useState(false);
+  const [installStage, setInstallStage] = useState<"form" | "progress">(
+    "form",
+  );
 
   return (
     <div className="flex flex-col gap-10">
@@ -82,13 +85,19 @@ export function DatabasesPage() {
       >
         <DialogContent
           title="New local database"
-          description="Installs PostgreSQL privately for this computer. No admin rights needed."
+          // The progress has its own "Setting up …" heading
+          description={
+            installStage === "form"
+              ? "A private PostgreSQL server on this computer."
+              : undefined
+          }
           className="w-130"
           hideClose={installing}
         >
           <InstallFlow
             onCancel={() => setInstallOpen(false)}
             onBusyChange={setInstalling}
+            onStageChange={setInstallStage}
             onInstalled={() => {
               setInstallOpen(false);
               void refresh();

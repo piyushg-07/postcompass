@@ -128,6 +128,18 @@ pub async fn query_version(server: &ManagedServer, password: &str) -> CoreResult
     process::run(cmd, Duration::from_secs(20)).await
 }
 
+/// `CREATE DATABASE "name"` as the superuser, through the bundled psql.
+pub async fn create_database(server: &ManagedServer, password: &str, name: &str) -> CoreResult<String> {
+    let quoted = format!("\"{}\"", name.replace('"', "\"\""));
+    let mut cmd = process::command(tool(server, "psql"));
+    cmd.args(["-h", &server.host, "-p", &server.port.to_string(), "-U", &server.superuser])
+        .args(["-d", "postgres", "-w", "-v", "ON_ERROR_STOP=1", "-c"])
+        .arg(format!("CREATE DATABASE {quoted}"))
+        .env("PGPASSWORD", password)
+        .env("PGCONNECT_TIMEOUT", "10");
+    process::run(cmd, Duration::from_secs(30)).await
+}
+
 pub async fn uninstall(server: &ManagedServer, keep_data: bool) -> CoreResult<()> {
     stop(server).await?;
     if keep_data {

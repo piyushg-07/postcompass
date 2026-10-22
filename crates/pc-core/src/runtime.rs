@@ -72,6 +72,9 @@ pub struct RuntimeVersion {
     pub recommended: bool,
     /// Download size in MB for this platform, when known.
     pub download_mb: Option<u32>,
+    /// These binaries are already on this computer, so a new server needs no download.
+    #[serde(default)]
+    pub installed: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -86,6 +89,9 @@ pub struct InstallRequest {
     /// Custom data directory; defaults to the app data folder.
     pub data_dir: Option<String>,
     pub auto_start: bool,
+    /// A database to create once the server is running, so there's somewhere to start.
+    #[serde(default)]
+    pub database: Option<String>,
 }
 
 /// A server installed and managed by PostCompass. Persisted in the app state (never contains secrets).

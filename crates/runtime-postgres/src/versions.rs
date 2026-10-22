@@ -25,6 +25,7 @@ pub fn available() -> Vec<RuntimeVersion> {
             major: major_of(version),
             recommended: index == 0,
             download_mb: Some(platform::approx_download_mb()),
+            installed: false,
         })
         .collect()
 }

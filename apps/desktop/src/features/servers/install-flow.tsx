@@ -21,6 +21,7 @@ import type {
   InstallStep,
   ManagedServer,
 } from "../../lib/bindings";
+import { useAppState } from "../../app/app-state";
 import { formatMb, generatePassword } from "../../lib/format";
 import { commands, describeError, isCancelled, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
@@ -30,11 +31,13 @@ const STEP_LABELS: Record<InstallStep, string> = {
   download: "Downloading PostgreSQL",
   verify: "Verifying checksum",
   extract: "Extracting files",
-  initialize: "Setting up database",
-  start: "Starting server",
+  initialize: "Setting up the server",
+  start: "Starting the server",
   connect: "Connecting",
 };
 const STEP_ORDER = Object.keys(STEP_LABELS) as InstallStep[];
+/** Only needed when the version isn't on this computer yet. */
+const DOWNLOAD_STEPS = new Set<InstallStep>(["download", "verify", "extract"]);
 
 interface FormValues {
   name: string;
@@ -42,7 +45,18 @@ interface FormValues {
   port: number;
   password: string;
   autoStart: boolean;
+  /** Created once the server runs; empty means only the built-in `postgres` database. */
+  database: string;
+  /** The version is already on this computer, so nothing is downloaded. */
+  installed: boolean;
 }
+
+/** A name other than the built-in `postgres`, which the setup creates for you. */
+const isNewDatabase = (name: string) =>
+  name.trim() !== "" && name.trim() !== "postgres";
+
+/** A plain database name: letters, digits and underscores, so it never needs quoting. */
+const DATABASE_NAME = /^[a-z_][a-z0-9_]{0,62}$/;
 
 type Phase =
   | { kind: "form" }
@@ -58,17 +72,22 @@ export function InstallFlow({
   onInstalled,
   onCancel,
   onBusyChange,
+  onStageChange,
   cancelLabel = "Cancel",
 }: {
   onInstalled: (server: ManagedServer) => void;
   onCancel?: () => void;
   /** True while an install is running, so containers can block closing. */
   onBusyChange?: (busy: boolean) => void;
+  /** Whether the form or the progress is showing, so containers can adapt their header. */
+  onStageChange?: (stage: "form" | "progress") => void;
   cancelLabel?: string;
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
   const [values, setValues] = useState<FormValues | null>(null);
   const progress = useInstallProgress();
+  const stage = phase.kind === "form" ? "form" : "progress";
+  useEffect(() => onStageChange?.(stage), [stage, onStageChange]);
 
   const install = async (form: FormValues) => {
     setValues(form);
@@ -82,7 +101,17 @@ export function InstallFlow({
       const server = await unwrap(
         commands.installServer(
           "postgres",
-          { ...form, dataDir: null, name: form.name.trim() },
+          {
+            version: form.version,
+            port: form.port,
+            password: form.password,
+            autoStart: form.autoStart,
+            dataDir: null,
+            name: form.name.trim(),
+            database: isNewDatabase(form.database)
+              ? form.database.trim()
+              : null,
+          },
           channel,
         ),
       );
@@ -92,8 +121,11 @@ export function InstallFlow({
       });
     } catch (e) {
       if (isCancelled(e)) {
-        toast.info("Install cancelled", {
-          description: "Everything was cleaned up.",
+        // Nothing was installed when the version was already here; only the new server was undone
+        toast.info(form.installed ? "Setup cancelled" : "Install cancelled", {
+          description: form.installed
+            ? "The new server was removed. PostgreSQL itself is untouched."
+            : "Everything was cleaned up.",
         });
         setPhase({ kind: "form" });
       } else {
@@ -115,9 +147,30 @@ export function InstallFlow({
     );
   }
 
+  // An installed version skips the download steps entirely, so don't list them
+  const steps = progress.steps.filter(
+    (step) =>
+      step.state !== "skipped" &&
+      !(values?.installed && DOWNLOAD_STEPS.has(step.id)),
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <TaskSteps steps={progress.steps} />
+      {values && phase.kind !== "done" && (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-fg">
+            {phase.kind === "failed" ? "Couldn't set up" : "Setting up"}{" "}
+            {values.name.trim()}
+          </span>
+          <span className="font-mono text-xs text-fg-subtle">
+            PostgreSQL {values.version} · port {values.port}
+            {` · database ${values.database.trim() || "postgres"}`}
+          </span>
+        </div>
+      )}
+      <div className="rounded-card border border-border bg-surface px-4 py-3.5">
+        <TaskSteps steps={steps} />
+      </div>
       {progress.download &&
         phase.kind === "installing" &&
         progress.activeStep === "download" && (
@@ -145,7 +198,7 @@ export function InstallFlow({
       {phase.kind === "installing" && (
         <div className="flex justify-end">
           <Button variant="ghost" onClick={() => void commands.cancelInstall()}>
-            Cancel install
+            {values?.installed ? "Cancel" : "Cancel install"}
           </Button>
         </div>
       )}
@@ -205,6 +258,15 @@ export function InstallFlow({
                 {phase.server.host}:{phase.server.port} · user{" "}
                 {phase.server.superuser}
               </span>
+              {values && isNewDatabase(values.database) && (
+                <span className="text-xs text-fg-muted">
+                  Database{" "}
+                  <span className="font-mono text-fg">
+                    {values.database.trim()}
+                  </span>{" "}
+                  is ready to use.
+                </span>
+              )}
               <span className="text-xs text-fg-subtle">
                 The password is saved in your system keychain.
               </span>
@@ -332,9 +394,21 @@ function InstallForm({
       port: 5432,
       password: generatePassword(),
       autoStart: true,
+      database: "postgres",
+      installed: false,
     },
   );
   const nameTouched = useRef(Boolean(initial));
+  const [advanced, setAdvanced] = useState(false);
+  // "Local PostgreSQL 18", or "… (2)" when that name is already taken
+  const { state } = useAppState();
+  const defaultName = (version: string) => {
+    const base = `Local PostgreSQL ${version.split(".")[0]}`;
+    const taken = new Set(state.servers.map((x) => x.name));
+    let name = base;
+    for (let n = 2; taken.has(name); n++) name = `${base} (${n})`;
+    return name;
+  };
 
   const versionsQuery = useQuery({
     queryKey: queryKeys.runtimeVersions("postgres"),
@@ -361,9 +435,7 @@ function InstallForm({
       return {
         ...v,
         version,
-        name: nameTouched.current
-          ? v.name
-          : `Local PostgreSQL ${version.split(".")[0]}`,
+        name: nameTouched.current ? v.name : defaultName(version),
       };
     });
   }, [versionsQuery.data]);
@@ -408,69 +480,63 @@ function InstallForm({
   const passwordError =
     values.password.length < 8 ? "At least 8 characters" : undefined;
   const nameError = values.name.trim() ? undefined : "Give the server a name";
+  const databaseError =
+    values.database.trim() && !DATABASE_NAME.test(values.database.trim())
+      ? "Lowercase letters, numbers and _ only, starting with a letter"
+      : undefined;
   const canSubmit =
     Boolean(values.version) &&
     !portError &&
     !passwordError &&
     !nameError &&
+    !databaseError &&
     portFree === true;
   const selected = versions.find((v) => v.version === values.version);
+  // Already on this computer: nothing to download, just a new server
+  const installed = selected?.installed === true;
+  const database = values.database.trim();
 
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        if (canSubmit) onSubmit(values);
+        if (canSubmit) onSubmit({ ...values, installed });
       }}
     >
-      <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Version"
-          hint={
-            selected?.downloadMb
-              ? `About ${selected.downloadMb} MB download`
+      <Field
+        label="Version"
+        hint={
+          installed
+            ? "Already installed"
+            : selected?.downloadMb
+              ? `${selected.downloadMb} MB download`
               : undefined
-          }
-        >
-          {(p) => (
-            <Select
-              {...p}
-              value={values.version}
-              onValueChange={(version) => {
-                setValues((v) => ({
-                  ...v,
-                  version,
-                  name: nameTouched.current
-                    ? v.name
-                    : `Local PostgreSQL ${version.split(".")[0]}`,
-                }));
-              }}
-              options={versions.map((v) => ({
-                value: v.version,
-                label: `PostgreSQL ${v.version}`,
-                hint: v.recommended ? "recommended" : undefined,
-              }))}
-            />
-          )}
-        </Field>
-        <Field
-          label="Port"
-          error={portError}
-          hint={portFree ? "Available" : undefined}
-        >
-          {(p) => (
-            <Input
-              {...p}
-              type="number"
-              inputMode="numeric"
-              className="font-mono"
-              value={Number.isNaN(values.port) ? "" : values.port}
-              onChange={(e) => set("port", e.target.valueAsNumber)}
-            />
-          )}
-        </Field>
-      </div>
+        }
+      >
+        {(p) => (
+          <Select
+            {...p}
+            value={values.version}
+            onValueChange={(version) => {
+              setValues((v) => ({
+                ...v,
+                version,
+                name: nameTouched.current ? v.name : defaultName(version),
+              }));
+            }}
+            options={versions.map((v) => ({
+              value: v.version,
+              label: `PostgreSQL ${v.version}`,
+              hint: v.installed
+                ? "installed"
+                : v.recommended
+                  ? "recommended"
+                  : undefined,
+            }))}
+          />
+        )}
+      </Field>
 
       <Field label="Name" error={nameError}>
         {(p) => (
@@ -485,10 +551,51 @@ function InstallForm({
         )}
       </Field>
 
+      <div className="grid grid-cols-[1fr_9rem] gap-3">
+        <Field
+          label="Database"
+          error={databaseError}
+          hint={
+            databaseError
+              ? undefined
+              : isNewDatabase(database)
+                ? "Created for you"
+                : "Built in"
+          }
+        >
+          {(p) => (
+            <Input
+              {...p}
+              className="font-mono"
+              spellCheck={false}
+              placeholder="postgres"
+              value={values.database}
+              onChange={(e) => set("database", e.target.value.toLowerCase())}
+            />
+          )}
+        </Field>
+        <Field
+          label="Port"
+          error={portError}
+          hint={portFree ? "Available" : undefined}
+        >
+          {(p) => (
+            <Input
+              {...p}
+              type="number"
+              inputMode="numeric"
+              className="font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              value={Number.isNaN(values.port) ? "" : values.port}
+              onChange={(e) => set("port", e.target.valueAsNumber)}
+            />
+          )}
+        </Field>
+      </div>
+
       <Field
-        label="Password for user postgres"
+        label="Password"
         error={passwordError}
-        hint="Generated for you and saved in your system keychain."
+        hint="For user postgres. Saved in your system keychain."
       >
         {(p) => (
           <PasswordInput
@@ -500,23 +607,33 @@ function InstallForm({
         )}
       </Field>
 
-      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
-        <span className="flex flex-col">
-          <span className="text-sm text-fg">Start with PostCompass</span>
-          <span className="text-xs text-fg-muted">
-            Starts the server automatically when you open the app.
-          </span>
-        </span>
-        <Switch
-          checked={values.autoStart}
-          onCheckedChange={(checked) => set("autoStart", checked)}
-        />
-      </label>
-
-      <p className="text-xs text-fg-subtle">
-        Installed in PostCompass's own folder, listening only on this computer
-        (127.0.0.1). No admin rights needed.
-      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setAdvanced((o) => !o)}
+          aria-expanded={advanced}
+          className="flex w-fit cursor-pointer items-center gap-1 text-xs text-fg-muted hover:text-fg"
+        >
+          <ChevronDown
+            className={`size-3.5 transition-transform ${advanced ? "" : "-rotate-90"}`}
+          />
+          Advanced
+        </button>
+        {advanced && (
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
+            <span className="flex flex-col">
+              <span className="text-sm text-fg">Start with PostCompass</span>
+              <span className="text-xs text-fg-muted">
+                Runs the server whenever the app is open.
+              </span>
+            </span>
+            <Switch
+              checked={values.autoStart}
+              onCheckedChange={(checked) => set("autoStart", checked)}
+            />
+          </label>
+        )}
+      </div>
 
       <div className="flex justify-end gap-2">
         {onCancel && (
@@ -525,7 +642,7 @@ function InstallForm({
           </Button>
         )}
         <Button type="submit" variant="primary" disabled={!canSubmit}>
-          Install PostgreSQL
+          {installed ? "Create server" : "Install PostgreSQL"}
         </Button>
       </div>
     </form>

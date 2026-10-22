@@ -339,6 +339,8 @@ export type InstallRequest = {
 	/**  Custom data directory; defaults to the app data folder. */
 	dataDir: string | null,
 	autoStart: boolean,
+	/**  A database to create once the server is running, so there's somewhere to start. */
+	database?: string | null,
 };
 
 /**  Where a detected installation came from. */
@@ -477,6 +479,8 @@ export type RuntimeVersion = {
 	recommended: boolean,
 	/**  Download size in MB for this platform, when known. */
 	downloadMb: number | null,
+	/**  These binaries are already on this computer, so a new server needs no download. */
+	installed?: boolean,
 };
 
 export type SchemaGraph = {

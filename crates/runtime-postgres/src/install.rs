@@ -20,6 +20,11 @@ const COMPLETE_MARKER: &str = ".postcompass-complete";
 const MIN_FREE_MB: u64 = 1024;
 const SUPERUSER: &str = "postgres";
 
+/// Whether `version`'s binaries are fully installed under `root` (a new server needs no download).
+pub fn binaries_installed(root: &Path, version: &str) -> bool {
+    binaries_dir(root, version).join(COMPLETE_MARKER).is_file()
+}
+
 pub fn binaries_dir(root: &Path, version: &str) -> PathBuf {
     root.join("binaries").join(version)
 }
@@ -127,6 +132,15 @@ async fn run_steps(
     let result = server::query_version(&managed, &request.password).await;
     let version = finish(ctx, InstallStep::Connect, result, |_| Some("Connected as postgres".into()))?;
     ctx.log(version);
+
+    // The first database, so there's somewhere to start besides `postgres`
+    if let Some(name) = request.database.as_deref().map(str::trim).filter(|n| !n.is_empty() && *n != "postgres") {
+        ctx.log(format!("Creating database {name}"));
+        // The server itself is fine either way, so a failure here doesn't undo the install
+        if let Err(e) = server::create_database(&managed, &request.password, name).await {
+            ctx.log(format!("Couldn't create database {name}: {e}"));
+        }
+    }
 
     Ok(managed)
 }

@@ -19,6 +19,7 @@ use pc_core::runtime::{
 use pc_core::{CoreResult, DatabaseKind};
 
 pub use detect::{first_free_port, is_postgres, port_is_free};
+pub use install::binaries_installed;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct PostgresRuntime;

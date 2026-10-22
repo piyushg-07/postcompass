@@ -20,7 +20,14 @@ use crate::state::Store;
 #[tauri::command]
 #[specta::specta]
 pub fn runtime_versions(runtimes: State<'_, Runtimes>, kind: DatabaseKind) -> Result<Vec<RuntimeVersion>, CoreError> {
-    Ok(runtimes.get(kind)?.available_versions())
+    let root = runtimes.root_for(kind);
+    // Mark versions whose binaries are already here, so the UI can skip the "install" wording
+    Ok(runtimes
+        .get(kind)?
+        .available_versions()
+        .into_iter()
+        .map(|v| RuntimeVersion { installed: runtime_postgres::binaries_installed(&root, &v.version), ..v })
+        .collect())
 }
 
 /// Scans this machine for existing installs and running servers. Read-only.

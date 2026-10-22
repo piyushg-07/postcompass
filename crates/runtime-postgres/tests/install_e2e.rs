@@ -54,6 +54,7 @@ async fn installs_starts_stops_and_uninstalls() {
         password: "e2e-Secret-123".into(),
         data_dir: None,
         auto_start: false,
+        database: None,
     };
 
     let server = runtime.install(request, ctx).await.expect("install succeeds");
@@ -135,6 +136,7 @@ async fn port_in_use_fails_cleanly() {
         password: "e2e-Secret-123".into(),
         data_dir: None,
         auto_start: false,
+        database: None,
     };
     let err = PostgresRuntime.install(request, ctx).await.unwrap_err();
     assert_eq!(err.code(), pc_core::ErrorCode::PortInUse);
