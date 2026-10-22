@@ -116,6 +116,10 @@ export interface DataGridProps {
   hidden?: ReadonlySet<string>;
   /** Column ids pinned to the left while scrolling sideways (shown first). */
   frozen?: ReadonlySet<string>;
+  /** Column ids in the order the user arranged them; columns not listed follow, in table order. */
+  columnOrder?: readonly string[];
+  /** Lets headers be dragged sideways; gets every column id (hidden ones too) in the new order. */
+  onReorder?: (ids: string[]) => void;
 }
 
 export function DataGrid({
@@ -135,6 +139,8 @@ export function DataGrid({
   onAddColumn,
   hidden,
   frozen,
+  columnOrder,
+  onReorder,
 }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -163,14 +169,20 @@ export function DataGrid({
   );
   // Results of a query have no checkboxes or expand buttons, so no column for them
   const selectWidth = onSelectedChange || onExpandRow ? SELECT_WIDTH : 0;
+  /** Every column index in the user's arrangement. */
+  const arranged = useMemo(() => {
+    const rank = (i: number) => {
+      const at = columnOrder?.indexOf(columns[i]!.id) ?? -1;
+      return at === -1 ? (columnOrder?.length ?? 0) + i : at;
+    };
+    return columns.map((_, i) => i).sort((a, b) => rank(a) - rank(b));
+  }, [columns, columnOrder]);
   /** Column indexes in display order: frozen ones first, hidden ones left out. */
   const order = useMemo(() => {
-    const visible = columns
-      .map((_, i) => i)
-      .filter((i) => !hidden?.has(columns[i]!.id));
+    const visible = arranged.filter((i) => !hidden?.has(columns[i]!.id));
     const pinned = visible.filter((i) => frozen?.has(columns[i]!.id));
     return [...pinned, ...visible.filter((i) => !frozen?.has(columns[i]!.id))];
-  }, [columns, hidden, frozen]);
+  }, [arranged, columns, hidden, frozen]);
   const frozenCount = order.filter((i) => frozen?.has(columns[i]!.id)).length;
   /** Left edge of each column (by its index), counting from the grid's left. */
   const offsets = useMemo(() => {
@@ -372,6 +384,64 @@ export function DataGrid({
     window.addEventListener("mouseup", up);
   };
 
+  /* ── Column reordering ── */
+
+  /** The header being dragged and where the drop line is (x from the grid's left edge). */
+  const [drag, setDrag] = useState<{ col: number; x: number } | null>(null);
+
+  const startDrag = (col: number, event: MouseEvent) => {
+    const el = scrollRef.current;
+    if (!onReorder || !el || event.button !== 0) return;
+    // The menu buttons and the resize handle keep their own behaviour
+    if ((event.target as HTMLElement).closest("button, [data-resize]")) return;
+    const startX = event.clientX;
+    // A column moves within its group: frozen among frozen, the rest among the rest
+    const isFrozen = stickyLeft[col] !== undefined;
+    const first = isFrozen ? 0 : frozenCount;
+    const end = isFrozen ? frozenCount : order.length;
+    let to: number | null = null;
+
+    const move = (e: globalThis.MouseEvent) => {
+      if (to === null && Math.abs(e.clientX - startX) < 5) return;
+      document.body.style.cursor = "grabbing";
+      // Frozen columns stay put while scrolling, so they're measured without the scroll
+      const scroll = isFrozen ? 0 : el.scrollLeft;
+      const x = e.clientX - el.getBoundingClientRect().left + scroll;
+      let pos = end;
+      for (let p = first; p < end; p++) {
+        const i = order[p]!;
+        if (x < offsets[i]! + colWidths[i]! / 2) {
+          pos = p;
+          break;
+        }
+      }
+      to = pos;
+      const edge =
+        pos < end
+          ? offsets[order[pos]!]!
+          : offsets[order[end - 1]!]! + colWidths[order[end - 1]!]!;
+      setDrag({ col, x: edge + (isFrozen ? el.scrollLeft : 0) });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+      setDrag(null);
+      const from = order.indexOf(col);
+      if (to === null || to === from || to === from + 1) return;
+      const moving = columns[col]!.id;
+      const ids = arranged
+        .map((i) => columns[i]!.id)
+        .filter((id) => id !== moving);
+      // Hidden columns keep their place in the arrangement
+      if (to < end) ids.splice(ids.indexOf(columns[order[to]!]!.id), 0, moving);
+      else ids.splice(ids.indexOf(columns[order[end - 1]!]!.id) + 1, 0, moving);
+      onReorder(ids);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
   const commit = (rowId: string, col: number, value: string | null | false) => {
     setEditing(null);
     scrollRef.current?.focus({ preventScroll: true });
@@ -435,9 +505,17 @@ export function DataGrid({
                     </>
                   }
                   onResize={(e) => startResize(column.id, colWidths[i]!, e)}
+                  onMouseDown={onReorder ? (e) => startDrag(i, e) : undefined}
+                  dragging={drag?.col === i}
                 />
               );
             })}
+            {drag && (
+              <span
+                className="pointer-events-none absolute top-0 z-30 h-full w-0.5 -translate-x-1/2 bg-accent"
+                style={{ left: drag.x }}
+              />
+            )}
             {onAddColumn && (
               <div
                 className="flex shrink-0 items-center justify-center"
@@ -570,6 +648,8 @@ function HeaderCell({
   sort,
   menu,
   onResize,
+  onMouseDown,
+  dragging,
 }: {
   column: GridColumn;
   width: number;
@@ -579,6 +659,9 @@ function HeaderCell({
   sort?: GridSort;
   menu?: ReactNode;
   onResize: (e: MouseEvent) => void;
+  /** Starts dragging the column to a new place. */
+  onMouseDown?: (e: MouseEvent) => void;
+  dragging?: boolean;
 }) {
   const name = (
     <span className="truncate text-xs font-medium text-fg">{column.name}</span>
@@ -590,8 +673,10 @@ function HeaderCell({
         left !== undefined && "sticky z-10 bg-surface",
         lastFrozen &&
           "border-r-border-strong shadow-[4px_0_6px_-4px_rgba(0,0,0,0.6)]",
+        dragging && "bg-surface-hover opacity-60",
       )}
       style={{ width, left }}
+      onMouseDown={onMouseDown}
     >
       {column.references && (
         <Tooltip
@@ -637,6 +722,7 @@ function HeaderCell({
       )}
       <span className="ml-auto flex shrink-0 items-center gap-0.5">{menu}</span>
       <span
+        data-resize
         className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
         onMouseDown={onResize}
       />

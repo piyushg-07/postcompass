@@ -6,7 +6,7 @@ import {
   Select,
   SheetContent,
 } from "@repo/ui";
-import { AlertTriangle, ClipboardPaste } from "lucide-react";
+import { AlertTriangle, ClipboardPaste, FileUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ColumnInfo } from "../../../lib/bindings";
 import {
@@ -20,10 +20,13 @@ import {
  * Splits clipboard text into rows of cells. Excel and Google Sheets copy as tab-separated text,
  * quoting cells that contain tabs, line breaks or quotes; CSV (commas) works too.
  */
-export function parseClipboard(text: string): string[][] {
+export function parseClipboard(
+  text: string,
+  delimiter?: "\t" | ",",
+): string[][] {
   const clean = text.replace(/\r\n?/g, "\n").replace(/\n+$/, "");
   if (!clean) return [];
-  const delimiter = clean.includes("\t") ? "\t" : ",";
+  delimiter ??= clean.includes("\t") ? "\t" : ",";
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -175,6 +178,7 @@ function guessMapping(rows: string[][], columns: ColumnInfo[]) {
  */
 export function PasteRowsDialog({
   text,
+  fileName,
   table,
   columns,
   enums = new Map(),
@@ -182,8 +186,10 @@ export function PasteRowsDialog({
   onCancel,
   onInsert,
 }: {
-  /** Clipboard text, or null when closed. */
+  /** Clipboard text or file contents, or null when closed. */
   text: string | null;
+  /** The imported file, when the rows come from a CSV/TSV file rather than the clipboard. */
+  fileName?: string | null;
   table: string;
   columns: ColumnInfo[];
   /** Enum values by type name, to check enum cells. */
@@ -198,6 +204,7 @@ export function PasteRowsDialog({
         <PasteBody
           key={text}
           text={text}
+          fileName={fileName ?? null}
           table={table}
           columns={columns}
           enums={enums}
@@ -211,6 +218,7 @@ export function PasteRowsDialog({
 
 function PasteBody({
   text,
+  fileName,
   table,
   columns,
   enums,
@@ -218,13 +226,23 @@ function PasteBody({
   onInsert,
 }: {
   text: string;
+  fileName: string | null;
   table: string;
   columns: ColumnInfo[];
   enums: ReadonlyMap<string, string[]>;
   saving: boolean;
   onInsert: (rows: { column: string; value: string }[][]) => void;
 }) {
-  const parsed = useMemo(() => parseClipboard(text), [text]);
+  // A file's delimiter comes from its extension; a cell may hold tabs in a CSV
+  const delimiter = fileName
+    ? /\.(tsv|tab)$/i.test(fileName)
+      ? "\t"
+      : ","
+    : undefined;
+  const parsed = useMemo(
+    () => parseClipboard(text, delimiter),
+    [text, delimiter],
+  );
   const guess = useMemo(() => guessMapping(parsed, columns), [parsed, columns]);
   const [hasHeader, setHasHeader] = useState(guess.hasHeader);
   const [mapping, setMapping] = useState(guess.mapping);
@@ -283,12 +301,21 @@ function PasteBody({
     <SheetContent
       title={
         <span className="flex items-center gap-2">
-          <ClipboardPaste className="size-4 text-accent" />
-          Paste {rows.length} row{rows.length === 1 ? "" : "s"} into{" "}
+          {fileName ? (
+            <FileUp className="size-4 text-accent" />
+          ) : (
+            <ClipboardPaste className="size-4 text-accent" />
+          )}
+          {fileName ? "Import" : "Paste"} {rows.length.toLocaleString()} row
+          {rows.length === 1 ? "" : "s"} into{" "}
           <span className="font-mono">{table}</span>
         </span>
       }
-      description="Check which column each pasted column goes into. Empty cells use the column's default."
+      description={
+        fileName
+          ? `From ${fileName}. Check which column each file column goes into. Empty cells use the column's default.`
+          : "Check which column each pasted column goes into. Empty cells use the column's default."
+      }
       className="w-[860px]"
       footer={
         <>
@@ -301,7 +328,8 @@ function PasteBody({
             disabled={!valid}
             onClick={insert}
           >
-            Insert {toInsert.length} row{toInsert.length === 1 ? "" : "s"}
+            Insert {toInsert.length.toLocaleString()} row
+            {toInsert.length === 1 ? "" : "s"}
           </Button>
         </>
       }

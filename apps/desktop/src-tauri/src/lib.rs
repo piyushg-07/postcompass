@@ -20,6 +20,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![
         app::app_info,
         app::save_text_file,
+        app::read_text_file,
         state::get_state,
         state::save_profile,
         state::reset_onboarding,

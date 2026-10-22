@@ -9,6 +9,11 @@ export const commands = {
 	appInfo: () => typedError<AppInfo, CoreError>(__TAURI_INVOKE("app_info")),
 	/**  Writes text to a file the user picked in a save dialog (data exports). */
 	saveTextFile: (path: string, contents: string) => typedError<null, CoreError>(__TAURI_INVOKE("save_text_file", { path, contents })),
+	/**
+	 *  Reads a text file the user picked in an open dialog (CSV imports). Drops a leading UTF-8 BOM,
+	 *  which Excel writes.
+	 */
+	readTextFile: (path: string) => typedError<string, CoreError>(__TAURI_INVOKE("read_text_file", { path })),
 	/**  Everything the UI needs on startup. */
 	getState: () => __TAURI_INVOKE<AppState>("get_state"),
 	/**  Saves onboarding answers; marks onboarding as complete. */

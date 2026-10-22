@@ -21,7 +21,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { save as saveFile } from "@tauri-apps/plugin-dialog";
+import { open as openFile, save as saveFile } from "@tauri-apps/plugin-dialog";
 import {
   ArrowDown,
   ArrowUp,
@@ -37,11 +37,13 @@ import {
   Filter,
   Lock,
   LockOpen,
+  FileUp,
   Maximize2,
   Pencil,
   Plus,
   Redo2,
   RefreshCw,
+  RotateCcw,
   Rows3,
   Trash2,
   Undo2,
@@ -114,7 +116,8 @@ export function TableData({
   toolbarRight?: ReactNode;
 }) {
   const { connectionId, serverId } = useExplorer();
-  // Hidden and frozen columns: only how this table looks here, saved per table on this computer
+  // Hidden, frozen and rearranged columns: only how this table looks here, saved per table on
+  // this computer
   const [view, setView] = useColumnView(
     `${serverId}:${database}.${schema}.${table}`,
   );
@@ -127,7 +130,15 @@ export function TableData({
   const toggleFreeze = (column: string) =>
     setView((v) => {
       if (v.frozen.includes(column)) return { ...v, frozen: [] };
-      const names = data.columns.map((c) => c.name);
+      // Left of it as arranged on screen
+      const rank = (name: string, i: number) => {
+        const at = v.order.indexOf(name);
+        return at === -1 ? v.order.length + i : at;
+      };
+      const names = data.columns
+        .map((c, i) => ({ name: c.name, rank: rank(c.name, i) }))
+        .sort((a, b) => a.rank - b.rank)
+        .map((c) => c.name);
       return { ...v, frozen: names.slice(0, names.indexOf(column) + 1) };
     });
   const toggleIn = (list: "hidden" | "frozen", column: string) =>
@@ -508,11 +519,40 @@ export function TableData({
   /* ── Pasting rows from a spreadsheet ── */
 
   const [pasteText, setPasteText] = useState<string | null>(null);
+  // Set when the rows come from an imported file
+  const [pasteFile, setPasteFile] = useState<string | null>(null);
+
+  const closePaste = () => {
+    setPasteText(null);
+    setPasteFile(null);
+  };
+
+  const importFile = async () => {
+    const path = await openFile({
+      filters: [{ name: "CSV", extensions: ["csv", "tsv", "txt"] }],
+    });
+    if (typeof path !== "string") return;
+    try {
+      const text = await unwrap(commands.readTextFile(path));
+      if (!text.trim()) {
+        toast.info("The file is empty");
+        return;
+      }
+      setPasteFile(path.split(/[\\/]/).pop() ?? path);
+      setPasteText(text);
+    } catch (e) {
+      toast.error("Couldn't open the file", {
+        description: describeError(e).message,
+      });
+    }
+  };
 
   const pasteFromClipboard = async () => {
     const text = await navigator.clipboard.readText().catch(() => "");
-    if (isTabular(text)) setPasteText(text);
-    else
+    if (isTabular(text)) {
+      setPasteFile(null);
+      setPasteText(text);
+    } else
       toast.info("Nothing to paste", {
         description: "Copy some rows from Excel or Google Sheets first.",
       });
@@ -555,11 +595,11 @@ export function TableData({
           message,
         );
       else toast.success(message);
-      setPasteText(null);
+      closePaste();
       void reload();
     },
     onError: (e) =>
-      toast.error("Couldn't insert the pasted rows", {
+      toast.error("Couldn't insert the rows", {
         description: describeError(e).message,
       }),
   });
@@ -765,6 +805,12 @@ export function TableData({
                     description="From Excel or Google Sheets (or press Ctrl+V)"
                     onSelect={() => void pasteFromClipboard()}
                   />
+                  <InsertOption
+                    icon={<FileUp />}
+                    title="Import data from CSV"
+                    description="Insert rows from a .csv or .tsv file"
+                    onSelect={() => void importFile()}
+                  />
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -878,6 +924,11 @@ export function TableData({
                 frozen={frozen.has(column.id)}
                 onFreeze={() => toggleFreeze(column.id)}
                 onHide={() => toggleIn("hidden", column.id)}
+                onResetOrder={
+                  view.order.length > 0
+                    ? () => setView((v) => ({ ...v, order: [] }))
+                    : undefined
+                }
               />
             )}
             renderReference={(target, close) => {
@@ -899,6 +950,8 @@ export function TableData({
             onAddColumn={editable ? () => setInsert("column") : undefined}
             hidden={hidden}
             frozen={frozen}
+            columnOrder={view.order}
+            onReorder={(ids) => setView((v) => ({ ...v, order: ids }))}
             cellMenu={(target) => (
               <CellMenu
                 target={target}
@@ -1018,11 +1071,12 @@ export function TableData({
       />
       <PasteRowsDialog
         text={pasteText}
+        fileName={pasteFile}
         table={table}
         columns={data.columns}
         enums={enums}
         saving={insertRows.isPending}
-        onCancel={() => setPasteText(null)}
+        onCancel={closePaste}
         onInsert={(rows) => insertRows.mutate(rows)}
       />
       <ConfirmDialog
@@ -1159,11 +1213,13 @@ function InsertOption({
 interface ColumnView {
   hidden: string[];
   frozen: string[];
+  /** Column names as dragged into place; empty for table order. */
+  order: string[];
 }
 
-const EMPTY_VIEW: ColumnView = { hidden: [], frozen: [] };
+const EMPTY_VIEW: ColumnView = { hidden: [], frozen: [], order: [] };
 
-/** Hidden/frozen columns for one table, kept in this computer's storage. */
+/** Hidden/frozen/rearranged columns for one table, kept in this computer's storage. */
 function useColumnView(key: string) {
   const storageKey = `postcompass-columns:${key}`;
   const [view, setViewState] = useState<ColumnView>(() => {
@@ -1180,7 +1236,7 @@ function useColumnView(key: string) {
     setViewState((v) => {
       const next = update(v);
       try {
-        if (next.hidden.length || next.frozen.length)
+        if (next.hidden.length || next.frozen.length || next.order.length)
           localStorage.setItem(storageKey, JSON.stringify(next));
         else localStorage.removeItem(storageKey);
       } catch {
@@ -1237,6 +1293,7 @@ function ColumnMenu({
   frozen,
   onFreeze,
   onHide,
+  onResetOrder,
 }: {
   name: string;
   sort?: SortSpec;
@@ -1249,6 +1306,8 @@ function ColumnMenu({
   frozen: boolean;
   onFreeze: () => void;
   onHide: () => void;
+  /** Set when the columns were dragged out of table order. */
+  onResetOrder?: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -1297,6 +1356,11 @@ function ColumnMenu({
         <DropdownMenuItem icon={<EyeOff />} onSelect={onHide}>
           Hide column
         </DropdownMenuItem>
+        {onResetOrder && (
+          <DropdownMenuItem icon={<RotateCcw />} onSelect={onResetOrder}>
+            Reset column order
+          </DropdownMenuItem>
+        )}
         {editable && (
           <>
             <DropdownMenuSeparator />
