@@ -1,11 +1,16 @@
 import { Button } from "@repo/ui";
 import { ArrowRight, Eye, Table2, TerminalSquare } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import {
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+  useRef,
+} from "react";
 import { useAppState } from "../../app/app-state";
-import { DataStreams, Mascot } from "../../app/mascot";
+import { DataNetwork } from "../../app/data-network";
+import { Mascot } from "../../app/mascot";
 import { useNavigation } from "../../app/navigation";
 import type { RemoteConnection } from "../../lib/bindings";
-import { greeting } from "../../lib/format";
 import {
   useQueryLibrary,
   useWorkspaceStore,
@@ -14,7 +19,7 @@ import { DatabaseRow } from "../servers/database-card";
 import { PROVIDER_LOGOS, ProviderLogo } from "../servers/provider-logos";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
-/** Start page: greeting, shortcuts, every connection (local and cloud), and where you left off. */
+/** Start page: a live network banner, every connection (local and cloud), and where you left off. */
 export function HomePage() {
   const { state } = useAppState();
   const nav = useNavigation();
@@ -29,7 +34,6 @@ export function HomePage() {
     id.startsWith("remote:")
       ? state.remoteConnections.find((r) => `remote:${r.id}` === id)?.name
       : state.servers.find((s) => s.id === id)?.name;
-  const running = state.servers.filter((s) => statuses[s.id] === "running");
   const localCount = state.servers.length;
   const remoteCount = state.remoteConnections.length;
   const hasAny = localCount + remoteCount > 0;
@@ -49,18 +53,9 @@ export function HomePage() {
     .sort((a, b) => b.entry.at - a.entry.at)
     .slice(0, 5);
 
-  // Counts live in the Connections list below; the banner just says what to do next
-  const summary = hasAny
-    ? "Pick up where you left off, or open a connection below."
-    : "Create a local database or connect to one in the cloud to get started.";
-
   return (
     <>
-      <Hero
-        title={greeting(state.profile?.name)}
-        summary={summary}
-        sleepy={localCount > 0 && running.length === 0 && remoteCount === 0}
-      />
+      <Hero />
 
       {hasAny && (
         <Section
@@ -201,37 +196,68 @@ function RemoteRow({
 }
 
 /** Greeting banner with Compi. */
-function Hero({
-  title,
-  summary,
-  sleepy,
-}: {
-  title: string;
-  summary: string;
-  sleepy: boolean;
-}) {
+/**
+ * Full-width live network banner with Compi and the PostCompass name in the middle.
+ * The centre leans towards the cursor (parallax); the network reacts to hover and clicks.
+ */
+function Hero() {
+  const centre = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
+
+  const lean = (e: PointerEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      if (centre.current)
+        centre.current.style.transform = `translate(${x * 18}px, ${y * 12}px)`;
+    });
+  };
+  const settle = () => {
+    cancelAnimationFrame(frame.current);
+    if (centre.current) centre.current.style.transform = "";
+  };
+
   return (
-    <section className="pc-rise relative overflow-hidden rounded-[14px] border border-border bg-surface">
+    <section
+      onPointerMove={lean}
+      onPointerLeave={settle}
+      className="pc-rise relative h-[300px] overflow-hidden rounded-[14px] border border-border bg-surface"
+    >
       <div
-        className="pc-grid pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute -top-32 left-1/2 size-[480px] -translate-x-1/2 rounded-full bg-accent/8 blur-3xl"
         aria-hidden
       />
-      <DataStreams className="pointer-events-none absolute top-0 right-[80px] h-full w-[45%] opacity-70" />
+      <DataNetwork className="absolute inset-0 size-full cursor-crosshair" />
+      {/* Darker centre so Compi and the name stand out from the network */}
       <div
-        className="pointer-events-none absolute -top-24 -right-16 size-80 rounded-full bg-accent/10 blur-3xl"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_38%_60%_at_50%_50%,var(--color-surface)_35%,transparent_100%)]"
+        aria-hidden
+      />
+      {/* Fade the edges into the card */}
+      <div
+        className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_20px_var(--color-surface)]"
         aria-hidden
       />
 
-      <div className="relative flex items-center gap-6 px-8 py-5">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-fg">
-            {title}
-          </h1>
-          <p className="max-w-md text-sm text-fg-muted">{summary}</p>
-        </div>
-
-        <div className="relative hidden shrink-0 flex-col items-center md:flex">
-          <Mascot size={128} mood={sleepy ? "sleepy" : "happy"} />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          ref={centre}
+          className="flex items-center gap-5 transition-transform duration-300 ease-out"
+        >
+          <Mascot size={150} />
+          <div className="flex flex-col gap-1">
+            <span className="font-heading text-5xl font-semibold tracking-tight text-fg">
+              Post
+              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text text-transparent">
+                Compass
+              </span>
+            </span>
+            <span className="text-sm text-fg-subtle">
+              Your PostgreSQL, charted.
+            </span>
+          </div>
         </div>
       </div>
     </section>
