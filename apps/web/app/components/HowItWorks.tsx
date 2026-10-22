@@ -18,6 +18,7 @@ import {
   Layers,
   Lock,
 } from "./Icons";
+import Hyperspeed from "./Hyperspeed";
 import styles from "./HowItWorks.module.css";
 
 type StepId = "step-1" | "step-2" | "step-3";
@@ -121,9 +122,44 @@ export default function HowItWorks() {
     }, 220);
   };
 
+  const [isBoosting, setIsBoosting] = useState(false);
+
   return (
-    <section className="section" id="how-it-works">
-      <div className="container">
+    <section className="section" id="how-it-works" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Interactive Hyperspeed 3D Warp Canvas */}
+      <div className={styles.hyperspeedBackdrop}>
+        <Hyperspeed
+          curve={activeStep === "step-3" ? "racing" : activeStep === "step-2" ? "winding" : "gentle"}
+          curvature={0.9}
+          speed={activeStep === "step-3" ? 1.6 : 1.1}
+          boost={3.5}
+          fov={85}
+          boostFov={125}
+          lanes={3}
+          roadWidth={11}
+          medianWidth={2}
+          density={38}
+          trailLength={1.2}
+          lightSize={1.1}
+          poles={18}
+          dust={130}
+          glow={0.5}
+          reflections={0.45}
+          roadOpacity={0.09}
+          steer={0.28}
+          tailColors={['#10b981', '#059669', '#34d399']}
+          headColors={['#06b6d4', '#0284c7', '#38bdf8']}
+          poleColors={['#10b981']}
+          interactive
+          onBoostStart={() => setIsBoosting(true)}
+          onBoostEnd={() => setIsBoosting(false)}
+        />
+        {/* Soft atmospheric gradient masks */}
+        <div className={styles.hyperspeedFadeTop} />
+        <div className={styles.hyperspeedFadeBottom} />
+      </div>
+
+      <div className="container" style={{ position: "relative", zIndex: 2 }}>
         {/* Section Header */}
         <div className="section-header">
           <span className="section-badge">Workflow Velocity</span>
@@ -131,6 +167,24 @@ export default function HowItWorks() {
           <p className="section-description">
             Three straightforward steps from download to live SQL analysis. Zero configuration ceremony, zero background services.
           </p>
+        </div>
+
+        {/* Warp Telemetry HUD */}
+        <div className={styles.hyperspeedHud}>
+          <div className={styles.hudLeft}>
+            <span className={`${styles.hudPulseDot} ${isBoosting ? styles.hudPulseBoosting : ''}`} />
+            <span className={styles.hudEngineStatus}>
+              {isBoosting ? "HYPER-WARP ACCELERATION ENGAGED (3.5×)" : "LIGHT-SPEED CRUISE MODE"}
+            </span>
+            <span className={styles.hudDivider}>•</span>
+            <span className={styles.hudTelemetry}>Direct TCP &lt;2ms</span>
+          </div>
+          <div className={styles.hudRight}>
+            <span className={styles.hudHint}>
+              <Zap size={13} style={{ color: "var(--accent)" }} />
+              <span><strong>Interactive 3D:</strong> Click & hold to boost speed · Drag to steer camera</span>
+            </span>
+          </div>
         </div>
 
         {/* Crazy Interactive Workflow Engine Cockpit */}

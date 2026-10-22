@@ -190,18 +190,21 @@
   gap: 0.45rem;
   padding: 0.35rem 0.72rem;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 13, 19, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #d4d4d8;
   font-size: 0.8rem;
   font-weight: 500;
   text-decoration: none;
   transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 .githubBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: #161a24;
+  border-color: rgba(255, 255, 255, 0.28);
   color: #ffffff;
 }
 

@@ -27,6 +27,7 @@ import {
   ArrowRightLeft,
   Eye,
 } from "./Icons";
+import Hyperspeed from "./Hyperspeed";
 import styles from "./Hero.module.css";
 
 type SupportedOs = "macos" | "windows" | "linux" | "cargo";
@@ -139,6 +140,38 @@ export default function Hero() {
 
   return (
     <section className={styles.hero} id="hero">
+      {/* Interactive Hyperspeed 3D Warp Canvas — Behind Headline & Actions */}
+      <div className={styles.hyperspeedBackdrop}>
+        <Hyperspeed
+          curve="winding"
+          curvature={0.8}
+          speed={1.2}
+          boost={3.5}
+          fov={85}
+          boostFov={125}
+          lanes={3}
+          roadWidth={10}
+          medianWidth={2}
+          density={45}
+          trailLength={1.3}
+          lightSize={1.3}
+          poles={18}
+          dust={140}
+          glow={0.7}
+          reflections={0.5}
+          roadOpacity={0.18}
+          steer={0.3}
+          cameraYOffset={-1.5}
+          lookAtYOffset={1.8}
+          tailColors={['#10b981', '#059669', '#34d399']}
+          headColors={['#06b6d4', '#0284c7', '#38bdf8']}
+          poleColors={['#10b981']}
+          interactive
+        />
+        <div className={styles.hyperspeedFadeTop} />
+        <div className={styles.hyperspeedFadeBottom} />
+      </div>
+
       <div className={styles.auroraOrb} />
       <div className={styles.gridBackground} />
 
