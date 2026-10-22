@@ -32,8 +32,11 @@ import {
   Columns3,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   Filter,
   Lock,
+  LockOpen,
   Maximize2,
   Pencil,
   Plus,
@@ -110,7 +113,30 @@ export function TableData({
   /** Extra toolbar items on the right (e.g. a view's security warning). */
   toolbarRight?: ReactNode;
 }) {
-  const { connectionId } = useExplorer();
+  const { connectionId, serverId } = useExplorer();
+  // Hidden and frozen columns: only how this table looks here, saved per table on this computer
+  const [view, setView] = useColumnView(
+    `${serverId}:${database}.${schema}.${table}`,
+  );
+  const hidden = useMemo(() => new Set(view.hidden), [view.hidden]);
+  const frozen = useMemo(() => new Set(view.frozen), [view.frozen]);
+  /**
+   * Freeze panes, like a spreadsheet: freezing a column pins it and every column to its left,
+   * in place; unfreezing releases them all.
+   */
+  const toggleFreeze = (column: string) =>
+    setView((v) => {
+      if (v.frozen.includes(column)) return { ...v, frozen: [] };
+      const names = data.columns.map((c) => c.name);
+      return { ...v, frozen: names.slice(0, names.indexOf(column) + 1) };
+    });
+  const toggleIn = (list: "hidden" | "frozen", column: string) =>
+    setView((v) => ({
+      ...v,
+      [list]: v[list].includes(column)
+        ? v[list].filter((c) => c !== column)
+        : [...v[list], column],
+    }));
   const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState(100);
   const [page, setPage] = useState(0);
@@ -690,6 +716,15 @@ export function TableData({
                 setPage(0);
               }}
             />
+            {view.hidden.length > 0 && (
+              <HiddenColumnsMenu
+                hidden={view.hidden.filter((c) =>
+                  data.columns.some((x) => x.name === c),
+                )}
+                onShow={(column) => toggleIn("hidden", column)}
+                onShowAll={() => setView((v) => ({ ...v, hidden: [] }))}
+              />
+            )}
             <SortPopover
               columns={data.columns.map((c) => c.name)}
               applied={sort}
@@ -840,6 +875,9 @@ export function TableData({
                     .writeText(column.name)
                     .then(() => toast.success("Copied column name"))
                 }
+                frozen={frozen.has(column.id)}
+                onFreeze={() => toggleFreeze(column.id)}
+                onHide={() => toggleIn("hidden", column.id)}
               />
             )}
             renderReference={(target, close) => {
@@ -859,6 +897,8 @@ export function TableData({
             onSelectedChange={setSelected}
             onEdit={editable ? editCell : undefined}
             onAddColumn={editable ? () => setInsert("column") : undefined}
+            hidden={hidden}
+            frozen={frozen}
             cellMenu={(target) => (
               <CellMenu
                 target={target}
@@ -1116,6 +1156,74 @@ function InsertOption({
   );
 }
 
+interface ColumnView {
+  hidden: string[];
+  frozen: string[];
+}
+
+const EMPTY_VIEW: ColumnView = { hidden: [], frozen: [] };
+
+/** Hidden/frozen columns for one table, kept in this computer's storage. */
+function useColumnView(key: string) {
+  const storageKey = `postcompass-columns:${key}`;
+  const [view, setViewState] = useState<ColumnView>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved
+        ? { ...EMPTY_VIEW, ...(JSON.parse(saved) as ColumnView) }
+        : EMPTY_VIEW;
+    } catch {
+      return EMPTY_VIEW;
+    }
+  });
+  const setView = (update: (v: ColumnView) => ColumnView) =>
+    setViewState((v) => {
+      const next = update(v);
+      try {
+        if (next.hidden.length || next.frozen.length)
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        else localStorage.removeItem(storageKey);
+      } catch {
+        // Storage can be unavailable; the view just won't be remembered
+      }
+      return next;
+    });
+  return [view, setView] as const;
+}
+
+/** "3 hidden": brings hidden columns back, one at a time or all at once. */
+function HiddenColumnsMenu({
+  hidden,
+  onShow,
+  onShowAll,
+}: {
+  hidden: string[];
+  onShow: (column: string) => void;
+  onShowAll: () => void;
+}) {
+  if (hidden.length === 0) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="ghost" iconLeft={<EyeOff />}>
+          {hidden.length} hidden
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {hidden.map((c) => (
+          <DropdownMenuItem key={c} icon={<Eye />} onSelect={() => onShow(c)}>
+            <span className="font-mono">{c}</span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onShowAll}>
+          Show all columns
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** The menu behind each column header's button, in Supabase's order. */
 function ColumnMenu({
   name,
@@ -1126,6 +1234,9 @@ function ColumnMenu({
   onEdit,
   onDrop,
   onCopy,
+  frozen,
+  onFreeze,
+  onHide,
 }: {
   name: string;
   sort?: SortSpec;
@@ -1135,6 +1246,9 @@ function ColumnMenu({
   onEdit: () => void;
   onDrop: () => void;
   onCopy: () => void;
+  frozen: boolean;
+  onFreeze: () => void;
+  onHide: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -1174,6 +1288,15 @@ function ColumnMenu({
             Edit column
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem
+          icon={frozen ? <LockOpen /> : <Lock />}
+          onSelect={onFreeze}
+        >
+          {frozen ? "Unfreeze columns" : "Freeze column"}
+        </DropdownMenuItem>
+        <DropdownMenuItem icon={<EyeOff />} onSelect={onHide}>
+          Hide column
+        </DropdownMenuItem>
         {editable && (
           <>
             <DropdownMenuSeparator />

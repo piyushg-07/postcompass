@@ -112,6 +112,10 @@ export interface DataGridProps {
   cellMenu?: (target: CellTarget) => ReactNode;
   /** The "+" column at the end of the header. */
   onAddColumn?: () => void;
+  /** Column ids left out of the view. */
+  hidden?: ReadonlySet<string>;
+  /** Column ids pinned to the left while scrolling sideways (shown first). */
+  frozen?: ReadonlySet<string>;
 }
 
 export function DataGrid({
@@ -129,6 +133,8 @@ export function DataGrid({
   onExpandRow,
   cellMenu,
   onAddColumn,
+  hidden,
+  frozen,
 }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -157,18 +163,38 @@ export function DataGrid({
   );
   // Results of a query have no checkboxes or expand buttons, so no column for them
   const selectWidth = onSelectedChange || onExpandRow ? SELECT_WIDTH : 0;
+  /** Column indexes in display order: frozen ones first, hidden ones left out. */
+  const order = useMemo(() => {
+    const visible = columns
+      .map((_, i) => i)
+      .filter((i) => !hidden?.has(columns[i]!.id));
+    const pinned = visible.filter((i) => frozen?.has(columns[i]!.id));
+    return [...pinned, ...visible.filter((i) => !frozen?.has(columns[i]!.id))];
+  }, [columns, hidden, frozen]);
+  const frozenCount = order.filter((i) => frozen?.has(columns[i]!.id)).length;
+  /** Left edge of each column (by its index), counting from the grid's left. */
   const offsets = useMemo(() => {
     const out: number[] = [];
     let x = selectWidth;
-    for (const w of colWidths) {
-      out.push(x);
-      x += w;
+    for (const i of order) {
+      out[i] = x;
+      x += colWidths[i]!;
     }
     return out;
-  }, [colWidths, selectWidth]);
+  }, [order, colWidths, selectWidth]);
+  const frozenWidth = order
+    .slice(0, frozenCount)
+    .reduce((sum, i) => sum + colWidths[i]!, 0);
+  /** Sticky left position of frozen columns, by index. */
+  const stickyLeft = useMemo(() => {
+    const out: (number | undefined)[] = [];
+    for (const i of order.slice(0, frozenCount)) out[i] = offsets[i];
+    return out;
+  }, [order, frozenCount, offsets]);
+  const lastFrozen = frozenCount > 0 ? order[frozenCount - 1] : undefined;
   const totalWidth =
     selectWidth +
-    colWidths.reduce((a, b) => a + b, 0) +
+    order.reduce((sum, i) => sum + colWidths[i]!, 0) +
     (onAddColumn ? ADD_COLUMN_WIDTH : 0);
 
   const virtualizer = useVirtualizer({
@@ -210,18 +236,27 @@ export function DataGrid({
     virtualizer.scrollToIndex(row);
     const el = scrollRef.current;
     if (!el) return;
-    const left = offsets[col]!;
+    // Frozen columns are always in view
+    if (stickyLeft[col] !== undefined) return;
+    const left = offsets[col] ?? 0;
     const right = left + colWidths[col]!;
-    if (left - selectWidth < el.scrollLeft) el.scrollLeft = left - selectWidth;
+    const pinned = selectWidth + frozenWidth;
+    if (left - pinned < el.scrollLeft) el.scrollLeft = left - pinned;
     else if (right > el.scrollLeft + el.clientWidth)
       el.scrollLeft = right - el.clientWidth;
   };
 
   const moveTo = (row: number, col: number) => {
     const r = Math.max(0, Math.min(rows.length - 1, row));
-    const c = Math.max(0, Math.min(columns.length - 1, col));
-    setActive({ row: r, col: c });
-    reveal(r, c);
+    if (!order.includes(col)) return;
+    setActive({ row: r, col });
+    reveal(r, col);
+  };
+
+  /** The column `delta` steps away from `col` in display order. */
+  const stepColumn = (col: number, delta: number) => {
+    const at = order.indexOf(col);
+    return order[Math.max(0, Math.min(order.length - 1, at + delta))] ?? col;
   };
 
   const canEdit = (row: GridRow, col: number) =>
@@ -259,19 +294,19 @@ export function DataGrid({
         return moveTo(row + 1, col);
       case "ArrowLeft":
         e.preventDefault();
-        return moveTo(row, col - 1);
+        return moveTo(row, stepColumn(col, -1));
       case "ArrowRight":
         e.preventDefault();
-        return moveTo(row, col + 1);
+        return moveTo(row, stepColumn(col, 1));
       case "Tab":
         e.preventDefault();
-        return moveTo(row, col + (e.shiftKey ? -1 : 1));
+        return moveTo(row, stepColumn(col, e.shiftKey ? -1 : 1));
       case "Home":
         e.preventDefault();
-        return moveTo(e.ctrlKey ? 0 : row, 0);
+        return moveTo(e.ctrlKey ? 0 : row, order[0] ?? 0);
       case "End":
         e.preventDefault();
-        return moveTo(e.ctrlKey ? rows.length - 1 : row, columns.length - 1);
+        return moveTo(e.ctrlKey ? rows.length - 1 : row, order.at(-1) ?? 0);
       case "PageDown":
         e.preventDefault();
         return moveTo(row + 15, col);
@@ -383,21 +418,26 @@ export function DataGrid({
                 )}
               </div>
             )}
-            {columns.map((column, i) => (
-              <HeaderCell
-                key={column.id}
-                column={column}
-                width={colWidths[i]!}
-                sort={sort.find((s) => s.column === column.id)}
-                menu={
-                  <>
-                    {headerExtra?.(column)}
-                    {headerMenu?.(column)}
-                  </>
-                }
-                onResize={(e) => startResize(column.id, colWidths[i]!, e)}
-              />
-            ))}
+            {order.map((i) => {
+              const column = columns[i]!;
+              return (
+                <HeaderCell
+                  key={column.id}
+                  column={column}
+                  width={colWidths[i]!}
+                  left={stickyLeft[i]}
+                  lastFrozen={i === lastFrozen}
+                  sort={sort.find((s) => s.column === column.id)}
+                  menu={
+                    <>
+                      {headerExtra?.(column)}
+                      {headerMenu?.(column)}
+                    </>
+                  }
+                  onResize={(e) => startResize(column.id, colWidths[i]!, e)}
+                />
+              );
+            })}
             {onAddColumn && (
               <div
                 className="flex shrink-0 items-center justify-center"
@@ -462,6 +502,9 @@ export function DataGrid({
                         top={item.start}
                         widths={colWidths}
                         columns={columns}
+                        order={order}
+                        stickyLeft={stickyLeft}
+                        lastFrozen={lastFrozen}
                         selected={selected?.has(row.id) ?? false}
                         activeCol={
                           active?.row === item.index ? active.col : null
@@ -522,12 +565,17 @@ export function DataGrid({
 function HeaderCell({
   column,
   width,
+  left,
+  lastFrozen,
   sort,
   menu,
   onResize,
 }: {
   column: GridColumn;
   width: number;
+  /** Set for frozen columns: where it sticks. */
+  left?: number;
+  lastFrozen?: boolean;
   sort?: GridSort;
   menu?: ReactNode;
   onResize: (e: MouseEvent) => void;
@@ -537,8 +585,13 @@ function HeaderCell({
   );
   return (
     <div
-      className="group/header relative flex shrink-0 items-center gap-1.5 border-r border-border px-2"
-      style={{ width }}
+      className={cn(
+        "group/header relative flex shrink-0 items-center gap-1.5 border-r border-border px-2",
+        left !== undefined && "sticky z-10 bg-surface",
+        lastFrozen &&
+          "border-r-border-strong shadow-[4px_0_6px_-4px_rgba(0,0,0,0.6)]",
+      )}
+      style={{ width, left }}
     >
       {column.references && (
         <Tooltip
@@ -597,6 +650,9 @@ const GridRowView = memo(function GridRowView({
   top,
   widths,
   columns,
+  order,
+  stickyLeft,
+  lastFrozen,
   selected,
   activeCol,
   editing,
@@ -614,6 +670,10 @@ const GridRowView = memo(function GridRowView({
   top: number;
   widths: number[];
   columns: GridColumn[];
+  /** Column indexes in display order. */
+  order: number[];
+  stickyLeft: (number | undefined)[];
+  lastFrozen?: number;
   selected: boolean;
   activeCol: number | null;
   editing: { col: number; initial?: string } | null;
@@ -670,18 +730,30 @@ const GridRowView = memo(function GridRowView({
           )}
         </div>
       )}
-      {row.cells.map((value, col) => {
+      {order.map((col) => {
+        const value = row.cells[col];
         const column = columns[col]!;
         const isEditing = editing?.col === col;
+        const left = stickyLeft[col];
         return (
           <div
             key={col}
             data-col={col}
             className={cn(
               "relative flex shrink-0 items-center border-r border-border px-2",
+              // Frozen cells need a background to cover what scrolls under them
+              left !== undefined &&
+                cn(
+                  "sticky z-[5]",
+                  selected
+                    ? "bg-surface-hover"
+                    : "bg-bg group-hover/row:bg-surface",
+                ),
+              col === lastFrozen &&
+                "border-r-border-strong shadow-[4px_0_6px_-4px_rgba(0,0,0,0.6)]",
               row.modified?.has(col) && "bg-warning/10",
             )}
-            style={{ width: widths[col] }}
+            style={{ width: widths[col], left }}
             onClick={() => onCellClick(col)}
             onDoubleClick={() => onCellDoubleClick(col)}
           >
