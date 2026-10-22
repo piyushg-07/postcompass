@@ -16,7 +16,7 @@ import {
   IconButton,
   Input,
   Skeleton,
-  Switch,
+  Checkbox,
   toast,
 } from "@repo/ui";
 import {
@@ -417,31 +417,62 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
           <NameField value={name} onChange={setName} />
         </RunSqlDialog>
       )}
-      {dialog === "drop-schema" && schema && (
-        <RunSqlDialog
-          open
-          onOpenChange={(o) => !o && setDialog(null)}
-          title={`Drop schema ${schema}?`}
-          description="Without CASCADE this only works if the schema is empty."
-          sql={dropSchema(schema, cascade)}
-          database={database}
-          confirmLabel="Drop schema"
-          destructive
-          successMessage={`Schema ${schema} dropped`}
-          onDone={() => {
-            ws.closeTabsFor(
-              (t) =>
-                "schema" in t && t.database === database && t.schema === schema,
-            );
-            ws.setLocation({ schema: null });
-          }}
-        >
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Switch checked={cascade} onCheckedChange={setCascade} />
-            Also drop everything inside it (CASCADE)
-          </label>
-        </RunSqlDialog>
-      )}
+      {dialog === "drop-schema" &&
+        schema &&
+        (() => {
+          const tableCount =
+            schemas.data?.find((x) => x.name === schema)?.tableCount ?? 0;
+          return (
+            <RunSqlDialog
+              open
+              onOpenChange={(o) => !o && setDialog(null)}
+              title={`Delete schema ${schema}?`}
+              // Deleting a schema with tables needs CASCADE, so ask for an explicit OK first
+              sql={
+                tableCount === 0
+                  ? dropSchema(schema, false)
+                  : cascade
+                    ? dropSchema(schema, true)
+                    : "-- confirm deleting its tables"
+              }
+              database={database}
+              confirmLabel="Delete schema"
+              destructive
+              successMessage={`Schema ${schema} deleted`}
+              onDone={() => {
+                ws.closeTabsFor(
+                  (t) =>
+                    "schema" in t &&
+                    t.database === database &&
+                    t.schema === schema,
+                );
+                ws.setLocation({ schema: null });
+              }}
+            >
+              {tableCount === 0 ? (
+                <p className="text-sm text-fg-muted">
+                  This schema is empty. It will be removed permanently.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3 rounded-control border border-danger/30 bg-danger/5 p-3">
+                  <p className="text-sm text-fg">
+                    <span className="font-mono">{schema}</span> has {tableCount}{" "}
+                    {tableCount === 1 ? "table" : "tables"}.{" "}
+                    {tableCount === 1 ? "It" : "They"} and all their data will
+                    be deleted permanently.
+                  </p>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                    <Checkbox
+                      checked={cascade}
+                      onCheckedChange={(v) => setCascade(v === true)}
+                    />
+                    I understand, delete everything in it
+                  </label>
+                </div>
+              )}
+            </RunSqlDialog>
+          );
+        })()}
     </aside>
   );
 }
