@@ -53,6 +53,7 @@ export function RowSheet({
   row,
   references = {},
   enums = new Map(),
+  onApplied,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +67,8 @@ export function RowSheet({
   references?: Record<string, Reference>;
   /** Enum values by type name. */
   enums?: ReadonlyMap<string, string[]>;
+  /** Called with each change once it's saved (for undo). */
+  onApplied?: (change: RowChange) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,6 +81,7 @@ export function RowSheet({
           row={row ?? null}
           references={references}
           enums={enums}
+          onApplied={onApplied}
           onDone={() => onOpenChange(false)}
         />
       )}
@@ -105,6 +109,7 @@ function RowForm({
   row,
   references,
   enums,
+  onApplied,
   onDone,
 }: {
   database: string;
@@ -114,6 +119,7 @@ function RowForm({
   row: EditTarget | null;
   references: Record<string, Reference>;
   enums: ReadonlyMap<string, string[]>;
+  onApplied?: (change: RowChange) => void;
   onDone: () => void;
 }) {
   const { connectionId } = useExplorer();
@@ -169,12 +175,14 @@ function RowForm({
     mutationFn: async () => {
       const c = change();
       if (!c) return null;
-      return unwrap(
+      await unwrap(
         commands.applyChanges(connectionId, database, schema, table, [c]),
       );
+      return c;
     },
     onSuccess: (result) => {
       if (result) {
+        onApplied?.(result);
         toast.success(
           editing ? `Row updated in ${table}` : `Row added to ${table}`,
         );

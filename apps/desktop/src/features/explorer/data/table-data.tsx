@@ -36,14 +36,17 @@ import {
   Maximize2,
   Pencil,
   Plus,
+  Redo2,
   RefreshCw,
   Rows3,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import type {
   ColumnInfo,
+  ColumnValue,
   FilterSpec,
   RowChange,
   RowsPage,
@@ -69,6 +72,7 @@ import {
 import { FilterBar } from "./filter-bar";
 import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
+import { type UndoEntry, useUndoStore } from "./undo-store";
 import { RecordPicker, type Reference, ReferencePeek } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
 
@@ -243,6 +247,96 @@ export function TableData({
 
   /* ── Editing ── */
 
+  // Undo history is per table and survives switching tabs
+  const historyKey = `${connectionId}:${database}.${schema}.${table}`;
+  const canUndo = useUndoStore(
+    (s) => (s.tables[historyKey]?.past.length ?? 0) > 0,
+  );
+  const canRedo = useUndoStore(
+    (s) => (s.tables[historyKey]?.future.length ?? 0) > 0,
+  );
+  const [undoing, setUndoing] = useState(false);
+
+  /** Saves `entry` so it can be undone, and offers Undo in a toast. */
+  const remember = (entry: UndoEntry, message: string) => {
+    useUndoStore.getState().record(historyKey, entry);
+    toast.success(message, {
+      action: { label: "Undo", onClick: () => void step("undo") },
+    });
+  };
+
+  /** Applies the latest undo (or redo) entry. */
+  const step = async (direction: "undo" | "redo") => {
+    if (undoing) return;
+    const store = useUndoStore.getState();
+    const entry = store.shift(historyKey, direction);
+    if (!entry) return;
+    setUndoing(true);
+    try {
+      await unwrap(
+        commands.applyChanges(
+          connectionId,
+          database,
+          schema,
+          table,
+          direction === "undo" ? entry.undo : entry.redo,
+        ),
+      );
+      toast.success(
+        `${direction === "undo" ? "Undid" : "Redid"}: ${entry.label}`,
+      );
+      await reload();
+    } catch (e) {
+      store.restore(historyKey, direction, entry);
+      toast.error(`Couldn't ${direction} ${entry.label.toLowerCase()}`, {
+        description: describeError(e).message,
+      });
+    } finally {
+      setUndoing(false);
+    }
+  };
+
+  /** The key of a row as it is after `values` were written (keys can be edited in the panel). */
+  const keyAfter = (key: ColumnValue[], values: ColumnValue[]) =>
+    key.map((k) => values.find((v) => v.column === k.column) ?? k);
+
+  /** Records a change made in the row panel, with the values it replaced. */
+  const rememberRowChange = (change: RowChange) => {
+    if (change.type === "update") {
+      const before = editRow?.values ?? [];
+      const old = change.values.map((v) => ({
+        column: v.column,
+        value:
+          before[data.columns.findIndex((c) => c.name === v.column)] ?? null,
+      }));
+      remember(
+        {
+          label: "Edit row",
+          undo: [
+            {
+              type: "update",
+              key: keyAfter(change.key, change.values),
+              values: old,
+            },
+          ],
+          redo: [change],
+        },
+        `Row updated in ${table}`,
+      );
+    } else if (change.type === "insert") {
+      // Only undoable when the new row's key is known (the database didn't generate it)
+      const key = data.keyColumns.map((column) =>
+        change.values.find((v) => v.column === column),
+      );
+      if (key.every((k): k is ColumnValue => k !== undefined))
+        useUndoStore.getState().record(historyKey, {
+          label: "Add row",
+          undo: [{ type: "delete", key }],
+          redo: [change],
+        });
+    }
+  };
+
   const keyOf = (id: string) =>
     data.keyColumns.map((column, i) => ({
       column,
@@ -292,7 +386,24 @@ export function TableData({
     unwrap(
       commands.applyChanges(connectionId, database, schema, table, [change]),
     )
-      .then(() => reload())
+      .then(() => {
+        const column = data.columns[col]!.name;
+        remember(
+          {
+            label: `Edit ${column}`,
+            undo: [
+              {
+                type: "update",
+                key: change.key,
+                values: [{ column, value: original[col] ?? null }],
+              },
+            ],
+            redo: [change],
+          },
+          `Saved ${column}`,
+        );
+        return reload();
+      })
       .catch((e: unknown) =>
         toast.error(`Couldn't save ${data.columns[col]!.name}`, {
           description: describeError(e).message,
@@ -302,20 +413,30 @@ export function TableData({
   };
 
   const removeRows = useMutation({
-    mutationFn: () =>
-      unwrap(
-        commands.applyChanges(
-          connectionId,
-          database,
-          schema,
-          table,
-          [...selected]
-            .filter((id) => originalRows.has(id))
-            .map((id) => ({ type: "delete" as const, key: keyOf(id) })),
+    mutationFn: async () => {
+      const ids = [...selected].filter((id) => originalRows.has(id));
+      const deletes: RowChange[] = ids.map((id) => ({
+        type: "delete",
+        key: keyOf(id),
+      }));
+      const result = await unwrap(
+        commands.applyChanges(connectionId, database, schema, table, deletes),
+      );
+      // Undo inserts the rows again with every value they had (generated ones are recomputed)
+      const inserts: RowChange[] = ids.map((id) => ({
+        type: "insert",
+        values: data.columns.flatMap((c, i) =>
+          c.generated
+            ? []
+            : [{ column: c.name, value: originalRows.get(id)![i] ?? null }],
         ),
-      ),
-    onSuccess: (result) => {
-      toast.success(
+      }));
+      return { result, deletes, inserts };
+    },
+    onSuccess: ({ result, deletes, inserts }) => {
+      const label = `Delete ${result.deleted} row${result.deleted === 1 ? "" : "s"}`;
+      remember(
+        { label, undo: inserts, redo: deletes },
         `Deleted ${result.deleted} row${result.deleted === 1 ? "" : "s"}`,
       );
       setSelected(new Set());
@@ -405,7 +526,25 @@ export function TableData({
       : Math.max(1, Math.ceil(data.total / pageSize)).toLocaleString();
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      onKeyDown={(e) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        // Text fields keep their own undo
+        const target = e.target as HTMLElement;
+        if (
+          target.closest(
+            "input, textarea, [contenteditable=true], [role=dialog]",
+          )
+        )
+          return;
+        const key = e.key.toLowerCase();
+        if (key === "z" || key === "y") {
+          e.preventDefault();
+          void step(key === "y" || e.shiftKey ? "redo" : "undo");
+        }
+      }}
+    >
       {/* Toolbar, like Supabase: filter, sort, insert; bulk actions while rows are selected */}
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-surface pr-2">
         {selected.size > 0 ? (
@@ -500,6 +639,20 @@ export function TableData({
           )}
         >
           {selected.size === 0 && toolbarRight}
+          <IconButton
+            size="sm"
+            label="Undo (Ctrl+Z)"
+            icon={<Undo2 />}
+            disabled={!canUndo || undoing}
+            onClick={() => void step("undo")}
+          />
+          <IconButton
+            size="sm"
+            label="Redo (Ctrl+Shift+Z)"
+            icon={<Redo2 />}
+            disabled={!canRedo || undoing}
+            onClick={() => void step("redo")}
+          />
           <IconButton
             size="sm"
             label="Refresh"
@@ -699,6 +852,7 @@ export function TableData({
         row={editRow}
         references={references}
         enums={enums}
+        onApplied={rememberRowChange}
       />
       <ConfirmDialog
         open={confirmDelete}
