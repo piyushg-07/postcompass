@@ -1,0 +1,106 @@
+# Builds PostCompass for Windows, macOS and Linux and attaches the installers to a GitHub Release.
+#
+# Runs only when commits are pushed to the `release` branch.
+#
+# How to release:
+#   1. Bump "version" in apps/desktop/src-tauri/tauri.conf.json (e.g. 0.2.0) and commit.
+#   2. Push that commit to the release branch:
+#        git push origin HEAD:release
+#   3. Wait for this workflow to finish (Actions tab). It creates the tag v0.2.0 and a draft
+#      release "PostCompass v0.2.0"; open Releases, edit the notes if you like, and Publish.
+#
+# Each release needs a new version number: pushing again with the same version updates the
+# draft for that version instead of creating a new one.
+
+name: Release
+
+on:
+  push:
+    branches:
+      - release
+
+# Creating a release and uploading files needs write access to the repository contents
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      # One platform failing shouldn't cancel the others
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: ""
+          - name: macOS (Apple Silicon)
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - name: macOS (Intel)
+            platform: macos-latest
+            args: "--target x86_64-apple-darwin"
+          - name: Linux
+            platform: ubuntu-22.04
+            args: ""
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install Linux system libraries
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          # WebKitGTK for the window, plus D-Bus for the system keychain (keyring crate)
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev pkg-config
+
+      - name: Set up pnpm
+        # Uses the version pinned in package.json ("packageManager")
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both Mac architectures are built on the same Apple Silicon runner
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust builds
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ${{ matrix.args }}
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and upload to the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          args: ${{ matrix.args }}
+          # __VERSION__ is replaced with the version from tauri.conf.json
+          tagName: v__VERSION__
+          releaseName: PostCompass v__VERSION__
+          releaseBody: |
+            Download the installer for your system from **Assets** below.
+
+            - **Windows:** `PostCompass_*_x64-setup.exe` (or the `.msi`)
+            - **macOS:** `PostCompass_*_aarch64.dmg` for Apple Silicon, `PostCompass_*_x64.dmg` for Intel
+            - **Linux:** `.AppImage` (any distribution), `.deb` (Ubuntu/Debian) or `.rpm` (Fedora)
+
+            The app isn't code-signed yet: on Windows choose **More info → Run anyway**; on macOS
+            right-click the app and choose **Open** the first time.
+          # Stays a draft until you review and publish it
+          releaseDraft: true
+          prerelease: false
