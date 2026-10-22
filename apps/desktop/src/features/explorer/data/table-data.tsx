@@ -88,6 +88,8 @@ export function TableData({
   table,
   initialFilters,
   footerRight,
+  isView = false,
+  toolbarRight,
 }: {
   database: string;
   schema: string;
@@ -96,6 +98,10 @@ export function TableData({
   initialFilters?: FilterSpec[];
   /** Shown on the right of the bottom bar (view switch, table actions). */
   footerRight?: ReactNode;
+  /** Views are read-only, so there's nothing to say about editing. */
+  isView?: boolean;
+  /** Extra toolbar items on the right (e.g. a view's security warning). */
+  toolbarRight?: ReactNode;
 }) {
   const { connectionId } = useExplorer();
   const queryClient = useQueryClient();
@@ -475,7 +481,8 @@ export function TableData({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              data.columns.length > 0 && (
+              data.columns.length > 0 &&
+              !isView && (
                 <Tooltip content="Rows can only be edited in tables with a primary key">
                   <span className="flex items-center gap-1.5 px-2 text-xs text-fg-subtle">
                     <Lock className="size-3.5" /> Read-only
@@ -491,6 +498,7 @@ export function TableData({
             selected.size > 0 && "ml-auto",
           )}
         >
+          {selected.size === 0 && toolbarRight}
           <IconButton
             size="sm"
             label="Refresh"

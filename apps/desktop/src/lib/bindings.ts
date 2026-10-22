@@ -579,6 +579,8 @@ export type TableStructure = {
 	comment: string | null,
 	/**  Row Level Security is switched on. */
 	rlsEnabled: boolean,
+	/**  A view runs with the querying user's permissions (`security_invoker`), not its owner's. */
+	securityInvoker: boolean,
 	columns: ColumnInfo[],
 	primaryKey: string[],
 	foreignKeys: ForeignKeyInfo[],

@@ -100,12 +100,14 @@ pub struct Relation {
     pub row_estimate: f64,
     pub comment: Option<String>,
     pub rls_enabled: bool,
+    pub security_invoker: bool,
 }
 
 pub async fn relation(client: &Client, schema: &str, name: &str) -> CoreResult<Relation> {
     let row = client
         .query_opt(
-            "select c.oid, c.relkind::text, c.reltuples::float8, obj_description(c.oid, 'pg_class'), c.relrowsecurity
+            "select c.oid, c.relkind::text, c.reltuples::float8, obj_description(c.oid, 'pg_class'), c.relrowsecurity,
+                    exists (select 1 from unnest(c.reloptions) o where o ~* '^security_invoker=(true|on|yes|1)$')
                from pg_class c
                join pg_namespace n on n.oid = c.relnamespace
               where n.nspname = $1 and c.relname = $2 and c.relkind in ('r', 'p', 'v', 'm', 'f')",
@@ -120,6 +122,7 @@ pub async fn relation(client: &Client, schema: &str, name: &str) -> CoreResult<R
         row_estimate: row.get(2),
         comment: row.get(3),
         rls_enabled: row.get(4),
+        security_invoker: row.get(5),
     })
 }
 
@@ -241,6 +244,7 @@ pub async fn structure(client: &Client, schema: &str, name: &str) -> CoreResult<
         kind: rel.kind,
         comment: rel.comment,
         rls_enabled: rel.rls_enabled,
+        security_invoker: rel.security_invoker,
         columns,
         primary_key,
         foreign_keys: fks

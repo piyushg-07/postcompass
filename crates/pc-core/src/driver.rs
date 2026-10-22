@@ -198,6 +198,8 @@ pub struct TableStructure {
     pub comment: Option<String>,
     /// Row Level Security is switched on.
     pub rls_enabled: bool,
+    /// A view runs with the querying user's permissions (`security_invoker`), not its owner's.
+    pub security_invoker: bool,
     pub columns: Vec<ColumnInfo>,
     pub primary_key: Vec<String>,
     pub foreign_keys: Vec<ForeignKeyInfo>,

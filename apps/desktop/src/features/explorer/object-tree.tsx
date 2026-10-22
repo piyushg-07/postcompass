@@ -647,9 +647,14 @@ function TableMenu({
       <ContextMenuItem icon={<Table2 />} onSelect={() => onView("data")}>
         View data
       </ContextMenuItem>
-      <ContextMenuItem icon={<Layers />} onSelect={() => onView("structure")}>
-        View structure
-      </ContextMenuItem>
+      {!isView && (
+        <ContextMenuItem
+          icon={<Layers />}
+          onSelect={() => onView("structure")}
+        >
+          View structure
+        </ContextMenuItem>
+      )}
       {isView && (
         <ContextMenuItem icon={<Code />} onSelect={() => onView("definition")}>
           View definition
