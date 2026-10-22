@@ -104,6 +104,8 @@ export interface DataGridProps {
   empty?: ReactNode;
   /** Menu shown from a button in each column header (sort, edit, delete…). */
   headerMenu?: (column: GridColumn) => ReactNode;
+  /** Extra header button shown on hover, before the menu (e.g. column stats). */
+  headerExtra?: (column: GridColumn) => ReactNode;
   /** When set, each row shows an expand button that calls this (e.g. to edit it in a panel). */
   onExpandRow?: (rowId: string) => void;
   /** Right-click menu items for a cell. */
@@ -123,6 +125,7 @@ export function DataGrid({
   renderReference,
   empty,
   headerMenu,
+  headerExtra,
   onExpandRow,
   cellMenu,
   onAddColumn,
@@ -386,7 +389,12 @@ export function DataGrid({
                 column={column}
                 width={colWidths[i]!}
                 sort={sort.find((s) => s.column === column.id)}
-                menu={headerMenu?.(column)}
+                menu={
+                  <>
+                    {headerExtra?.(column)}
+                    {headerMenu?.(column)}
+                  </>
+                }
                 onResize={(e) => startResize(column.id, colWidths[i]!, e)}
               />
             ))}
@@ -529,7 +537,7 @@ function HeaderCell({
   );
   return (
     <div
-      className="relative flex shrink-0 items-center gap-1.5 border-r border-border px-2"
+      className="group/header relative flex shrink-0 items-center gap-1.5 border-r border-border px-2"
       style={{ width }}
     >
       {column.references && (
@@ -574,7 +582,7 @@ function HeaderCell({
           {sort.descending ? "↓" : "↑"}
         </span>
       )}
-      <span className="ml-auto flex shrink-0 items-center">{menu}</span>
+      <span className="ml-auto flex shrink-0 items-center gap-0.5">{menu}</span>
       <span
         className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
         onMouseDown={onResize}

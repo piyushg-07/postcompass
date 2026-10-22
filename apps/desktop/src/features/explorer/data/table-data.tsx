@@ -75,6 +75,7 @@ import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
 import { type UndoEntry, useUndoStore } from "./undo-store";
 import { isTabular, PasteRowsDialog } from "./paste-rows";
+import { ColumnStatsButton } from "./column-stats";
 import { RecordPicker, type Reference, ReferencePeek } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
 
@@ -212,6 +213,35 @@ export function TableData({
       };
     });
   }, [data.columns, references, enums, editable]);
+  /**
+   * Columns where a summary says something: numbers, booleans and enums, plus text that
+   * repeats a lot (city, status). Ids, uuids, names, dates and times (almost all unique), JSON
+   * and links are left out.
+   */
+  const statsColumns = useMemo(() => {
+    const out = new Set<string>();
+    columns.forEach((c, i) => {
+      if (c.isKey || c.references || c.format === "uuid") return;
+      if (c.kind === "number" || c.kind === "bool" || c.kind === "enum") {
+        out.add(c.id);
+        return;
+      }
+      if (c.kind !== "text") return;
+      // Judge text by the rows on screen: few distinct values means categories
+      const values = data.rows
+        .map((r) => r[i])
+        .filter((v): v is string => v !== null && v !== "");
+      const distinct = new Set(values).size;
+      if (
+        values.length >= 5 &&
+        distinct <= 20 &&
+        distinct <= values.length * 0.6
+      )
+        out.add(c.id);
+    });
+    return out;
+  }, [columns, data.rows]);
+
   const keyIndexes = useMemo(
     () =>
       data.keyColumns.map((k) => data.columns.findIndex((c) => c.name === k)),
@@ -775,6 +805,16 @@ export function TableData({
             columns={columns}
             rows={gridRows}
             sort={sort}
+            headerExtra={(column) =>
+              statsColumns.has(column.id) && (
+                <ColumnStatsButton
+                  database={database}
+                  schema={schema}
+                  table={table}
+                  column={column}
+                />
+              )
+            }
             headerMenu={(column) => (
               <ColumnMenu
                 name={column.name}
@@ -900,7 +940,7 @@ export function TableData({
           aria-label="Rows per page"
           size="sm"
           side="top"
-          className="ml-1 w-[96px]"
+          className="ml-1 w-24"
           value={String(pageSize)}
           disabled={locked}
           onValueChange={(v) => {
