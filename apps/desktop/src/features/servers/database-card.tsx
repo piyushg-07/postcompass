@@ -16,7 +16,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   Copy,
-  Database,
   FolderOpen,
   MoreHorizontal,
   Play,
@@ -28,6 +27,7 @@ import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
 import type { ManagedServer, ServerStatus } from "../../lib/bindings";
 import { connectionString } from "../../lib/format";
+import { LocalServerLogo } from "./provider-logos";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import { useWorkspaceStore } from "../explorer/workspace-store";
@@ -127,8 +127,8 @@ export function DatabaseCard({
         <div className="flex flex-1 flex-col gap-3 p-4">
           {/* Top row: icon + menu */}
           <div className="flex items-start justify-between">
-            <div className="flex size-9 items-center justify-center rounded-control border border-border bg-bg text-fg-muted">
-              <Database className="size-4" />
+            <div className="flex size-9 items-center justify-center rounded-control border border-border bg-bg">
+              <LocalServerLogo className="size-5" />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -215,7 +215,7 @@ export function DatabaseRow({
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <StatusDot status={actions.displayStatus} />
+      <LocalServerLogo status={actions.displayStatus} />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium text-fg">{server.name}</span>
         <span className="truncate text-xs text-fg-subtle">

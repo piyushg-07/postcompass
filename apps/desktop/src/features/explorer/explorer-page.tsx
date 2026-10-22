@@ -1,4 +1,5 @@
-import { Button, EmptyState, StatusDot } from "@repo/ui";
+import { Button, EmptyState } from "@repo/ui";
+import { LocalServerLogo } from "../servers/provider-logos";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Cloud, Unplug } from "lucide-react";
@@ -112,7 +113,9 @@ export function ExplorerPage({
           {remote ? (
             <Cloud className="size-3.5 text-accent" />
           ) : (
-            <StatusDot status={connection.data ? "running" : "starting"} />
+            <LocalServerLogo
+              status={connection.data ? "running" : "starting"}
+            />
           )}
           <span className="max-w-48 truncate">{displayName}</span>
         </span>

@@ -1,3 +1,4 @@
+import { type Status, StatusDot } from "@repo/ui";
 /**
  * Brand logos for cloud PostgreSQL providers.
  *
@@ -27,6 +28,35 @@ export const PROVIDER_LOGOS: Record<string, { label: string; src: string }> = {
   render: { label: "Render", src: render },
   other: { label: "PostgreSQL", src: postgresql },
 };
+
+/**
+ * A local PostgreSQL server: the PostgreSQL elephant, with a small status dot on its corner
+ * (running, stopped, starting…).
+ */
+export function LocalServerLogo({
+  status,
+  className = "size-4",
+}: {
+  status?: Status;
+  className?: string;
+}) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <img
+        src={postgresql}
+        alt="PostgreSQL"
+        draggable={false}
+        className={`object-contain ${className}`}
+      />
+      {status && (
+        <StatusDot
+          status={status}
+          className="absolute -right-0.5 -bottom-0.5 size-1.5 ring-2 ring-bg"
+        />
+      )}
+    </span>
+  );
+}
 
 export function ProviderLogo({
   provider,
