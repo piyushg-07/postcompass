@@ -23,7 +23,7 @@ import type {
   SortSpec,
 } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
-import { shortType } from "../../../lib/pg-types";
+import { shortType, typeKind } from "../../../lib/pg-types";
 import { queryKeys } from "../../../lib/query";
 import { useExplorer } from "../explorer-context";
 import { useWorkspaceStore } from "../workspace-store";
@@ -266,7 +266,11 @@ function PickerBody({
             onClick={() => void rows.refetch()}
           />
           <FilterBar
-            columns={columns}
+            columns={(data?.columns ?? []).map((c) => ({
+              name: c.name,
+              format: shortType(c.dataType),
+              kind: typeKind(c.dataType, new Set()),
+            }))}
             applied={filters}
             disabled={false}
             onApply={(next) => {

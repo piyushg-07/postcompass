@@ -407,11 +407,12 @@ export function TableData({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar, like Supabase: filter, sort, insert; bulk actions while rows are selected */}
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
+      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-surface pr-2">
         {selected.size > 0 ? (
           <>
             <IconButton
               size="sm"
+              className="ml-2"
               label="Clear selection"
               icon={<X />}
               onClick={() => setSelected(new Set())}
@@ -436,7 +437,7 @@ export function TableData({
         ) : (
           <>
             <FilterBar
-              columns={data.columns.map((c) => c.name)}
+              columns={columns}
               applied={filters}
               disabled={locked}
               onApply={(next) => {

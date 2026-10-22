@@ -236,7 +236,13 @@ export type ExtensionInfo = {
 	comment: string | null,
 };
 
-export type FilterOp = "equals" | "not_equals" | "contains" | "starts_with" | "greater_than" | "greater_or_equal" | "less_than" | "less_or_equal" | "is_null" | "is_not_null";
+export type FilterOp = "equals" | "not_equals" | "contains" | "starts_with" | "greater_than" | "greater_or_equal" | "less_than" | "less_or_equal" | "is_null" | "is_not_null" | 
+/**  SQL `LIKE` with the user's own `%` / `_` wildcards. */
+"like" | 
+/**  Case-insensitive `ILIKE`. */
+"i_like" | 
+/**  One of a comma-separated list of values. */
+"in_list" | "is_true" | "is_false";
 
 export type FilterSpec = {
 	column: string,

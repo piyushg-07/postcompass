@@ -107,7 +107,10 @@ fn build_where(columns: &[ColumnInfo], request: &RowsRequest, params: &mut Vec<P
     for filter in &request.filters {
         let col = column(columns, &filter.column)?;
         let name = ident(&col.name);
-        let needs_value = !matches!(filter.op, FilterOp::IsNull | FilterOp::IsNotNull);
+        let needs_value = !matches!(
+            filter.op,
+            FilterOp::IsNull | FilterOp::IsNotNull | FilterOp::IsTrue | FilterOp::IsFalse
+        );
         let value = filter.value.clone();
         if needs_value && value.is_none() {
             return Err(CoreError::InvalidInput(format!("filter on {} needs a value", col.name)));
@@ -137,6 +140,25 @@ fn build_where(columns: &[ColumnInfo], request: &RowsRequest, params: &mut Vec<P
             }
             FilterOp::IsNull => format!("{name} is null"),
             FilterOp::IsNotNull => format!("{name} is not null"),
+            FilterOp::IsTrue => format!("{name} is true"),
+            FilterOp::IsFalse => format!("{name} is false"),
+            FilterOp::Like => format!("{name}::text like {}", bind(value)),
+            FilterOp::ILike => format!("{name}::text ilike {}", bind(value)),
+            FilterOp::InList => {
+                // `a, b, c` or `(a, b, c)` becomes a text array, cast to the column's type
+                let list = value.unwrap_or_default();
+                let items: Vec<String> = list
+                    .trim()
+                    .trim_start_matches('(')
+                    .trim_end_matches(')')
+                    .split(',')
+                    .map(|v| v.trim().trim_matches('\'').to_owned())
+                    .filter(|v| !v.is_empty())
+                    .map(|v| format!("\"{}\"", v.replace('\\', "\\\\").replace('"', "\\\"")))
+                    .collect();
+                let p = bind(Some(format!("{{{}}}", items.join(","))));
+                format!("{name} = any(cast({p}::text as {}[]))", col.data_type)
+            }
         });
     }
     Ok(if clauses.is_empty() {

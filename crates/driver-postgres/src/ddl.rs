@@ -99,6 +99,8 @@ mod tests {
             name: "user".into(),
             kind: TableKind::Table,
             comment: None,
+            rls_enabled: false,
+            security_invoker: false,
             columns: vec![id, email, column("bio", "text", true)],
             primary_key: vec!["id".into()],
             foreign_keys: vec![],

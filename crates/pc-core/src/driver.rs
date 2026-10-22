@@ -355,6 +355,14 @@ pub enum FilterOp {
     LessOrEqual,
     IsNull,
     IsNotNull,
+    /// SQL `LIKE` with the user's own `%` / `_` wildcards.
+    Like,
+    /// Case-insensitive `ILIKE`.
+    ILike,
+    /// One of a comma-separated list of values.
+    InList,
+    IsTrue,
+    IsFalse,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
