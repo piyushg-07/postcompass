@@ -157,7 +157,7 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   const systemSchemas = (schemas.data ?? []).filter((s) => s.isSystem);
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col overflow-clip border-r border-border bg-surface">
+    <aside className="flex h-full w-full flex-col overflow-clip border-r border-border bg-surface">
       {/* Like Supabase: table editor, SQL editor, database objects */}
       <div className="flex shrink-0 gap-1 border-b border-border p-2">
         {(["tables", "sql", "database"] as const).map((p) => (
@@ -319,9 +319,6 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
             </div>
           ) : (
             <>
-              <div className="flex h-7 items-center gap-1.5 px-3 text-[11px] font-medium text-fg-subtle">
-                Tables & views <span>{tableList.length}</span>
-              </div>
               {tableList.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-fg-subtle">
                   {query

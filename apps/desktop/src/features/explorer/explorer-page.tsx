@@ -10,6 +10,7 @@ import { CreateTableSheet } from "./create-table-sheet";
 import { DatabaseSwitcher } from "./database-switcher";
 import { ExplorerProvider } from "./explorer-context";
 import { ObjectTree } from "./object-tree";
+import { SidePanel } from "./side-panel";
 import { Workspace } from "./workspace";
 import { useWorkspaceStore } from "./workspace-store";
 
@@ -39,12 +40,13 @@ export function ExplorerPage({
   const queryClient = useQueryClient();
 
   const remote = isRemoteId(serverId)
-    ? state.remoteConnections.find((r) => r.id === rawRemoteId(serverId)) ?? null
+    ? (state.remoteConnections.find((r) => r.id === rawRemoteId(serverId)) ??
+      null)
     : null;
 
   const server = isRemoteId(serverId)
     ? null
-    : state.servers.find((s) => s.id === serverId) ?? null;
+    : (state.servers.find((s) => s.id === serverId) ?? null);
 
   // ── Connection query — opens the session if not already open ────────────────
   const connection = useQuery({
@@ -101,15 +103,18 @@ export function ExplorerPage({
     ? server
       ? `PostgreSQL ${connection.data.serverVersion} · ${server.host}:${server.port}`
       : remote
-      ? `PostgreSQL ${connection.data.serverVersion} · ${remote.host}:${remote.port}`
-      : undefined
+        ? `PostgreSQL ${connection.data.serverVersion} · ${remote.host}:${remote.port}`
+        : undefined
     : undefined;
 
   const error = connection.isError ? describeError(connection.error) : null;
 
   const header = (
     <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-border px-3">
-      <nav aria-label="Location" className="flex min-w-0 items-center gap-1 text-sm">
+      <nav
+        aria-label="Location"
+        className="flex min-w-0 items-center gap-1 text-sm"
+      >
         <span
           className="flex shrink-0 items-center gap-2 px-1 text-fg-muted"
           title={displaySubtitle}
@@ -128,16 +133,27 @@ export function ExplorerPage({
             {schema && (
               <>
                 <ChevronRight className="size-3.5 shrink-0 text-fg-subtle" />
-                <span className="truncate px-1 font-mono text-fg-muted">{schema}</span>
+                <span className="truncate px-1 font-mono text-fg-muted">
+                  {schema}
+                </span>
               </>
             )}
           </>
         )}
-        {connection.isPending && <span className="px-2 text-xs text-fg-subtle">Connecting…</span>}
+        {connection.isPending && (
+          <span className="px-2 text-xs text-fg-subtle">Connecting…</span>
+        )}
       </nav>
       <div className="flex shrink-0 items-center gap-2">
-        {connection.data && server && <ConnectButton server={server} database={database} />}
-        <Button size="sm" variant="ghost" iconLeft={<Unplug />} onClick={() => void disconnect()}>
+        {connection.data && server && (
+          <ConnectButton server={server} database={database} />
+        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          iconLeft={<Unplug />}
+          onClick={() => void disconnect()}
+        >
           Disconnect
         </Button>
       </div>
@@ -146,11 +162,15 @@ export function ExplorerPage({
 
   if (connection.data)
     return (
-      <ExplorerProvider value={{ serverId, connectionId: connection.data.connectionId }}>
+      <ExplorerProvider
+        value={{ serverId, connectionId: connection.data.connectionId }}
+      >
         <div className="flex h-full flex-col overflow-clip">
           {header}
           <div className="flex min-h-0 flex-1 overflow-clip">
-            <ObjectTree defaultDatabase={connection.data.database} />
+            <SidePanel>
+              <ObjectTree defaultDatabase={connection.data.database} />
+            </SidePanel>
             <div className="min-w-0 flex-1">
               <Workspace />
             </div>
@@ -168,11 +188,17 @@ export function ExplorerPage({
           <EmptyState
             icon={<Unplug />}
             title="Couldn't open this database"
-            description={error.hint ? `${error.message}. ${error.hint}` : error.message}
+            description={
+              error.hint ? `${error.message}. ${error.hint}` : error.message
+            }
             actions={
               <>
                 <Button onClick={onClose}>Back</Button>
-                <Button variant="primary" loading={connection.isFetching} onClick={() => void connection.refetch()}>
+                <Button
+                  variant="primary"
+                  loading={connection.isFetching}
+                  onClick={() => void connection.refetch()}
+                >
                   Try again
                 </Button>
               </>
