@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardPaste,
   Columns3,
   Copy,
   Download,
@@ -73,6 +74,7 @@ import { FilterBar } from "./filter-bar";
 import { SortPopover } from "./filter-sort";
 import { type EditTarget, RowSheet } from "./insert-row-sheet";
 import { type UndoEntry, useUndoStore } from "./undo-store";
+import { isTabular, PasteRowsDialog } from "./paste-rows";
 import { RecordPicker, type Reference, ReferencePeek } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
 
@@ -447,6 +449,65 @@ export function TableData({
       toast.error("Couldn't delete", { description: describeError(e).message }),
   });
 
+  /* ── Pasting rows from a spreadsheet ── */
+
+  const [pasteText, setPasteText] = useState<string | null>(null);
+
+  const pasteFromClipboard = async () => {
+    const text = await navigator.clipboard.readText().catch(() => "");
+    if (isTabular(text)) setPasteText(text);
+    else
+      toast.info("Nothing to paste", {
+        description: "Copy some rows from Excel or Google Sheets first.",
+      });
+  };
+
+  const insertRows = useMutation({
+    mutationFn: async (rows: ColumnValue[][]) => {
+      const inserts: RowChange[] = rows.map((values) => ({
+        type: "insert",
+        values,
+      }));
+      const result = await unwrap(
+        commands.applyChanges(connectionId, database, schema, table, inserts),
+      );
+      return { result, inserts };
+    },
+    onSuccess: ({ result, inserts }) => {
+      const message = `Inserted ${result.inserted} row${result.inserted === 1 ? "" : "s"}`;
+      // Undo needs each row's key; it's known only when the paste included it
+      const keys = inserts.map((c) =>
+        c.type === "insert"
+          ? data.keyColumns.map((column) =>
+              c.values.find((v) => v.column === column),
+            )
+          : [],
+      );
+      if (
+        data.keyColumns.length > 0 &&
+        keys.every((k) => k.every((v) => v !== undefined))
+      )
+        remember(
+          {
+            label: message.replace("Inserted", "Paste"),
+            undo: keys.map((key) => ({
+              type: "delete",
+              key: key as ColumnValue[],
+            })),
+            redo: inserts,
+          },
+          message,
+        );
+      else toast.success(message);
+      setPasteText(null);
+      void reload();
+    },
+    onError: (e) =>
+      toast.error("Couldn't insert the pasted rows", {
+        description: describeError(e).message,
+      }),
+  });
+
   const expandRow = (id: string) => {
     const values = originalRows.get(id);
     if (values) setEditRow({ values, key: keyOf(id) });
@@ -528,6 +589,21 @@ export function TableData({
   return (
     <div
       className="flex h-full min-h-0 flex-col"
+      onPaste={(e) => {
+        if (!editable) return;
+        const target = e.target as HTMLElement;
+        if (
+          target.closest(
+            "input, textarea, [contenteditable=true], [role=dialog]",
+          )
+        )
+          return;
+        const text = e.clipboardData.getData("text/plain");
+        if (isTabular(text)) {
+          e.preventDefault();
+          setPasteText(text);
+        }
+      }}
       onKeyDown={(e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
         // Text fields keep their own undo
@@ -617,6 +693,12 @@ export function TableData({
                     title="Insert column"
                     description={`Add a new column to ${table}`}
                     onSelect={() => setInsert("column")}
+                  />
+                  <InsertOption
+                    icon={<ClipboardPaste />}
+                    title="Paste rows"
+                    description="From Excel or Google Sheets (or press Ctrl+V)"
+                    onSelect={() => void pasteFromClipboard()}
                   />
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -853,6 +935,15 @@ export function TableData({
         references={references}
         enums={enums}
         onApplied={rememberRowChange}
+      />
+      <PasteRowsDialog
+        text={pasteText}
+        table={table}
+        columns={data.columns}
+        enums={enums}
+        saving={insertRows.isPending}
+        onCancel={() => setPasteText(null)}
+        onInsert={(rows) => insertRows.mutate(rows)}
       />
       <ConfirmDialog
         open={confirmDelete}
