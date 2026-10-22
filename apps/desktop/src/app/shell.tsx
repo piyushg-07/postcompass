@@ -7,13 +7,21 @@ import {
   PanelLeftOpen,
   Search,
   Settings,
-  Table2,
+  X,
 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, type ReactNode, Suspense, useEffect, useRef } from "react";
 import { BackupDialog, RestoreDialog } from "../features/backup/backup-dialogs";
 import { HomePage } from "../features/home/home-page";
 import { CommandPalette } from "../features/palette/command-palette";
 import { DatabasesPage } from "../features/servers/databases-page";
+import {
+  LocalServerLogo,
+  ProviderLogo,
+} from "../features/servers/provider-logos";
+import type { OpenedConnection } from "../lib/bindings";
+import { commands } from "../lib/ipc";
+import { queryKeys } from "../lib/query";
 import { SettingsPage } from "../features/settings/settings-page";
 import { useAppState } from "./app-state";
 import { ErrorBoundary } from "./error-boundary";
@@ -36,16 +44,62 @@ export function Shell() {
   const { info, state } = useAppState();
   const section = useNavigation((s) => s.section);
   const openServerId = useNavigation((s) => s.openServerId);
+  const openServerIds = useNavigation((s) => s.openServerIds);
   const goTo = useNavigation((s) => s.goTo);
+  const openServer = useNavigation((s) => s.openServer);
   const closeServer = useNavigation((s) => s.closeServer);
   const setPaletteOpen = useNavigation((s) => s.setPaletteOpen);
+  const queryClient = useQueryClient();
 
-  // Resolve the display name of whatever is currently open (local or remote).
-  const openItemName = openServerId
-    ? openServerId.startsWith("remote:")
-      ? (state.remoteConnections.find((r) => r.id === openServerId.replace(/^remote:/, ""))?.name ?? "Remote DB")
-      : (state.servers.find((s) => s.id === openServerId)?.name ?? null)
-    : null;
+  // Connections kept in the sidebar, skipping any that were removed since
+  const openConnections = openServerIds.flatMap<{
+    id: string;
+    name: string;
+    detail: string;
+    provider: string | null;
+  }>((id) => {
+    if (id.startsWith("remote:")) {
+      const remote = state.remoteConnections.find(
+        (r) => r.id === id.replace(/^remote:/, ""),
+      );
+      return remote
+        ? [
+            {
+              id,
+              name: remote.name,
+              detail: remote.database,
+              provider: remote.provider,
+            },
+          ]
+        : [];
+    }
+    const server = state.servers.find((x) => x.id === id);
+    return server
+      ? [
+          {
+            id,
+            name: server.name,
+            detail: `localhost:${server.port}`,
+            provider: null,
+          },
+        ]
+      : [];
+  });
+
+  /** Closes the connection behind a sidebar entry and takes it out of the list. */
+  const disconnect = async (id: string) => {
+    const opened = queryClient.getQueryData<OpenedConnection>(
+      queryKeys.connection(id),
+    );
+    if (opened) {
+      await commands.closeConnection(opened.connectionId);
+      queryClient.removeQueries({
+        queryKey: queryKeys.explorer.all(opened.connectionId),
+      });
+    }
+    queryClient.removeQueries({ queryKey: queryKeys.connection(id) });
+    closeServer(id);
+  };
 
   const collapsed = useUiPrefs((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
@@ -107,8 +161,8 @@ export function Shell() {
           </li>
         </ul>
 
-        {openItemName && (
-          <ul className="flex flex-col gap-0.5 px-2">
+        {openConnections.length > 0 && (
+          <ul className="flex min-h-0 flex-col gap-0.5 overflow-y-auto px-2">
             {collapsed ? (
               <li className="mx-2 my-1 h-px bg-border" aria-hidden />
             ) : (
@@ -116,15 +170,20 @@ export function Shell() {
                 Open now
               </li>
             )}
-            <li>
-              <NavButton
-                active={section === "explorer"}
-                icon={<Table2 />}
-                label={openItemName}
-                collapsed={collapsed}
-                onClick={() => goTo("explorer")}
-              />
-            </li>
+            {openConnections.map((c) => (
+              <li key={c.id}>
+                <ConnectionButton
+                  id={c.id}
+                  name={c.name}
+                  detail={c.detail}
+                  provider={c.provider}
+                  active={section === "explorer" && openServerId === c.id}
+                  collapsed={collapsed}
+                  onOpen={() => openServer(c.id)}
+                  onClose={() => void disconnect(c.id)}
+                />
+              </li>
+            ))}
           </ul>
         )}
 
@@ -198,7 +257,7 @@ export function Shell() {
               <ExplorerPage
                 key={openServerId}
                 serverId={openServerId}
-                onClose={closeServer}
+                onClose={() => closeServer(openServerId)}
               />
             </Suspense>
           ) : (
@@ -215,6 +274,108 @@ export function Shell() {
       <BackupDialog />
       <RestoreDialog />
     </div>
+  );
+}
+
+/**
+ * One open connection in the sidebar: its logo (the PostgreSQL elephant, or the cloud provider's),
+ * a dot while connected, and × on hover to disconnect.
+ */
+function ConnectionButton({
+  id,
+  name,
+  detail,
+  provider,
+  active,
+  collapsed,
+  onOpen,
+  onClose,
+}: {
+  id: string;
+  name: string;
+  detail: string;
+  /** Cloud provider, or null for a local server. */
+  provider: string | null;
+  active: boolean;
+  collapsed: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  // Reads the explorer's cached session without opening one
+  const connection = useQuery<OpenedConnection>({
+    queryKey: queryKeys.connection(id),
+    enabled: false,
+  });
+  const connected = connection.data !== undefined;
+  const logo =
+    provider === null ? (
+      <LocalServerLogo status={connected ? "running" : undefined} />
+    ) : (
+      <span className="relative inline-flex shrink-0">
+        <ProviderLogo provider={provider} className="size-4" />
+        {connected && (
+          <span className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-accent ring-2 ring-surface" />
+        )}
+      </span>
+    );
+
+  const button = (
+    <div
+      className={cn(
+        "group/conn relative flex h-8 w-full items-center rounded-control text-sm transition-colors",
+        active
+          ? "bg-surface-hover text-fg"
+          : "text-fg-muted hover:bg-surface-hover/60 hover:text-fg",
+      )}
+    >
+      {active && (
+        <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />
+      )}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5",
+          collapsed ? "justify-center" : "pl-2.5",
+        )}
+      >
+        {logo}
+        {collapsed ? (
+          <span className="sr-only">{name}</span>
+        ) : (
+          <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
+            <span className="truncate whitespace-nowrap">{name}</span>
+          </span>
+        )}
+      </button>
+      <button
+        type="button"
+        aria-label={`Disconnect ${name}`}
+        onClick={onClose}
+        className={cn(
+          "flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-fg-subtle opacity-0 group-hover/conn:opacity-100 hover:bg-surface-raised hover:text-fg focus-visible:opacity-100",
+          collapsed
+            ? "absolute -top-1 -right-1 size-4 rounded-full border border-border-strong bg-surface-raised"
+            : "mr-1.5",
+        )}
+      >
+        <X className="size-3" />
+      </button>
+    </div>
+  );
+  return (
+    <Tooltip
+      side="right"
+      content={
+        <span className="flex flex-col">
+          <span>{name}</span>
+          <span className="font-mono text-[11px] text-fg-muted">{detail}</span>
+        </span>
+      }
+    >
+      {button}
+    </Tooltip>
   );
 }
 

@@ -1,8 +1,8 @@
 import { Button, EmptyState } from "@repo/ui";
-import { LocalServerLogo } from "../servers/provider-logos";
+import { LocalServerLogo, ProviderLogo } from "../servers/provider-logos";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Cloud, Unplug } from "lucide-react";
+import { ChevronRight, Unplug } from "lucide-react";
 import { useAppState } from "../../app/app-state";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
@@ -111,7 +111,7 @@ export function ExplorerPage({
       >
         <span className="flex shrink-0 items-center gap-2 px-1 text-fg-muted">
           {remote ? (
-            <Cloud className="size-3.5 text-accent" />
+            <ProviderLogo provider={remote.provider} className="size-4" />
           ) : (
             <LocalServerLogo
               status={connection.data ? "running" : "starting"}
