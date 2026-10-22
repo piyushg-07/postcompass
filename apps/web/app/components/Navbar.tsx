@@ -21,7 +21,6 @@ const NAV_ITEMS = [
   { label: "Features", href: "#features" },
   { label: "Compare vs DBeaver", href: "#compare" },
   { label: "How It Works", href: "#how-it-works" },
-  { label: "Download", href: "/download" },
 ];
 
 export default function Navbar() {
@@ -84,7 +83,7 @@ export default function Navbar() {
         <nav className={styles.nav} aria-label="Main navigation">
           {/* Brand Logo */}
           <div className={styles.brandGroup}>
-            <a href="#" className={styles.logo} aria-label={`${PRODUCT.name} home`}>
+            <a href="/" className={styles.logo} aria-label={`${PRODUCT.name} home`}>
               <div className={styles.logoIconWrap}>
                 <Compass size={17} className={styles.logoIcon} />
               </div>

@@ -15,59 +15,59 @@ import {
   Sparkles,
   Play,
   Activity,
-  Cpu,
+  Layers,
   Lock,
 } from "./Icons";
 import styles from "./HowItWorks.module.css";
 
-type WorkflowStepId = "step-1" | "step-2" | "step-3";
-type InstallPlatform = "windows" | "mac" | "linux" | "cargo";
-type CloudProvider = "aws" | "supabase" | "neon" | "local";
+type StepId = "step-1" | "step-2" | "step-3";
+type OsPlatform = "windows" | "mac" | "linux" | "cargo";
+type CloudDb = "aws" | "supabase" | "neon" | "docker";
 
-interface StepData {
-  id: WorkflowStepId;
+interface StepMeta {
+  id: StepId;
   stepNum: string;
   badge: string;
   title: string;
-  summary: string;
+  subtitle: string;
   metric: string;
 }
 
-const STEPS: StepData[] = [
+const WORKFLOW_STEPS: StepMeta[] = [
   {
     id: "step-1",
     stepNum: "01",
-    badge: "10-Second Launch",
-    title: "Download Single Binary",
-    summary: "A pure Rust executable with zero runtime dependencies. No Java JRE, no Python envs, and no daemon bloat.",
-    metric: "14.2 MB · <90ms Cold Boot",
+    badge: "10-Second Setup",
+    title: "Download & Instant Launch",
+    subtitle: "A self-contained 14.2 MB native Rust binary. Zero Java runtime, zero Python dependencies, zero background daemons.",
+    metric: "<90ms Cold Boot",
   },
   {
     id: "step-2",
     stepNum: "02",
-    badge: "Direct TLS 1.3 Socket",
-    title: "Instant Database Handshake",
-    summary: "Direct workstation socket connection to AWS RDS, Supabase, Neon, or Docker. Zero cloud proxy interception.",
-    metric: "Sub-2ms Direct TCP",
+    badge: "Direct TLS 1.3",
+    title: "Connect Any PostgreSQL",
+    subtitle: "Direct TCP socket to AWS RDS, Supabase, Neon, or Docker. 100% private with zero third-party proxy interception.",
+    metric: "<2ms Direct Socket",
   },
   {
     id: "step-3",
     stepNum: "03",
     badge: "Native Velocity",
     title: "Mutate, Query & Chart",
-    summary: "Double-click spreadsheet cell editing with optimistic auto-save, GPU ERD canvas, and visual EXPLAIN tree.",
-    metric: "0.9ms Auto-commit",
+    subtitle: "Spreadsheet-style inline editing with optimistic auto-save in 1.4ms, GPU ERD canvas, and visual EXPLAIN tree.",
+    metric: "1.4ms Auto-commit",
   },
 ];
 
-const INSTALL_COMMANDS: Record<InstallPlatform, { cmd: string; tool: string }> = {
-  windows: { cmd: "winget install postcompass", tool: "Windows Package Manager" },
-  mac: { cmd: "brew install --cask postcompass", tool: "Homebrew Cask" },
-  linux: { cmd: "sudo pacman -S postcompass", tool: "Arch / Snap / AppImage" },
-  cargo: { cmd: "cargo install postcompass-cli", tool: "Rust Crates.io" },
+const INSTALL_OPTIONS: Record<OsPlatform, { label: string; cmd: string; tool: string }> = {
+  windows: { label: "Windows", cmd: "winget install postcompass", tool: "Windows Package Manager" },
+  mac: { label: "macOS", cmd: "brew install --cask postcompass", tool: "Homebrew Cask" },
+  linux: { label: "Linux", cmd: "sudo pacman -S postcompass", tool: "Arch / Snap / AppImage" },
+  cargo: { label: "Cargo", cmd: "cargo install postcompass", tool: "Rust Crates.io" },
 };
 
-const CLOUD_CONFIGS: Record<CloudProvider, { name: string; host: string; ping: string; ssl: string }> = {
+const CLOUD_SERVERS: Record<CloudDb, { name: string; host: string; ping: string; ssl: string }> = {
   aws: {
     name: "AWS Aurora RDS",
     host: "aurora-db.cluster-ro-c3x.us-east-1.rds.amazonaws.com:5432",
@@ -86,24 +86,24 @@ const CLOUD_CONFIGS: Record<CloudProvider, { name: string; host: string; ping: s
     ping: "1.9ms",
     ssl: "TLSv1.3 SSL Connection",
   },
-  local: {
-    name: "Local PostgreSQL 18",
-    host: "localhost:5432 / var/run/postgresql/.s.PGSQL.5432",
+  docker: {
+    name: "Docker / Localhost",
+    host: "localhost:5432 / UNIX domain socket",
     ping: "0.4ms",
-    ssl: "UNIX Socket / Localhost Direct",
+    ssl: "Local Direct Socket Connection",
   },
 };
 
 export default function HowItWorks() {
-  const [activeStep, setActiveStep] = useState<WorkflowStepId>("step-1");
-  const [platform, setPlatform] = useState<InstallPlatform>("windows");
-  const [cloudProvider, setCloudProvider] = useState<CloudProvider>("aws");
+  const [activeStep, setActiveStep] = useState<StepId>("step-1");
+  const [os, setOs] = useState<OsPlatform>("windows");
+  const [cloud, setCloud] = useState<CloudDb>("aws");
   const [copied, setCopied] = useState(false);
 
-  // Step 3 interactive mutation state
-  const [demoValue, setDemoValue] = useState("Enterprise Tier");
-  const [isMutating, setIsMutating] = useState(false);
-  const [savedToast, setSavedToast] = useState(false);
+  // Step 3 live simulation
+  const [editedPlan, setEditedPlan] = useState("Enterprise Tier");
+  const [isCommitting, setIsCommitting] = useState(false);
+  const [commitToast, setCommitToast] = useState(false);
 
   const handleCopyCmd = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -112,13 +112,13 @@ export default function HowItWorks() {
     });
   };
 
-  const handleSimulateMutation = () => {
-    setIsMutating(true);
+  const handleCommitSimulation = () => {
+    setIsCommitting(true);
     setTimeout(() => {
-      setIsMutating(false);
-      setSavedToast(true);
-      setTimeout(() => setSavedToast(false), 3000);
-    }, 250);
+      setIsCommitting(false);
+      setCommitToast(true);
+      setTimeout(() => setCommitToast(false), 2800);
+    }, 220);
   };
 
   return (
@@ -126,128 +126,133 @@ export default function HowItWorks() {
       <div className="container">
         {/* Section Header */}
         <div className="section-header">
-          <span className="section-badge">Fast Workflow</span>
+          <span className="section-badge">Workflow Velocity</span>
           <h2 className="section-title">From install to insight in minutes</h2>
           <p className="section-description">
-            PostCompass removes all setup friction. Three seamless steps from download to live SQL analysis with zero configuration rituals.
+            Three straightforward steps from download to live SQL analysis. Zero configuration ceremony, zero background services.
           </p>
         </div>
 
-        {/* Interactive 3-Stage Pipeline Bento Station */}
-        <div className={styles.pipelineContainer}>
-          {/* Left Column: Interactive Step Selector Cards */}
-          <div className={styles.stepsRail}>
-            {STEPS.map((step) => {
+        {/* Crazy Interactive Workflow Engine Cockpit */}
+        <div className={styles.engineContainer}>
+          {/* Top Step Selector Track */}
+          <div className={styles.stepTrack}>
+            {WORKFLOW_STEPS.map((step) => {
               const isActive = activeStep === step.id;
               return (
                 <button
                   key={step.id}
                   type="button"
                   onClick={() => setActiveStep(step.id)}
-                  className={`${styles.stepCard} ${isActive ? styles.stepCardActive : ""}`}
+                  className={`${styles.trackCard} ${isActive ? styles.trackCardActive : ""}`}
                 >
-                  <div className={styles.stepCardHeader}>
-                    <div className={styles.stepBadgeGroup}>
-                      <span className={styles.stepNum}>{step.stepNum}</span>
-                      <span className={styles.stepBadge}>{step.badge}</span>
-                    </div>
-                    {isActive && (
-                      <span className={styles.activePulse}>
-                        <span className={styles.activePulseDot} />
-                        Active Station
-                      </span>
-                    )}
+                  <div className={styles.trackCardTop}>
+                    <span className={styles.trackStepNum}>{step.stepNum}</span>
+                    <span className={styles.trackBadge}>{step.badge}</span>
                   </div>
 
-                  <h3 className={styles.stepTitle}>{step.title}</h3>
-                  <p className={styles.stepSummary}>{step.summary}</p>
+                  <h3 className={styles.trackTitle}>{step.title}</h3>
+                  <p className={styles.trackSubtitle}>{step.subtitle}</p>
 
-                  <div className={styles.stepFooter}>
-                    <span className={styles.stepMetric}>
+                  <div className={styles.trackFooter}>
+                    <span className={styles.trackMetric}>
                       <Zap size={11} style={{ color: "var(--accent)" }} />
                       {step.metric}
                     </span>
-                    <span className={styles.cardArrow}>→</span>
+                    <span className={styles.trackIndicator}>
+                      {isActive ? "● Active" : "Click to View"}
+                    </span>
                   </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Right Column: Dynamic Live Preview Sandbox Stage */}
-          <div className={styles.sandboxStage}>
-            {/* Top Stage Header */}
-            <div className={styles.sandboxTopBar}>
-              <div className={styles.sandboxDots}>
-                <span className={styles.sDot} data-color="red" />
-                <span className={styles.sDot} data-color="yellow" />
-                <span className={styles.sDot} data-color="green" />
+          {/* Interactive Simulation Cockpit Stage */}
+          <div className={styles.cockpitStage}>
+            {/* Cockpit Window Header */}
+            <div className={styles.cockpitHeader}>
+              <div className={styles.cockpitDots}>
+                <span className={styles.cDot} data-color="red" />
+                <span className={styles.cDot} data-color="yellow" />
+                <span className={styles.cDot} data-color="green" />
               </div>
-              <div className={styles.sandboxTitle}>
-                <Sparkles size={12} style={{ color: "var(--accent)" }} />
+              <div className={styles.cockpitTitle}>
+                <Sparkles size={13} style={{ color: "var(--accent)" }} />
                 <span>
                   {activeStep === "step-1"
-                    ? "Interactive CLI & Binary Installer"
+                    ? "Interactive CLI & Binary Spawn Engine"
                     : activeStep === "step-2"
-                    ? "Live Multi-Cloud TCP Handshake Simulator"
-                    : "Instant Mutation & Visual EXPLAIN Engine"}
+                    ? "Direct TCP Multi-Cloud Socket Handshake"
+                    : "Instant In-Memory Mutation & Auto-Save Sandbox"}
                 </span>
               </div>
-              <div className={styles.sandboxStatus}>
-                <span className={styles.sandboxLiveDot} />
+              <div className={styles.cockpitLiveTag}>
+                <span className={styles.livePulseDot} />
                 <span>Live Interactive</span>
               </div>
             </div>
 
-            {/* Stage Body */}
-            <div className={styles.sandboxBody}>
-              {/* STAGE 1: CLI & Binary Installer */}
+            {/* Cockpit Body */}
+            <div className={styles.cockpitBody}>
+              {/* STAGE 1: CLI & Binary Spawn */}
               {activeStep === "step-1" && (
-                <div className={styles.stageContent}>
-                  <div className={styles.platformTabs}>
-                    {(["windows", "mac", "linux", "cargo"] as InstallPlatform[]).map((p) => (
+                <div className={styles.stagePanel}>
+                  {/* OS Switcher */}
+                  <div className={styles.osTabRow}>
+                    {(["windows", "mac", "linux", "cargo"] as OsPlatform[]).map((p) => (
                       <button
                         key={p}
                         type="button"
-                        onClick={() => setPlatform(p)}
-                        className={`${styles.platformTab} ${platform === p ? styles.platformTabActive : ""}`}
+                        onClick={() => setOs(p)}
+                        className={`${styles.osTabBtn} ${os === p ? styles.osTabBtnActive : ""}`}
                       >
-                        <span>{p === "windows" ? "Windows" : p === "mac" ? "macOS" : p === "linux" ? "Linux" : "Cargo"}</span>
+                        <span>{INSTALL_OPTIONS[p].label}</span>
                       </button>
                     ))}
                   </div>
 
-                  <div className={styles.terminalBox}>
-                    <div className={styles.terminalHeader}>
-                      <span>bash / powershell</span>
-                      <span className={styles.installerMeta}>{INSTALL_COMMANDS[platform].tool}</span>
+                  {/* Terminal Box */}
+                  <div className={styles.terminalContainer}>
+                    <div className={styles.terminalBar}>
+                      <span>terminal ({INSTALL_OPTIONS[os].tool})</span>
+                      <span className={styles.termLatency}>Spawn Time: 84ms</span>
                     </div>
-                    <div className={styles.terminalContent}>
-                      <div className={styles.terminalLine}>
+                    <div className={styles.terminalCodeArea}>
+                      <div className={styles.termCommandLine}>
                         <span className={styles.termPrompt}>$</span>
-                        <span className={styles.termCmd}>{INSTALL_COMMANDS[platform].cmd}</span>
+                        <code className={styles.termCode}>{INSTALL_OPTIONS[os].cmd}</code>
                       </div>
-                      <div className={styles.terminalLog}>
-                        <span className={styles.termMuted}>Downloading PostCompass-v0.1.0-x64...</span>
-                        <div className={styles.termProgressBar}>
-                          <div className={styles.termProgressFill} />
+                      <div className={styles.termLogList}>
+                        <div className={styles.termLogMuted}>
+                          <span>[1/3] Downloading single native executable (14.2 MB)...</span>
+                          <div className={styles.termFillBar}>
+                            <div className={styles.termFillProgress} />
+                          </div>
                         </div>
-                        <span className={styles.termSuccess}>[✓] Package verified: SHA-256 e8f3a9b1c0 (14.2 MB)</span>
-                        <span className={styles.termSuccess}>[✓] Desktop studio spawned in 84ms. Zero JRE required.</span>
+                        <div className={styles.termLogSuccess}>
+                          <Check size={12} />
+                          <span>[2/3] Verified cryptographic checksum: SHA-256 e8f3a9b1c0</span>
+                        </div>
+                        <div className={styles.termLogSuccess}>
+                          <Check size={12} />
+                          <span>[3/3] Native desktop process launched in 84ms · Zero JRE required</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className={styles.stageActionRow}>
+                  {/* Actions */}
+                  <div className={styles.terminalActionRow}>
                     <button
                       type="button"
-                      onClick={() => handleCopyCmd(INSTALL_COMMANDS[platform].cmd)}
-                      className={styles.copyCmdBtn}
+                      onClick={() => handleCopyCmd(INSTALL_OPTIONS[os].cmd)}
+                      className={styles.copyCommandBtn}
                     >
                       {copied ? (
                         <>
                           <Check size={13} style={{ color: "#34d399" }} />
-                          <span>Copied to Clipboard!</span>
+                          <span>Command Copied!</span>
                         </>
                       ) : (
                         <>
@@ -256,7 +261,7 @@ export default function HowItWorks() {
                         </>
                       )}
                     </button>
-                    <a href="/download" className={styles.directDlLink}>
+                    <a href="/download" className={styles.installerLink}>
                       <Download size={13} />
                       <span>Or download installer file (.exe / .dmg / .deb)</span>
                     </a>
@@ -264,144 +269,149 @@ export default function HowItWorks() {
                 </div>
               )}
 
-              {/* STAGE 2: Multi-Cloud Handshake Tester */}
+              {/* STAGE 2: Multi-Cloud Direct Socket Handshake */}
               {activeStep === "step-2" && (
-                <div className={styles.stageContent}>
-                  <div className={styles.cloudSelectorRow}>
-                    {(["aws", "supabase", "neon", "local"] as CloudProvider[]).map((cp) => (
+                <div className={styles.stagePanel}>
+                  {/* Cloud Provider Tabs */}
+                  <div className={styles.cloudTabsRow}>
+                    {(["aws", "supabase", "neon", "docker"] as CloudDb[]).map((c) => (
                       <button
-                        key={cp}
+                        key={c}
                         type="button"
-                        onClick={() => setCloudProvider(cp)}
-                        className={`${styles.cloudBtn} ${cloudProvider === cp ? styles.cloudBtnActive : ""}`}
+                        onClick={() => setCloud(c)}
+                        className={`${styles.cloudTabBtn} ${cloud === c ? styles.cloudTabBtnActive : ""}`}
                       >
                         <Server size={12} />
-                        <span>{CLOUD_CONFIGS[cp].name}</span>
+                        <span>{CLOUD_SERVERS[c].name}</span>
                       </button>
                     ))}
                   </div>
 
-                  <div className={styles.connectionCard}>
-                    <div className={styles.connectionCardHeader}>
-                      <div className={styles.connTargetInfo}>
-                        <span className={styles.connDbIcon}>🐘</span>
+                  {/* Live Socket Card */}
+                  <div className={styles.cloudSocketCard}>
+                    <div className={styles.cloudSocketTop}>
+                      <div className={styles.cloudInfoGroup}>
+                        <span className={styles.cloudElephant}>🐘</span>
                         <div>
-                          <div className={styles.connDbTitle}>{CLOUD_CONFIGS[cloudProvider].name}</div>
-                          <code className={styles.connHostText}>{CLOUD_CONFIGS[cloudProvider].host}</code>
+                          <div className={styles.cloudProviderTitle}>{CLOUD_SERVERS[cloud].name}</div>
+                          <code className={styles.cloudHostCode}>{CLOUD_SERVERS[cloud].host}</code>
                         </div>
                       </div>
-                      <div className={styles.connPingBadge}>
-                        <Zap size={11} style={{ color: "var(--accent)" }} />
-                        <span>{CLOUD_CONFIGS[cloudProvider].ping} direct</span>
+                      <div className={styles.cloudPingPill}>
+                        <Zap size={12} style={{ color: "var(--accent)" }} />
+                        <span>{CLOUD_SERVERS[cloud].ping} Direct Socket</span>
                       </div>
                     </div>
 
-                    <div className={styles.socketMetricsGrid}>
-                      <div className={styles.socketMetric}>
-                        <span className={styles.sMetricLabel}>Transport Layer:</span>
-                        <span className={styles.sMetricValGood}>Direct Workstation TCP Socket</span>
+                    <div className={styles.cloudSpecsGrid}>
+                      <div className={styles.specBox}>
+                        <span className={styles.specLabel}>SOCKET PROTOCOL</span>
+                        <span className={styles.specValueGood}>Direct Client-to-DB TCP</span>
                       </div>
-                      <div className={styles.socketMetric}>
-                        <span className={styles.sMetricLabel}>Encryption:</span>
-                        <span className={styles.sMetricValGood}>{CLOUD_CONFIGS[cloudProvider].ssl}</span>
+                      <div className={styles.specBox}>
+                        <span className={styles.specLabel}>ENCRYPTION</span>
+                        <span className={styles.specValueGood}>{CLOUD_SERVERS[cloud].ssl}</span>
                       </div>
-                      <div className={styles.socketMetric}>
-                        <span className={styles.sMetricLabel}>Third-Party Proxy:</span>
-                        <span className={styles.sMetricValHighlight}>ZERO (100% Client-Side Privacy)</span>
+                      <div className={styles.specBox}>
+                        <span className={styles.specLabel}>THIRD-PARTY CLOUD PROXY</span>
+                        <span className={styles.specValueEmerald}>ZERO (100% Workstation Privacy)</span>
                       </div>
-                      <div className={styles.socketMetric}>
-                        <span className={styles.sMetricLabel}>Authentication:</span>
-                        <span className={styles.sMetricValGood}>SCRAM-SHA-256 / MD5 Passphrase</span>
+                      <div className={styles.specBox}>
+                        <span className={styles.specLabel}>AUTHENTICATION</span>
+                        <span className={styles.specValueGood}>SCRAM-SHA-256 / SSL Passphrase</span>
                       </div>
                     </div>
 
-                    <div className={styles.handshakeVisual}>
-                      <div className={styles.nodeBox}>
+                    <div className={styles.socketVisualLine}>
+                      <div className={styles.visualNode}>
                         <span className={styles.nodeIcon}>💻</span>
                         <span>Your Workstation</span>
                       </div>
-                      <div className={styles.handshakeLine}>
-                        <span className={styles.handshakeBadge}>
+                      <div className={styles.visualConnection}>
+                        <span className={styles.visualBeamBadge}>
                           <Lock size={10} />
-                          TLS 1.3 Encrypted Socket
+                          Direct TLS 1.3 Socket ({CLOUD_SERVERS[cloud].ping})
                         </span>
                       </div>
-                      <div className={styles.nodeBox}>
+                      <div className={styles.visualNode}>
                         <span className={styles.nodeIcon}>☁️</span>
-                        <span>{CLOUD_CONFIGS[cloudProvider].name}</span>
+                        <span>{CLOUD_SERVERS[cloud].name}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* STAGE 3: Instant Mutation & Visual Engine */}
+              {/* STAGE 3: Instant Mutation & Auto-Save Sandbox */}
               {activeStep === "step-3" && (
-                <div className={styles.stageContent}>
-                  <div className={styles.mutationSandboxCard}>
-                    <div className={styles.mutationCardTop}>
-                      <span className={styles.mutationTitle}>
+                <div className={styles.stagePanel}>
+                  <div className={styles.sandboxMutationBox}>
+                    <div className={styles.sandboxMutationTop}>
+                      <span className={styles.mutationHeaderTitle}>
                         <Table size={13} style={{ color: "var(--accent)" }} />
-                        <span>Live Database Mutation Simulator</span>
+                        <span>Live Database Cell Auto-Save Tester</span>
                       </span>
-                      {savedToast && (
-                        <span className={styles.toastAutoSaved}>
+                      {commitToast && (
+                        <span className={styles.mutationAutoToast}>
                           <Check size={12} />
-                          Auto-saved to PostgreSQL in 0.9ms!
+                          Auto-committed to PostgreSQL in 1.4ms!
                         </span>
                       )}
                     </div>
 
-                    <div className={styles.interactiveRowEdit}>
-                      <div className={styles.rowItemLabel}>Record #1 · customers.tier:</div>
-                      <div className={styles.inputButtonRow}>
+                    <div className={styles.mutationInputGroup}>
+                      <span className={styles.mutationFieldPrompt}>
+                        Record #1 · customers.subscription_tier:
+                      </span>
+                      <div className={styles.mutationInputRow}>
                         <input
                           type="text"
-                          value={demoValue}
-                          onChange={(e) => setDemoValue(e.target.value)}
-                          className={styles.simInput}
+                          value={editedPlan}
+                          onChange={(e) => setEditedPlan(e.target.value)}
+                          className={styles.mutationFieldInput}
+                          placeholder="Type any value..."
                         />
                         <button
                           type="button"
-                          onClick={handleSimulateMutation}
-                          disabled={isMutating}
-                          className={styles.simSaveBtn}
+                          onClick={handleCommitSimulation}
+                          disabled={isCommitting}
+                          className={styles.mutationCommitBtn}
                         >
                           <Play size={11} />
-                          <span>{isMutating ? "Writing..." : "Save Mutation"}</span>
+                          <span>{isCommitting ? "Writing..." : "Commit Mutation"}</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Miniature live query terminal */}
-                    <div className={styles.miniLogBox}>
-                      <div className={styles.logLine}>
-                        <span className={styles.logKeyword}>UPDATE</span> public.customers{" "}
-                        <span className={styles.logKeyword}>SET</span> tier ={" "}
-                        <span className={styles.logString}>&apos;{demoValue}&apos;</span>{" "}
-                        <span className={styles.logKeyword}>WHERE</span> id = 1;
+                    {/* Query Execution Trace */}
+                    <div className={styles.mutationQueryTrace}>
+                      <div className={styles.queryCodeLine}>
+                        <span className={styles.sqlKw}>UPDATE</span> public.customers{" "}
+                        <span className={styles.sqlKw}>SET</span> subscription_tier ={" "}
+                        <span className={styles.sqlStr}>&apos;{editedPlan}&apos;</span>{" "}
+                        <span className={styles.sqlKw}>WHERE</span> id = 1;
                       </div>
-                      <div className={styles.logMeta}>
-                        <span>Query Status: COMMIT SUCCESS</span>
-                        <span className={styles.logSpeed}>
+                      <div className={styles.queryTraceMeta}>
+                        <span>Status: TRANSACTION COMMITTED</span>
+                        <span className={styles.queryTiming}>
                           <Zap size={11} />
-                          Round-trip TCP: <strong>0.9ms</strong>
+                          Round-trip TCP: <strong>1.4ms</strong>
                         </span>
                       </div>
                     </div>
 
-                    {/* Capabilities bullets */}
-                    <div className={styles.stage3Pills}>
-                      <span className={styles.stage3Pill}>
-                        <Check size={12} style={{ color: "var(--accent)" }} />
+                    {/* Capability Points */}
+                    <div className={styles.sandboxPillsRow}>
+                      <span className={styles.sandboxPill}>
+                        <Check size={11} style={{ color: "var(--accent)" }} />
                         Optimistic instant UI update
                       </span>
-                      <span className={styles.stage3Pill}>
-                        <Check size={12} style={{ color: "var(--accent)" }} />
+                      <span className={styles.sandboxPill}>
+                        <Check size={11} style={{ color: "var(--accent)" }} />
                         Rollback on network exception
                       </span>
-                      <span className={styles.stage3Pill}>
-                        <Check size={12} style={{ color: "var(--accent)" }} />
+                      <span className={styles.sandboxPill}>
+                        <Check size={11} style={{ color: "var(--accent)" }} />
                         Zero confirmation popups
                       </span>
                     </div>
@@ -410,11 +420,20 @@ export default function HowItWorks() {
               )}
             </div>
 
-            {/* Sandbox Bottom Bar */}
-            <div className={styles.sandboxBottomBar}>
-              <div className={styles.sandboxBottomLeft}>
+            {/* Cockpit Bottom Navigation Bar */}
+            <div className={styles.cockpitFooter}>
+              <div className={styles.cockpitFooterLeft}>
                 <Activity size={12} style={{ color: "var(--accent)" }} />
-                <span>Next Station: <strong>{activeStep === "step-1" ? "Step 02 / Direct Socket" : activeStep === "step-2" ? "Step 03 / Native Velocity" : "Download & Get Started"}</strong></span>
+                <span>
+                  Next Step:{" "}
+                  <strong>
+                    {activeStep === "step-1"
+                      ? "Step 02 / Direct TLS 1.3 Socket"
+                      : activeStep === "step-2"
+                      ? "Step 03 / Native Velocity"
+                      : "Step 01 / Download & Launch"}
+                  </strong>
+                </span>
               </div>
               <button
                 type="button"
@@ -423,7 +442,7 @@ export default function HowItWorks() {
                   else if (activeStep === "step-2") setActiveStep("step-3");
                   else setActiveStep("step-1");
                 }}
-                className={styles.nextStageBtn}
+                className={styles.nextStepBtn}
               >
                 <span>{activeStep === "step-3" ? "Restart Tour" : "Next Station"}</span>
                 <ArrowRight size={12} />

@@ -1,141 +1,126 @@
 "use client";
 
-import { useState } from "react";
 import {
-  FEATURES,
-  FEATURE_CATEGORIES,
-  type FeatureCategory,
-  type Feature,
-} from "../config/product";
-import {
-  Table,
-  Columns,
-  Code,
-  FileJson,
-  Filter,
-  Eye,
-  Upload,
-  Settings,
-  Check,
-  Layers,
   Globe,
-  Database,
-  ArrowRightLeft,
-  Sparkles,
+  Table,
+  Filter,
+  Columns,
+  Activity,
+  Upload,
+  Check,
 } from "./Icons";
 import styles from "./FeaturesSection.module.css";
 
-const categoryIcons: Record<FeatureCategory, React.FC<{ size?: number }>> = {
-  "cloud-connections": Globe,
-  "data-editing": Table,
-  "schema-management": Columns,
-  "query-tools": Code,
-  "data-types": FileJson,
-  navigation: Filter,
-  visualization: Eye,
-  "import-export": Upload,
-  advanced: Settings,
-};
+interface BentoBox {
+  id: string;
+  icon: React.FC<{ size?: number; className?: string }>;
+  title: string;
+  category: string;
+  description: string;
+  size: "wide" | "normal";
+  tags?: string[];
+  visualBadge?: string;
+}
 
-const categoryOrder: FeatureCategory[] = [
-  "cloud-connections",
-  "data-editing",
-  "schema-management",
-  "query-tools",
-  "navigation",
-  "visualization",
-  "data-types",
-  "import-export",
-  "advanced",
+const BENTO_BOXES: BentoBox[] = [
+  // Layer 1
+  {
+    id: "multi-cloud",
+    icon: Globe,
+    title: "Direct Multi-Cloud Connection",
+    category: "Connectivity",
+    description:
+      "Connect directly from your local workstation to AWS RDS, Aurora, Supabase, Neon, Google Cloud SQL, and Docker VPS in <2ms with zero third-party proxy.",
+    size: "wide",
+    tags: ["AWS RDS & Aurora", "Supabase", "Neon Serverless", "Docker / VPS"],
+    visualBadge: "Zero Cloud Proxy",
+  },
+  {
+    id: "data-editing",
+    icon: Table,
+    title: "Spreadsheet Data Editor",
+    category: "Data Mutation",
+    description:
+      "Click any cell to edit records like Excel. Auto-save mutations to PostgreSQL in 1.4ms with zero modal confirmation popups.",
+    size: "normal",
+    visualBadge: "Auto-Save in 1.4ms",
+  },
+  // Layer 2
+  {
+    id: "filter-sort",
+    icon: Filter,
+    title: "Multi-Column Filter & Sort",
+    category: "Navigation",
+    description:
+      "Build complex WHERE clauses visually with type-aware operators, regex matching, and instant multi-column sorting on live tables.",
+    size: "normal",
+    visualBadge: "Visual SQL Builder",
+  },
+  {
+    id: "schema-ddl",
+    icon: Columns,
+    title: "Schema Management & DDL",
+    category: "Database Design",
+    description:
+      "Create, alter, and drop tables, foreign key constraints, and indexes with real-time SQL preview before committing changes.",
+    size: "wide",
+    tags: ["Visual DDL Builder", "Live SQL Preview", "Constraint Checks"],
+    visualBadge: "Live SQL Preview",
+  },
+  // Layer 3
+  {
+    id: "explain-analyze",
+    icon: Activity,
+    title: "Visual EXPLAIN ANALYZE",
+    category: "Diagnostics",
+    description:
+      "Inspect execution plans as visual interactive trees. Automatically highlight expensive sequential scans, node costs, and timing bottlenecks.",
+    size: "normal",
+    visualBadge: "Execution Tree",
+  },
+  {
+    id: "import-export",
+    icon: Upload,
+    title: "High-Speed Import & Export",
+    category: "Data Transfer",
+    description:
+      "Stream millions of rows utilizing the native PostgreSQL binary COPY protocol. Export to CSV, JSON, and raw SQL dumps in seconds.",
+    size: "wide",
+    tags: ["PostgreSQL COPY Protocol", "CSV & JSON", "SQL Dumps"],
+    visualBadge: "Fast Streaming",
+  },
 ];
 
 export default function FeaturesSection() {
-  const [activeCategory, setActiveCategory] =
-    useState<FeatureCategory>("cloud-connections");
-
-  const featuresInCategory = FEATURES.filter(
-    (f) => f.category === activeCategory
-  );
-
-  const catMeta = FEATURE_CATEGORIES[activeCategory];
-
   return (
     <section className="section" id="features">
       <div className="container">
         {/* Section Header */}
         <div className="section-header">
-          <span className="section-badge">Features</span>
+          <span className="section-badge">Capabilities</span>
           <h2 className="section-title">
             Everything you need to manage PostgreSQL
           </h2>
-
+          <p className="section-description">
+            Six essential tools organized into three seamless layers. Designed for speed, clarity, and zero developer friction.
+          </p>
         </div>
 
-        {/* Category Tabs */}
-        <div className={styles.categories} role="tablist">
-          {categoryOrder.map((cat) => {
-            const Icon = categoryIcons[cat];
-            const meta = FEATURE_CATEGORIES[cat];
-            return (
-              <button
-                key={cat}
-                className={`${styles.categoryTab} ${activeCategory === cat ? styles.active : ""
-                  }`}
-                onClick={() => setActiveCategory(cat)}
-                role="tab"
-                aria-selected={activeCategory === cat}
-              >
-                <Icon size={16} />
-                <span>{meta.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* 3-Layer Bento Grid */}
+        <div className={styles.layersContainer}>
+          {/* Layer 1 */}
+          <div className={styles.layerRow}>
+            {BENTO_BOXES.slice(0, 2).map((box) => renderBox(box))}
+          </div>
 
-        {/* Category Description Banner */}
-        <div className={styles.categoryHeader}>
-          <h3 className={styles.categoryTitle}>{catMeta.label}</h3>
-          <p className={styles.categoryDesc}>{catMeta.description}</p>
-        </div>
+          {/* Layer 2 */}
+          <div className={styles.layerRow}>
+            {BENTO_BOXES.slice(2, 4).map((box) => renderBox(box))}
+          </div>
 
-        {/* 
-          Feature Cards Grid:
-          When a category contains 2 features, they render in a balanced 2-column layout.
-          Neither card spans full width, eliminating asymmetric empty spaces.
-        */}
-        <div
-          className={`${styles.featureGrid} ${featuresInCategory.length === 2 ? styles.balancedGrid : ""
-            }`}
-        >
-          {featuresInCategory.map((feature, index) => {
-            // Only span full width if there is a single card or an odd 3+ layout
-            const isFeatured =
-              featuresInCategory.length === 1 ||
-              (featuresInCategory.length >= 3 && index === 0);
-
-            return (
-              <FeatureCard
-                key={feature.id}
-                feature={feature}
-                featured={isFeatured}
-              />
-            );
-          })}
-        </div>
-
-        {/* Compact All-Features Summary Pills */}
-        <div className={styles.allFeatures}>
-          <h3 className={styles.allFeaturesTitle}>
-            <Layers size={18} />
-            All {FEATURES.length} features at a glance
-          </h3>
-          <div className={styles.featurePills}>
-            {FEATURES.map((f) => (
-              <span key={f.id} className={styles.featurePill}>
-                <Check size={12} />
-                {f.title}
-              </span>
-            ))}
+          {/* Layer 3 */}
+          <div className={styles.layerRow}>
+            {BENTO_BOXES.slice(4, 6).map((box) => renderBox(box))}
           </div>
         </div>
       </div>
@@ -143,216 +128,45 @@ export default function FeaturesSection() {
   );
 }
 
-/**
- * FeatureCard Component:
- * Displays individual features with tier badge, title, description,
- * rich contextual UI preview widgets (e.g. Visual Filter Builder & Smart Pagination),
- * and detail bullet lists.
- */
-function FeatureCard({
-  feature,
-  featured,
-}: {
-  feature: Feature;
-  featured: boolean;
-}) {
-  const tierLabels: Record<1 | 2 | 3, string> = {
-    1: "Core",
-    2: "Power",
-    3: "Premium",
-  };
+function renderBox(box: BentoBox) {
+  const Icon = box.icon;
+  const isWide = box.size === "wide";
 
   return (
-    <article
-      className={`${styles.featureCard} ${featured ? styles.featured : ""}`}
+    <div
+      key={box.id}
+      className={`${styles.bentoBox} ${isWide ? styles.boxWide : styles.boxNormal}`}
     >
-      <div className={styles.featureContent}>
-        {/* Top Header with Tier Badge */}
-        <div className={styles.featureTop}>
-          <span className={styles.tierBadge} data-tier={feature.tier}>
-            {tierLabels[feature.tier]}
-          </span>
-          <span className={styles.featureCategoryTag}>PostgreSQL Native</span>
+      {/* Tech grid texture pattern */}
+      <div className={styles.cardGridPattern} />
+
+      <div className={styles.cardContent}>
+        {/* Top Bar with Icon and Category Tag */}
+        <div className={styles.cardTopBar}>
+          <div className={styles.iconCircle}>
+            <Icon size={17} className={styles.cardIcon} />
+          </div>
+          {box.visualBadge && (
+            <span className={styles.badgePill}>{box.visualBadge}</span>
+          )}
         </div>
 
-        <h4 className={styles.featureTitle}>{feature.title}</h4>
-        <p className={styles.featureDesc}>{feature.description}</p>
+        <div className={styles.categoryLabel}>{box.category}</div>
+        <h3 className={styles.cardTitle}>{box.title}</h3>
+        <p className={styles.cardDesc}>{box.description}</p>
 
-        {/* ========================================================
-            Contextual Visual Mockup Previews:
-            Brings the features to life with realistic GUI controls
-            ======================================================== */}
-
-        {/* Preview: Multi-Cloud Direct Connection */}
-        {feature.id === "multi-cloud-direct" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Supported Database Providers</span>
-              <span className={styles.widgetBadge}>Zero Proxy</span>
-            </div>
-
-            <div className={styles.cloudProviderBadges}>
-              <span className={styles.cloudBadge}>AWS RDS &amp; Aurora</span>
-              <span className={styles.cloudBadge}>Supabase</span>
-              <span className={styles.cloudBadge}>Neon Serverless</span>
-              <span className={styles.cloudBadge}>Google Cloud SQL</span>
-              <span className={styles.cloudBadge}>Docker / VPS</span>
-            </div>
-
-            <div className={styles.cloudFooterInfo}>
-              <span>⚡ Direct TCP/SSL Socket</span>
-              <span style={{ color: "#34d399" }}>&lt;2ms Latency</span>
-              <span>🔒 100% Private</span>
-            </div>
+        {/* Optional Tags for Wide Cards */}
+        {box.tags && box.tags.length > 0 && (
+          <div className={styles.tagsRow}>
+            {box.tags.map((t) => (
+              <span key={t} className={styles.tagItem}>
+                <Check size={11} style={{ color: "var(--accent)" }} />
+                <span>{t}</span>
+              </span>
+            ))}
           </div>
         )}
-
-        {/* Preview: Replica & Branch Routing */}
-        {feature.id === "cloud-replica-failover" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Active Cluster Routing</span>
-              <span className={styles.widgetBadge}>High Availability</span>
-            </div>
-
-            <div className={styles.cloudProviderBadges}>
-              <span className={`${styles.cloudBadge} ${styles.cloudBadgeActive}`}>
-                ● Primary (us-east-1)
-              </span>
-              <span className={styles.cloudBadge}>
-                Replica 1 (us-west-2 · 1.8ms)
-              </span>
-              <span className={styles.cloudBadge}>
-                Neon Branch: main
-              </span>
-            </div>
-
-            <div className={styles.cloudFooterInfo}>
-              <span>✓ Auto-Failover Discovery</span>
-              <span>Lock Timeout: 2000ms</span>
-            </div>
-          </div>
-        )}
-
-        {/* Preview: Visual Filter Builder */}
-        {feature.id === "filtering-sorting" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Active Filter Conditions</span>
-              <span className={styles.widgetBadge}>Real-time AST</span>
-            </div>
-
-            <div className={styles.filterRulesList}>
-              {/* Filter Chip 1 */}
-              <div className={styles.filterChip}>
-                <span className={styles.filterField}>status</span>
-                <span className={styles.filterOp}>=</span>
-                <span className={styles.filterValue}>&apos;ACTIVE&apos;</span>
-                <span className={styles.filterDismiss}>✕</span>
-              </div>
-
-              {/* Filter Chip 2 */}
-              <div className={styles.filterChip}>
-                <span className={styles.filterField}>latency</span>
-                <span className={styles.filterOp}>&lt;</span>
-                <span className={styles.filterValue}>3.0ms</span>
-                <span className={styles.filterDismiss}>✕</span>
-              </div>
-
-              <button type="button" className={styles.addFilterBtn}>
-                + Add Condition
-              </button>
-            </div>
-
-            <div className={styles.filterFooter}>
-              <span className={styles.filterSortTag}>
-                Sort: <strong>created_at</strong> <span style={{ color: "#10b981" }}>DESC ↓</span>
-              </span>
-              <span className={styles.filterMatchCount}>
-                ✓ <strong>142</strong> / 1,500 rows match
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Preview: Smart Pagination */}
-        {feature.id === "pagination" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Cursor Pagination Bar</span>
-              <span className={styles.widgetBadge}>Sub-ms Scan</span>
-            </div>
-
-            <div className={styles.paginationPreviewRow}>
-              <div className={styles.paginationStats}>
-                Showing <strong>1 – 50</strong> of <strong>2,845</strong> rows
-              </div>
-
-              <div className={styles.paginationButtons}>
-                <button type="button" className={styles.pageBtn}>‹ Prev</button>
-                <span className={`${styles.pagePill} ${styles.pagePillActive}`}>1</span>
-                <span className={styles.pagePill}>2</span>
-                <span className={styles.pagePill}>3</span>
-                <span className={styles.pageEllipsis}>...</span>
-                <span className={styles.pagePill}>57</span>
-                <button type="button" className={styles.pageBtn}>Next ›</button>
-              </div>
-            </div>
-
-            <div className={styles.paginationFooter}>
-              <span className={styles.pageSizePill}>
-                Limit: <strong>50 rows / page ▾</strong>
-              </span>
-              <span className={styles.paginationTiming}>Index Seek: <strong>0.8ms</strong></span>
-            </div>
-          </div>
-        )}
-
-        {/* Preview: Inline Cell Editing */}
-        {feature.id === "inline-editing" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Inline Spreadsheet Mutation</span>
-              <span className={styles.widgetBadge}>Auto-Save</span>
-            </div>
-            <div className={styles.inlineEditMock}>
-              <div className={styles.mockCellOld}>sarah@acme.dev</div>
-              <div className={styles.mockArrow}>→</div>
-              <div className={styles.mockCellNew}>
-                <span>sarah@production.cloud</span>
-                <span className={styles.cellSaveIndicator}>✓ Saved</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Preview: Row Operations */}
-        {feature.id === "row-operations" && (
-          <div className={styles.previewWidget}>
-            <div className={styles.widgetHeader}>
-              <span className={styles.widgetTitle}>Batch Operations Bar</span>
-              <span className={styles.widgetBadge}>Atomic Tx</span>
-            </div>
-            <div className={styles.rowOpsMock}>
-              <span className={styles.rowSelectCount}>2 rows selected</span>
-              <div className={styles.rowOpsActions}>
-                <button type="button" className={styles.opBtn}>Duplicate</button>
-                <button type="button" className={styles.opBtnDanger}>Delete (2)</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Feature Detail Checklist */}
-        <ul className={styles.featureDetails}>
-          {feature.details.slice(0, 5).map((detail, i) => (
-            <li key={i} className={styles.featureDetail}>
-              <Check size={14} className={styles.checkIcon} />
-              <span>{detail}</span>
-            </li>
-          ))}
-        </ul>
       </div>
-    </article>
+    </div>
   );
 }
