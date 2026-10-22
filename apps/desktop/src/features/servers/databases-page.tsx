@@ -1,5 +1,5 @@
-import { Button, Dialog, DialogContent } from "@repo/ui";
-import { Cloud, Database, Plus } from "lucide-react";
+import { Dialog, DialogContent } from "@repo/ui";
+import { Cloud, Database } from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
@@ -21,33 +21,16 @@ export function DatabasesPage() {
     <div className="flex flex-col gap-10">
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-fg">Databases</h1>
-          <p className="mt-0.5 text-sm text-fg-muted">Local and remote PostgreSQL databases.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" iconLeft={<Cloud />} onClick={() => openRemoteDialog()}>
-            Add remote
-          </Button>
-          <Button variant="primary" size="sm" iconLeft={<Plus />} onClick={() => setInstallOpen(true)}>
-            New local
-          </Button>
-        </div>
+      {/* Adding happens from the dashed tile in each section */}
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-fg">Databases</h1>
+        <p className="mt-0.5 text-sm text-fg-muted">Local and remote PostgreSQL databases.</p>
       </div>
 
       {/* ── Local databases ──────────────────────────────────────────────── */}
       <SectionGroup
         title="Local"
         description="Managed by PostCompass on this computer."
-        action={
-          <button
-            className="text-xs text-fg-subtle hover:text-fg transition-colors"
-            onClick={() => setInstallOpen(true)}
-          >
-            + New
-          </button>
-        }
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {state.servers.map((server) => (
@@ -71,14 +54,6 @@ export function DatabasesPage() {
       <SectionGroup
         title="Remote"
         description="Cloud or self-hosted PostgreSQL endpoints."
-        action={
-          <button
-            className="text-xs text-fg-subtle hover:text-fg transition-colors"
-            onClick={() => openRemoteDialog()}
-          >
-            + Add
-          </button>
-        }
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           {state.remoteConnections.map((rc) => (
