@@ -1,4 +1,4 @@
-import { Button, cn, Dialog, DialogContent, toast } from "@repo/ui";
+import { Button, cn, Dialog, SheetContent, toast } from "@repo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Eye, EyeOff, Lock, Plug } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -119,7 +119,7 @@ defer conn.Close(context.Background())`,
 
 type View = "string" | "code" | "params";
 
-/** "Connect" button + dialog: how to reach the database open in the explorer. */
+/** "Connect" button + side panel: how to reach the database open in the explorer. */
 export function ConnectButton({
   server,
   database,
@@ -198,18 +198,24 @@ function ConnectDialogBody({
       : STRINGS.find((s) => s.id === format)!;
 
   return (
-    <DialogContent
+    <SheetContent
       title={
         <span className="flex items-center gap-2">
           Connect to <span className="font-mono">{database}</span>
         </span>
       }
       description="Use these details in your app, an ORM, or any PostgreSQL tool."
-      className="w-[700px]"
+      className="w-[640px]"
+      footer={
+        <span className="mr-auto flex items-center gap-2 text-xs text-fg-subtle">
+          <Lock className="size-3.5 shrink-0" />
+          Only reachable from this computer ({server.host}). The password is
+          kept in your system keychain.
+        </span>
+      }
     >
-      {/* Tabs */}
-      {/* Tab line runs edge to edge; the dialog keeps its normal padding */}
-      <div className="-mx-5 flex gap-5 border-b border-border px-5">
+      {/* Tab line runs edge to edge; the panel keeps its normal padding */}
+      <div className="-mx-5 -mt-4 mb-4 flex gap-5 border-b border-border px-5 pt-3">
         {(
           [
             ["string", "Connection string"],
@@ -312,14 +318,7 @@ function ConnectDialogBody({
           </>
         )}
       </div>
-
-      {/* Footer */}
-      <div className="-mx-5 -mb-5 flex items-center gap-2 rounded-b-card border-t border-border bg-surface px-5 py-3 text-xs text-fg-subtle">
-        <Lock className="size-3.5 shrink-0" />
-        Only reachable from this computer ({server.host}). The password is kept
-        in your system keychain.
-      </div>
-    </DialogContent>
+    </SheetContent>
   );
 }
 
