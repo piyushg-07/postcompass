@@ -8,6 +8,7 @@ import {
   Handle,
   MarkerType,
   MiniMap,
+  type MiniMapNodeProps,
   type Node,
   type NodeProps,
   Panel,
@@ -28,7 +29,16 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { GraphRelation, GraphTable } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
 import { useSchemaGraph } from "../explorer-context";
@@ -163,6 +173,53 @@ function Tag({ className, children }: { className: string; children: string }) {
 
 const nodeTypes = { table: TableNodeView };
 
+/** Lets minimap tables report hovers to the diagram (they're rendered by React Flow). */
+const MiniHover = createContext<(name: string | null) => void>(() => {});
+
+/**
+ * A table in the minimap: a tiny card with a header strip (green when focused, blue for views)
+ * and the table name. Hovering shows the name in the minimap header and focuses the table.
+ */
+function MiniTable({ id, x, y, width, height, color }: MiniMapNodeProps) {
+  const setHover = useContext(MiniHover);
+  const strip =
+    color === "focus" ? "#3ecf8e" : color === "view" ? "#5ea8f0" : "#4a4a4a";
+  const header = Math.min(height, Math.max(14, height * 0.16));
+  const clip = `mini-${id.replace(/[^a-z0-9_-]/gi, "_")}`;
+  return (
+    <g
+      onMouseEnter={() => setHover(id)}
+      onMouseLeave={() => setHover(null)}
+      style={{ cursor: "pointer" }}
+    >
+      <clipPath id={clip}>
+        <rect x={x} y={y} width={width} height={height} rx={10} />
+      </clipPath>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={10}
+        fill={color === "focus" ? "#11291f" : "#1c1c1e"}
+        stroke={color === "focus" ? "#3ecf8e" : "#3a3a3c"}
+        strokeWidth={4}
+      />
+      <rect x={x} y={y} width={width} height={header} rx={10} fill={strip} />
+      <text
+        x={x + 16}
+        y={y + header + 58}
+        fontSize={52}
+        fontFamily="'Source Code Pro Variable', monospace"
+        fill={color === "focus" ? "#3ecf8e" : "#bdbdbd"}
+        clipPath={`url(#${clip})`}
+      >
+        {id}
+      </text>
+    </g>
+  );
+}
+
 /* ── Layout and saved positions ─────────────────────────────────────────── */
 
 type Positions = Record<string, { x: number; y: number }>;
@@ -252,7 +309,9 @@ function Diagram({
   const [nodes, setNodes, onNodesChange] = useNodesState<TableNode>([]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [showMap, setShowMap] = useState(true);
+  // The minimap starts hidden; the toolbar button shows it
+  const [showMap, setShowMap] = useState(false);
+  const [miniHover, setMiniHover] = useState<string | null>(null);
 
   const tables = useMemo(() => graph.data?.tables ?? [], [graph.data]);
   // Only links inside this schema can be drawn
@@ -313,7 +372,7 @@ function Diagram({
   }, [measured, nodes.length, flow]);
 
   // Focus: the hovered (or selected) table, plus everything linked to it
-  const focus = hovered ?? selected;
+  const focus = hovered ?? miniHover ?? selected;
   const related = useMemo(() => {
     if (!focus) return null;
     const set = new Set([focus]);
@@ -553,17 +612,49 @@ function Diagram({
         </Panel>
 
         {showMap && (
-          <MiniMap
-            position="bottom-right"
-            pannable
-            zoomable
-            className="!rounded-card !border !border-border !bg-surface"
-            maskColor="rgb(2 2 2 / 0.65)"
-            nodeColor={(n) => (n.id === focus ? "#3ecf8e" : "#2a2a2a")}
-            nodeStrokeColor={(n) => (n.id === focus ? "#3ecf8e" : "#3a3a3a")}
-            nodeStrokeWidth={2}
-            nodeBorderRadius={4}
-          />
+          <Panel position="bottom-right" className="!m-3">
+            <div className="overflow-hidden rounded-card border border-border bg-surface/95 shadow-xl shadow-black/50 backdrop-blur">
+              <div className="flex h-7 items-center gap-1.5 border-b border-border px-2.5 text-[10px] text-fg-subtle">
+                <span className="font-medium tracking-wide uppercase">
+                  Overview
+                </span>
+                {miniHover && (
+                  <>
+                    <span>·</span>
+                    <span className="truncate font-mono text-[11px] text-accent">
+                      {miniHover}
+                    </span>
+                  </>
+                )}
+              </div>
+              <MiniHover.Provider value={setMiniHover}>
+                <MiniMap
+                  pannable
+                  zoomable
+                  // Rendered inside our own frame instead of React Flow's corner box
+                  style={{
+                    position: "static",
+                    margin: 0,
+                    width: 220,
+                    height: 140,
+                    background: "transparent",
+                  }}
+                  maskColor="rgb(10 10 11 / 0.7)"
+                  maskStrokeColor="#3ecf8e"
+                  maskStrokeWidth={1.5}
+                  // The colour carries the node's state; MiniTable draws it
+                  nodeColor={(n) =>
+                    n.id === focus
+                      ? "focus"
+                      : (n.data as TableData).table.kind === "table"
+                        ? "table"
+                        : "view"
+                  }
+                  nodeComponent={MiniTable}
+                />
+              </MiniHover.Provider>
+            </div>
+          </Panel>
         )}
       </ReactFlow>
     </div>
