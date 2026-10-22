@@ -23,6 +23,7 @@ import {
   toast,
 } from "@repo/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { open as openFile } from "@tauri-apps/plugin-dialog";
 import { Check, ChevronDown, Cloud, DatabaseZap, FlaskConical } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAppState } from "../../app/app-state";
@@ -58,30 +59,30 @@ const PROVIDERS: Provider[] = [
 const SSL_OPTIONS: { value: SslMode; label: string; short: string; description: string; color: string }[] = [
   {
     value: "disable",
-    label: "Disable",
-    short: "No TLS",
-    description: "Plain text only. Local / trusted networks.",
+    label: "Off",
+    short: "Not encrypted",
+    description: "No encryption. Only for databases on this computer or a private network you trust.",
     color: "text-fg-muted",
   },
   {
     value: "prefer",
     label: "Prefer",
-    short: "TLS preferred",
-    description: "Try TLS first, fall back to plain text.",
+    short: "Encrypted if supported",
+    description: "Encrypts when the server supports it, otherwise connects without encryption.",
     color: "text-amber-500",
   },
   {
     value: "require",
     label: "Require",
-    short: "TLS required",
-    description: "Encrypted, certificate not verified.",
+    short: "Encrypted",
+    description: "Always encrypted. Recommended for cloud databases; the server's certificate isn't checked.",
     color: "text-blue-500",
   },
   {
     value: "verify_full",
-    label: "Verify Full",
-    short: "TLS verified",
-    description: "Encrypted + certificate chain checked.",
+    label: "Verify certificate",
+    short: "Encrypted + verified",
+    description: "Always encrypted, and checks the server really is who it claims to be. Most secure.",
     color: "text-success",
   },
 ];
@@ -147,7 +148,7 @@ function SslPicker({
           <ChevronDown className={`size-3.5 shrink-0 text-fg-subtle transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-1.5" align="start">
+      <PopoverContent className="w-80 p-1.5" align="start">
         {SSL_OPTIONS.map((opt) => {
           const isSelected = opt.value === value;
           return (
@@ -254,6 +255,7 @@ interface FormState {
   password: string;
   database: string;
   sslMode: SslMode;
+  caCert: string;
 }
 
 function empty(provider = PROVIDERS[0]): FormState {
@@ -266,6 +268,7 @@ function empty(provider = PROVIDERS[0]): FormState {
     password: "",
     database: "postgres",
     sslMode: provider.defaultSsl,
+    caCert: "",
   };
 }
 
@@ -279,6 +282,7 @@ function fromExisting(rc: RemoteConnection): FormState {
     password: "",
     database: rc.database,
     sslMode: rc.sslMode,
+    caCert: rc.caCert ?? "",
   };
 }
 
@@ -327,6 +331,7 @@ export function RemoteConnectionDialog() {
         password: form.password,
         database: form.database.trim(),
         sslMode: form.sslMode,
+        caCert: form.sslMode === "verify_full" ? form.caCert.trim() || null : null,
         provider: form.provider,
       };
       if (existing) return unwrap(commands.updateRemoteConnection(existing.id, req));
@@ -354,11 +359,13 @@ export function RemoteConnectionDialog() {
           host: form.host.trim(),
           port: parseInt(form.port, 10) || 5432,
           user: form.user.trim(),
-          password: form.password || (existing ? "will-use-keychain" : ""),
+          // Left empty while editing → the saved password is used
+          password: form.password,
           database: form.database.trim(),
           sslMode: form.sslMode,
+          caCert: form.sslMode === "verify_full" ? form.caCert.trim() || null : null,
           provider: form.provider,
-        }),
+        }, existing?.id ?? null),
       );
       setTestResult({ ok: true, message: `Connected · PostgreSQL ${result.serverVersion} · ${result.latencyMs} ms` });
     } catch (e) {
@@ -473,7 +480,7 @@ export function RemoteConnectionDialog() {
                 />
               )}
             </Field>
-            <Field label="SSL mode" className="flex-1">
+            <Field label="Encryption (SSL)" className="flex-1">
               {() => (
                 <SslPicker
                   value={form.sslMode}
@@ -482,6 +489,37 @@ export function RemoteConnectionDialog() {
               )}
             </Field>
           </div>
+
+          {form.sslMode === "verify_full" && (
+            <Field
+              label="CA certificate (optional)"
+              hint="Your provider's certificate bundle, e.g. AWS RDS global-bundle.pem or Supabase's prod-ca.crt. Leave empty to trust only certificates your system already trusts."
+            >
+              {(fp) => (
+                <div className="flex gap-2">
+                  <Input
+                    {...fp}
+                    className="font-mono text-xs"
+                    placeholder="C:\path\to\ca-certificate.pem"
+                    value={form.caCert}
+                    onChange={(e) => set("caCert", e.target.value)}
+                    spellCheck={false}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      void openFile({
+                        multiple: false,
+                        filters: [{ name: "Certificate", extensions: ["pem", "crt", "cer"] }],
+                      }).then((path) => typeof path === "string" && set("caCert", path))
+                    }
+                  >
+                    Browse…
+                  </Button>
+                </div>
+              )}
+            </Field>
+          )}
 
           {/* Test result banner */}
           {testResult && (

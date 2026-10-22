@@ -87,6 +87,9 @@ pub struct RemoteConnection {
     /// Database to open by default.
     pub database: String,
     pub ssl_mode: SslMode,
+    /// PEM file with the provider's CA certificate, for `verify_full`.
+    #[serde(default)]
+    pub ca_cert: Option<String>,
     /// Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other".
     pub provider: String,
     pub created_at: f64,

@@ -48,6 +48,10 @@ pub struct ConnectionConfig {
     pub database: String,
     #[serde(default)]
     pub ssl_mode: SslMode,
+    /// PEM file of the provider's CA certificate, trusted on top of the system store
+    /// (needed for `VerifyFull` with AWS RDS, Supabase, Azure…).
+    #[serde(default)]
+    pub ca_cert: Option<String>,
 }
 
 impl std::fmt::Debug for ConnectionConfig {
@@ -59,6 +63,7 @@ impl std::fmt::Debug for ConnectionConfig {
             .field("password", &"<redacted>")
             .field("database", &self.database)
             .field("ssl_mode", &self.ssl_mode)
+            .field("ca_cert", &self.ca_cert)
             .finish()
     }
 }

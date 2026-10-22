@@ -39,6 +39,7 @@ pub async fn open_server(
         password: secrets::server_password(&server.id)?,
         database: "postgres".into(),
         ssl_mode: Default::default(), // local managed servers: prefer (try TLS, fall back)
+        ca_cert: None,
     };
     let driver = connections.driver(server.kind)?;
 

@@ -53,8 +53,11 @@ export const commands = {
 	removeRemoteConnection: (id: string) => typedError<AppState, CoreError>(__TAURI_INVOKE("remove_remote_connection", { id })),
 	/**  Opens a session for a saved remote connection. Returns the same `OpenedConnection` shape as `open_server`. */
 	openRemoteConnection: (id: string) => typedError<OpenedConnection, CoreError>(__TAURI_INVOKE("open_remote_connection", { id })),
-	/**  Tests a remote connection form without saving anything. */
-	testRemoteConnection: (request: RemoteConnectionRequest) => typedError<TestResult, CoreError>(__TAURI_INVOKE("test_remote_connection", { request })),
+	/**
+	 *  Tests a remote connection form without saving anything. When editing (`existing_id`) and the
+	 *  password field is left empty, the saved password from the keychain is used.
+	 */
+	testRemoteConnection: (request: RemoteConnectionRequest, existingId: string | null) => typedError<TestResult, CoreError>(__TAURI_INVOKE("test_remote_connection", { request, existingId })),
 	schemaObjects: (connectionId: string, database: string, schema: string) => typedError<SchemaObjects, CoreError>(__TAURI_INVOKE("schema_objects", { connectionId, database, schema })),
 	tableStructure: (connectionId: string, database: string, schema: string, table: string) => typedError<TableStructure, CoreError>(__TAURI_INVOKE("table_structure", { connectionId, database, schema, table })),
 	/**  SQL that recreates a table, view, function or sequence. `name` is the function id for functions. */
@@ -152,6 +155,11 @@ export type ConnectionConfig = {
 	/**  Database to connect to first. */
 	database: string,
 	sslMode?: SslMode,
+	/**
+	 *  PEM file of the provider's CA certificate, trusted on top of the system store
+	 *  (needed for `VerifyFull` with AWS RDS, Supabase, Azure…).
+	 */
+	caCert?: string | null,
 };
 
 export type ConstraintInfo = {
@@ -378,6 +386,8 @@ export type RemoteConnection = {
 	/**  Database to open by default. */
 	database: string,
 	sslMode: SslMode,
+	/**  PEM file with the provider's CA certificate, for `verify_full`. */
+	caCert?: string | null,
 	/**  Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other". */
 	provider: string,
 	createdAt: number | null,
@@ -392,6 +402,8 @@ export type RemoteConnectionRequest = {
 	password: string,
 	database: string,
 	sslMode: SslMode,
+	/**  PEM file with the provider's CA certificate (optional). */
+	caCert?: string | null,
 	provider: string,
 };
 

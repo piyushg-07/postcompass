@@ -80,6 +80,8 @@ async fn installs_starts_stops_and_uninstalls() {
         user: server.superuser.clone(),
         password: "e2e-Secret-123".into(),
         database: "postgres".into(),
+        ssl_mode: Default::default(),
+        ca_cert: None,
     };
     let tested = PostgresDriver.test_connection(&config).await.expect("test connection succeeds");
     assert!(tested.server_version.starts_with("18."), "version {}", tested.server_version);

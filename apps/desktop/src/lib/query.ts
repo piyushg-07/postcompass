@@ -31,7 +31,6 @@ export const queryKeys = {
   runtimeVersions: (kind: DatabaseKind) => ["runtime-versions", kind] as const,
   suggestedPort: (kind: DatabaseKind) => ["suggested-port", kind] as const,
   connection: (serverId: string) => ["connection", serverId] as const,
-  remoteConnection: (remoteId: string) => ["remote-connection", remoteId] as const,
   explorer: {
     all: (connectionId: string) => ["explorer", connectionId] as const,
     databases: (connectionId: string) => ["explorer", connectionId, "databases"] as const,

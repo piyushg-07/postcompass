@@ -24,10 +24,10 @@ import { PROVIDER_LOGOS, ProviderLogo } from "./provider-logos";
 // ── SSL labels ────────────────────────────────────────────────────────────────
 
 const SSL_LABELS: Record<string, string> = {
-  disable:     "No TLS",
-  prefer:      "TLS preferred",
-  require:     "TLS",
-  verify_full: "TLS verified",
+  disable: "Not encrypted",
+  prefer: "Encrypted if supported",
+  require: "Encrypted",
+  verify_full: "Encrypted · certificate verified",
 };
 
 function remoteConnectionString(rc: RemoteConnection) {
@@ -44,27 +44,13 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
 
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [busy, setBusy] = useState(false);
 
   const connectionId = `remote:${remote.id}`;
   const isOpen = !!useWorkspaceStore((s) => s.workspaces[connectionId]);
 
   const forgetConnection = () => {
-    queryClient.removeQueries({ queryKey: queryKeys.remoteConnection(remote.id) });
+    queryClient.removeQueries({ queryKey: queryKeys.connection(connectionId) });
     queryClient.removeQueries({ queryKey: queryKeys.explorer.all(connectionId) });
-  };
-
-  const handleOpen = async () => {
-    setBusy(true);
-    try {
-      await unwrap(commands.openRemoteConnection(remote.id));
-      openServer(connectionId);
-    } catch (e) {
-      const { title, message, hint } = describeError(e);
-      toast.error(title, { description: hint ? `${message}\n${hint}` : message });
-    } finally {
-      setBusy(false);
-    }
   };
 
   const copyConnectionString = () =>
@@ -117,7 +103,7 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
             {isOpen && (
               <span className="ml-auto flex items-center gap-1 text-[10px] font-medium text-success">
                 <span className="size-1.5 rounded-full bg-success" />
-                Open
+                Connected
               </span>
             )}
           </div>
@@ -129,10 +115,10 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
             size="sm"
             variant="primary"
             className="flex-1"
-            loading={busy}
-            onClick={() => void handleOpen()}
+            // The explorer opens the session (and shows any connection error)
+            onClick={() => openServer(connectionId)}
           >
-            {isOpen ? "Switch to" : "Open"}
+            Open
           </Button>
         </div>
       </div>

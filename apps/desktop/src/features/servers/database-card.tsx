@@ -56,7 +56,7 @@ function useDatabaseActions(
   const { refresh } = useAppState();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [password, setPassword] = useState<string | null>(null);
+  const [password] = useState<string | null>(null);
   const running = status === "running";
   const database =
     useWorkspaceStore((s) => s.workspaces[server.id]?.database) ?? "postgres";

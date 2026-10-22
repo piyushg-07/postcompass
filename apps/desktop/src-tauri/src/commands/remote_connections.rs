@@ -48,6 +48,7 @@ fn make_config(rc: &RemoteConnection, password: String) -> ConnectionConfig {
         password,
         database: rc.database.clone(),
         ssl_mode: to_driver_ssl(rc.ssl_mode),
+        ca_cert: rc.ca_cert.clone(),
     }
 }
 
@@ -64,7 +65,14 @@ pub struct RemoteConnectionRequest {
     pub password: String,
     pub database: String,
     pub ssl_mode: SslMode,
+    /// PEM file with the provider's CA certificate (optional).
+    #[serde(default)]
+    pub ca_cert: Option<String>,
     pub provider: String,
+}
+
+fn clean_path(path: Option<String>) -> Option<String> {
+    path.map(|p| p.trim().to_owned()).filter(|p| !p.is_empty())
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -85,6 +93,7 @@ pub fn add_remote_connection(
         user: request.user,
         database: request.database,
         ssl_mode: request.ssl_mode,
+        ca_cert: clean_path(request.ca_cert),
         provider: request.provider,
         created_at: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -119,6 +128,7 @@ pub fn update_remote_connection(
             rc.user = request.user;
             rc.database = request.database;
             rc.ssl_mode = request.ssl_mode;
+            rc.ca_cert = clean_path(request.ca_cert);
             rc.provider = request.provider;
         }
     })?;
@@ -166,20 +176,27 @@ pub async fn open_remote_connection(
     Ok(opened)
 }
 
-/// Tests a remote connection form without saving anything.
+/// Tests a remote connection form without saving anything. When editing (`existing_id`) and the
+/// password field is left empty, the saved password from the keychain is used.
 #[tauri::command]
 #[specta::specta]
 pub async fn test_remote_connection(
     connections: State<'_, Connections>,
     request: RemoteConnectionRequest,
+    existing_id: Option<String>,
 ) -> Result<pc_core::driver::TestResult, CoreError> {
+    let password = match existing_id {
+        Some(id) if request.password.is_empty() => secrets::remote_password(&id)?,
+        _ => request.password,
+    };
     let config = ConnectionConfig {
         host: request.host,
         port: request.port,
         user: request.user,
-        password: request.password,
+        password,
         database: request.database,
         ssl_mode: to_driver_ssl(request.ssl_mode),
+        ca_cert: clean_path(request.ca_cert),
     };
     connections.driver(DatabaseKind::Postgres)?.test_connection(&config).await
 }
