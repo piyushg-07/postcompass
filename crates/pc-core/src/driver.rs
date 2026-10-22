@@ -217,6 +217,22 @@ pub struct FunctionInfo {
     pub language: String,
     /// `function`, `procedure`, `aggregate` or `window`
     pub kind: String,
+    /// The code between the `$$` quotes.
+    pub body: String,
+    /// `volatile`, `stable` or `immutable`
+    pub volatility: String,
+    pub security_definer: bool,
+    /// The input arguments, or `None` when they use OUT, VARIADIC or defaults
+    /// (too much for the simple form; edit the SQL instead).
+    pub args: Option<Vec<FunctionArg>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionArg {
+    /// Empty for an unnamed argument.
+    pub name: String,
+    pub data_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

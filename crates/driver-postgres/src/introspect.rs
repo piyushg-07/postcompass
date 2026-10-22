@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use pc_core::driver::{
-    ColumnInfo, ConstraintInfo, ConstraintKind, DatabaseInfo, EnumInfo, ExtensionInfo, ForeignKeyInfo, FunctionInfo,
+    ColumnInfo, ConstraintInfo, ConstraintKind, DatabaseInfo, EnumInfo, ExtensionInfo, ForeignKeyInfo, FunctionArg, FunctionInfo,
     GraphColumn, GraphRelation, GraphTable, IndexInfo, SchemaGraph, SchemaInfo, SchemaObjects, SchemaTriggerInfo,
     SequenceInfo,
     TableInfo, TableKind, TableStructure, TriggerInfo,
@@ -298,7 +298,17 @@ pub async fn schema_objects(client: &Client, schema: &str) -> CoreResult<SchemaO
                             pg_get_function_identity_arguments(p.oid),
                             coalesce(pg_get_function_result(p.oid), ''),
                             l.lanname::text,
-                            p.prokind::text
+                            p.prokind::text,
+                            p.prosrc,
+                            case p.provolatile when 'i' then 'immutable' when 's' then 'stable' else 'volatile' end,
+                            p.prosecdef,
+                            -- plain input arguments only; OUT, VARIADIC or defaults leave these null
+                            case when p.proallargtypes is null and p.pronargdefaults = 0 and p.provariadic = 0
+                                 then array(select coalesce(p.proargnames[u.i::int], '')
+                                              from unnest(p.proargtypes::oid[]) with ordinality u(t, i) order by u.i) end,
+                            case when p.proallargtypes is null and p.pronargdefaults = 0 and p.provariadic = 0
+                                 then array(select format_type(u.t, null)
+                                              from unnest(p.proargtypes::oid[]) with ordinality u(t, i) order by u.i) end
                        from pg_proc p
                        join pg_language l on l.oid = p.prolang
                        join pg_namespace n on n.oid = p.pronamespace
@@ -371,6 +381,19 @@ pub async fn schema_objects(client: &Client, schema: &str) -> CoreResult<SchemaO
                     _ => "function",
                 }
                 .into(),
+                body: row.get(6),
+                volatility: row.get(7),
+                security_definer: row.get(8),
+                args: match (row.get::<_, Option<Vec<String>>>(9), row.get::<_, Option<Vec<String>>>(10)) {
+                    (Some(names), Some(types)) => Some(
+                        names
+                            .into_iter()
+                            .zip(types)
+                            .map(|(name, data_type)| FunctionArg { name, data_type })
+                            .collect(),
+                    ),
+                    _ => None,
+                },
             })
             .collect(),
         sequences: sequences

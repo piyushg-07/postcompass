@@ -256,6 +256,12 @@ export type ForeignKeyInfo = {
 	definition: string,
 };
 
+export type FunctionArg = {
+	/**  Empty for an unnamed argument. */
+	name: string,
+	dataType: string,
+};
+
 export type FunctionInfo = {
 	/**  Stable identifier for fetching the definition (overloads share a name). */
 	id: string,
@@ -265,6 +271,16 @@ export type FunctionInfo = {
 	language: string,
 	/**  `function`, `procedure`, `aggregate` or `window` */
 	kind: string,
+	/**  The code between the `$$` quotes. */
+	body: string,
+	/**  `volatile`, `stable` or `immutable` */
+	volatility: string,
+	securityDefiner: boolean,
+	/**
+	 *  The input arguments, or `None` when they use OUT, VARIADIC or defaults
+	 *  (too much for the simple form; edit the SQL instead).
+	 */
+	args: FunctionArg[] | null,
 };
 
 export type GraphColumn = {
