@@ -1,0 +1,4 @@
+# Machine-local (gitignored). Keeps Rust build output out of OneDrive,
+# which locks files while syncing and breaks the build.
+[build]
+target-dir = "C:/Users/gupta.DESKTOP-BMVHMNJ/AppData/Local/postcompass/target"
