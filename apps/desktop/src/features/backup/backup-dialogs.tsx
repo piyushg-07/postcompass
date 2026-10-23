@@ -1,14 +1,13 @@
 import {
   Button,
+  Checkbox,
+  cn,
   Dialog,
   DialogContent,
   DialogFooter,
   Field,
   Input,
   LogViewer,
-  RadioCard,
-  RadioCardGroup,
-  Switch,
   toast,
 } from "@repo/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,11 +17,11 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   AlertTriangle,
   CheckCircle2,
-  FileArchive,
-  FileCode2,
+  ChevronRight,
+  FileUp,
   FolderOpen,
 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { BackupContent, BackupFormat } from "../../lib/bindings";
 import { formatBytes } from "../../lib/format";
 import { commands, describeError, isCancelled, unwrap } from "../../lib/ipc";
@@ -82,43 +81,165 @@ function useJob() {
   return { job, log, run, cancel, reset };
 }
 
-function JobStatus({ job, log }: { job: Job; log: string[] }) {
+function JobStatus({
+  job,
+  log,
+  running,
+}: {
+  job: Job;
+  log: string[];
+  /** e.g. "Backing up piyushgres…" */
+  running: string;
+}) {
+  // The log is tucked away unless something went wrong
+  const [showLog, setShowLog] = useState(false);
+  const logOpen = showLog || job.state === "failed";
   return (
     <div className="flex flex-col gap-3">
       {job.state === "running" && (
-        <div className="flex items-center gap-2 text-sm text-fg-muted">
-          <span className="size-4 animate-spin rounded-full border-2 border-accent/25 border-t-accent" />
-          Working…
+        <div className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3">
+          <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-accent/25 border-t-accent" />
+          <span className="text-sm text-fg">{running}</span>
         </div>
       )}
       {job.state === "done" && (
-        <div className="flex items-start gap-2 rounded-card border border-accent/30 bg-accent-muted p-3 text-sm">
-          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-fg">{job.message}</span>
-            {job.path && (
-              <span className="truncate font-mono text-xs text-fg-muted">
-                {job.path}
-              </span>
-            )}
-          </div>
+        <div className="flex flex-col items-center gap-2 rounded-card border border-accent/30 bg-accent-muted px-4 py-5 text-center">
+          <CheckCircle2 className="size-7 text-accent" />
+          <span className="text-sm font-medium text-fg">{job.message}</span>
+          {job.path && (
+            <span className="max-w-full truncate font-mono text-xs text-fg-muted">
+              {job.path}
+            </span>
+          )}
         </div>
       )}
       {job.state === "failed" && (
-        <div className="flex items-start gap-2 rounded-card border border-danger/30 bg-danger/5 p-3 text-sm">
+        <div className="flex items-start gap-2.5 rounded-card border border-danger/30 bg-danger/5 px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" />
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-fg">{job.title}</span>
+            <span className="font-medium text-fg">{job.title}</span>
             <span className="text-xs break-words whitespace-pre-wrap text-fg-muted">
               {job.message}
             </span>
           </div>
         </div>
       )}
-      <LogViewer lines={log} emptyText="Waiting for output…" />
+      {job.state !== "failed" && (
+        <button
+          type="button"
+          onClick={() => setShowLog((v) => !v)}
+          className="flex w-fit cursor-pointer items-center gap-1 text-xs text-fg-subtle hover:text-fg"
+        >
+          <ChevronRight
+            className={cn(
+              "size-3.5 transition-transform",
+              logOpen && "rotate-90",
+            )}
+          />
+          {logOpen ? "Hide details" : "Show details"}
+        </button>
+      )}
+      {logOpen && (
+        <LogViewer
+          lines={log}
+          emptyText="Waiting for output…"
+          className="max-h-48"
+        />
+      )}
     </div>
   );
 }
+
+/** A labelled group of options in the form. */
+function Section({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-fg-muted">{label}</span>
+      {children}
+      {hint && <p className="text-xs text-fg-subtle">{hint}</p>}
+    </div>
+  );
+}
+
+/** Two or three side-by-side choices, like a toggle group. */
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: ReactNode }[];
+}) {
+  return (
+    <div
+      className="grid gap-1 rounded-control border border-border-strong bg-bg p-1"
+      style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "h-7 cursor-pointer truncate rounded px-2 text-sm transition-colors",
+            value === o.value
+              ? "bg-surface-hover text-fg shadow-sm"
+              : "text-fg-muted hover:text-fg",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A checkbox with a title and a muted line under it. */
+function CheckOption({
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5">
+      <Checkbox
+        className="mt-0.5"
+        checked={checked}
+        onCheckedChange={(c) => onChange(c === true)}
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm text-fg">{title}</span>
+        <span className="text-xs text-fg-subtle">{description}</span>
+      </span>
+    </label>
+  );
+}
+
+const FORMAT_HINTS: Record<BackupFormat, string> = {
+  custom: "Smaller, and you can restore all of it or just some tables.",
+  plain: "Plain SQL you can read and edit in any text editor.",
+};
+
+const CONTENT_HINTS: Record<BackupContent, string> = {
+  all: "Tables, views and functions together with their rows.",
+  schema_only: "Only how the database is built, without any rows.",
+  data_only: "Only the rows, for a database that already has the tables.",
+};
 
 export function BackupDialog() {
   const target = useBackupDialogs((s) => s.backup);
@@ -158,7 +279,7 @@ export function BackupDialog() {
           description: formatBytes(result.sizeBytes),
         });
         return {
-          message: `Backup saved: ${formatBytes(result.sizeBytes)} in ${(result.durationMs / 1000).toFixed(1)}s`,
+          message: `Backup saved · ${formatBytes(result.sizeBytes)} in ${(result.durationMs / 1000).toFixed(1)}s`,
           path: result.path,
         };
       },
@@ -175,65 +296,51 @@ export function BackupDialog() {
       }}
     >
       <DialogContent
-        title={`Back up ${target.database}`}
-        className="w-[560px]"
+        title={
+          <>
+            Back up <span className="font-mono">{target.database}</span>
+          </>
+        }
+        description="Save a copy of the database to a file. You'll pick where next."
+        className="w-[500px]"
         hideClose={busy}
       >
         {job.state === "idle" ? (
-          <div className="flex flex-col gap-4">
-            <RadioCardGroup
-              className="grid-cols-2"
-              value={format}
-              onValueChange={(v) => setFormat(v as BackupFormat)}
-            >
-              <RadioCard
-                value="custom"
-                icon={<FileArchive />}
-                title="Compressed (.dump)"
-                description="Smaller. Can restore all or part of it. Recommended."
+          <div className="flex flex-col gap-5">
+            <Section label="Format" hint={FORMAT_HINTS[format]}>
+              <Segmented
+                value={format}
+                onChange={setFormat}
+                options={[
+                  { value: "custom", label: "Compressed (.dump)" },
+                  { value: "plain", label: "SQL script (.sql)" },
+                ]}
               />
-              <RadioCard
-                value="plain"
-                icon={<FileCode2 />}
-                title="SQL script (.sql)"
-                description="Readable, opens in any editor."
+            </Section>
+            <Section label="Include" hint={CONTENT_HINTS[content]}>
+              <Segmented
+                value={content}
+                onChange={setContent}
+                options={[
+                  { value: "all", label: "Everything" },
+                  { value: "schema_only", label: "Structure only" },
+                  { value: "data_only", label: "Data only" },
+                ]}
               />
-            </RadioCardGroup>
-            <RadioCardGroup
-              className="grid-cols-3"
-              value={content}
-              onValueChange={(v) => setContent(v as BackupContent)}
-            >
-              <RadioCard
-                value="all"
-                title="Everything"
-                description="Structure + data"
-              />
-              <RadioCard
-                value="schema_only"
-                title="Structure"
-                description="No rows"
-              />
-              <RadioCard
-                value="data_only"
-                title="Data"
-                description="Rows only"
-              />
-            </RadioCardGroup>
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
-              <span className="flex flex-col">
-                <span className="text-sm text-fg">
-                  Leave out owners and permissions
-                </span>
-                <span className="text-xs text-fg-muted">
-                  Makes the backup easy to restore on another server.
-                </span>
-              </span>
-              <Switch checked={noOwner} onCheckedChange={setNoOwner} />
-            </label>
+            </Section>
+            <CheckOption
+              checked={noOwner}
+              onChange={setNoOwner}
+              title="Leave out owners and permissions"
+              description="Makes the backup easy to restore on another server."
+            />
           </div>
         ) : (
-          <JobStatus job={job} log={log} />
+          <JobStatus
+            job={job}
+            log={log}
+            running={`Backing up ${target.database}…`}
+          />
         )}
         <DialogFooter>
           {job.state === "idle" && (
@@ -242,7 +349,7 @@ export function BackupDialog() {
                 Cancel
               </Button>
               <Button variant="primary" onClick={() => void start()}>
-                Choose location & back up
+                Back up…
               </Button>
             </>
           )}
@@ -364,73 +471,107 @@ export function RestoreDialog() {
     >
       <DialogContent
         title="Restore a backup"
-        className="w-[560px]"
+        description="Load a backup file into a new or existing database."
+        className="w-[500px]"
         hideClose={busy}
       >
         {job.state === "idle" ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                value={path ?? ""}
-                placeholder="No file chosen"
-                className="font-mono text-xs"
-              />
-              <Button onClick={() => void pick()} iconLeft={<FolderOpen />}>
-                Choose…
-              </Button>
-            </div>
-            <RadioCardGroup
-              value={mode}
-              onValueChange={(v) => setMode(v as "new" | "existing")}
+          <div className="flex flex-col gap-5">
+            <Section label="Backup file">
+              <button
+                type="button"
+                onClick={() => void pick()}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-card border px-3 py-3 text-left transition-colors hover:bg-surface-hover",
+                  path
+                    ? "border-border-strong bg-surface"
+                    : "border-dashed border-border-strong",
+                )}
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-surface-hover text-fg-muted">
+                  <FileUp className="size-4" />
+                </span>
+                {path ? (
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-mono text-sm text-fg">
+                      {path.split(/[\\/]/).pop()}
+                    </span>
+                    <span className="truncate text-xs text-fg-subtle">
+                      {path}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex flex-1 flex-col">
+                    <span className="text-sm text-fg">
+                      Choose a backup file
+                    </span>
+                    <span className="text-xs text-fg-subtle">
+                      .dump, .backup or .sql
+                    </span>
+                  </span>
+                )}
+                <span className="text-xs text-fg-muted">
+                  {path ? "Change" : "Browse"}
+                </span>
+              </button>
+            </Section>
+            <Section
+              label="Restore into"
+              hint={
+                mode === "new"
+                  ? "Safest: nothing that exists now is touched."
+                  : `Adds the backup's objects to ${target.database}.`
+              }
             >
-              <RadioCard
-                value="new"
-                title="Into a new database"
-                description="Safest: nothing existing is touched."
+              <Segmented
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: "new", label: "A new database" },
+                  {
+                    value: "existing",
+                    label: <span className="font-mono">{target.database}</span>,
+                  },
+                ]}
               />
-              <RadioCard
-                value="existing"
-                title={`Into ${target.database}`}
-                description="Adds the backup's objects to this database."
-              />
-            </RadioCardGroup>
+            </Section>
             {mode === "new" ? (
               <Field label="New database name">
                 {(p) => (
                   <Input
                     {...p}
                     className="font-mono"
+                    placeholder="my_database"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                   />
                 )}
               </Field>
             ) : (
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
-                <span className="flex flex-col">
-                  <span className="text-sm text-fg">
-                    Replace existing objects
-                  </span>
-                  <span className="text-xs text-fg-muted">
-                    Drops tables that are in the backup before recreating them
-                    (.dump files).
-                  </span>
-                </span>
-                <Switch checked={clean} onCheckedChange={setClean} />
-              </label>
+              <CheckOption
+                checked={clean}
+                onChange={setClean}
+                title="Replace existing objects"
+                description="Drops tables that are in the backup before recreating them (.dump files)."
+              />
             )}
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Switch checked={noOwner} onCheckedChange={setNoOwner} />
-              Ignore owners and permissions in the backup
-            </label>
+            <CheckOption
+              checked={noOwner}
+              onChange={setNoOwner}
+              title="Ignore owners and permissions"
+              description="Use this when the backup came from another server."
+            />
             <p className="text-xs text-fg-subtle">
               Runs in one transaction: if anything fails, the database is left
               as it was.
             </p>
           </div>
         ) : (
-          <JobStatus job={job} log={log} />
+          <JobStatus
+            job={job}
+            log={log}
+            running={`Restoring into ${database}…`}
+          />
         )}
         <DialogFooter>
           {job.state === "idle" && (
