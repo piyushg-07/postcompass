@@ -1,174 +1,364 @@
 /* ============================================================
-   PostCompass — 3-Layer Bento Features Grid
-   Exactly 3 distinct horizontal layers with dynamic multi-size cards,
-   circular icon badges, and faint tech grid patterns. Fully responsive.
+   Features — tabbed showcase with real screenshots
    ============================================================ */
-
-.layersContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
+.section {
+  padding-top: var(--space-20);
+  overflow-x: clip;
+  isolation: isolate;
 }
 
-/* Layer Row: Each row is 1 layer containing 2 multi-size cards */
-.layerRow {
-  display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-/* Layer 2 and 3 alternate the wide card position for visual balance */
-.layerRow:nth-child(2),
-.layerRow:nth-child(3) {
-  grid-template-columns: 1fr 1.35fr;
-}
-
-@media (max-width: 820px) {
-  .layerRow,
-  .layerRow:nth-child(2),
-  .layerRow:nth-child(3) {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-}
-
-.bentoBox {
+.inner {
   position: relative;
-  background: #0d0f14;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 1.85rem 1.65rem;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.25s ease;
-  min-height: 220px;
+  z-index: 1;
 }
 
-.bentoBox:hover {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: #10131a;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.08);
-}
-
-/* Faint tech grid pattern */
-.cardGridPattern {
+/* ---- Ambient background ---- */
+.backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background-image:
-    linear-gradient(to right, rgba(56, 189, 248, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
-.cardContent {
-  position: relative;
-  z-index: 1;
+
+
+
+
+
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, black, transparent 75%);
+}
+
+.showcase {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+/* ---- Tabs ---- */
+.tabs {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 0.35rem;
+  position: sticky;
+  top: 88px;
 }
 
-.cardTopBar {
+.tab {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.15rem;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg-secondary);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-/* Circular icon badge */
-.iconCircle {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+.tab:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-primary);
 }
 
-.bentoBox:hover .iconCircle {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #34d399;
+.tab:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
 }
 
-.cardIcon {
-  color: #e4e4e7;
-  transition: color 0.2s ease;
+.tabActive {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border-color: rgba(255, 255, 255, 0.09);
+  color: var(--fg-primary);
 }
 
-.bentoBox:hover .cardIcon {
-  color: #34d399;
-}
-
-.badgePill {
-  font-size: 0.68rem;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-.categoryLabel {
-  font-size: 0.7rem;
-  font-family: var(--font-mono);
-  color: #71717a;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.35rem;
-}
-
-.cardTitle {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 0.55rem;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
-}
-
-.cardDesc {
-  font-size: 0.88rem;
-  color: #94a3b8;
-  line-height: 1.6;
-}
-
-/* Tags Row for wide cards */
-.tagsRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: auto;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tagItem {
+.tabIcon {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.74rem;
-  color: #d4d4d8;
-  font-family: var(--font-mono);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--fg-muted);
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tabActive .tabIcon {
+  background: var(--accent-muted);
+  border-color: var(--border-accent);
+  color: var(--accent-hover);
+}
+
+.tabText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.tabLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tabProgress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transform-origin: left;
+  animation-name: progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ---- Panel ---- */
+.panel {
+  min-width: 0;
+}
+
+.frame {
+  position: relative;
+  border-radius: 14px;
+  padding: 5px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.8), 0 0 60px -30px rgba(16, 185, 129, 0.35);
+}
+
+.frameBar {
+  display: flex;
+  gap: 6px;
+  padding: 7px 9px 9px;
+}
+
+.frameBar span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.shots {
+  position: relative;
+  aspect-ratio: 1600 / 1000;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #000;
+}
+
+.shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  opacity: 0;
+  transform: scale(1.012);
+  transition: opacity 0.45s ease, transform 0.6s ease;
+}
+
+.shotActive {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 0.5rem 2.5rem;
+  padding: 1.75rem 0.25rem 0;
+  animation: fadeUp 0.45s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.detailTitle {
+  grid-column: 1;
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--fg-primary);
+}
+
+.detailText {
+  grid-column: 1;
+  margin: 0;
+  font-size: 0.975rem;
+  line-height: 1.65;
+  color: var(--fg-secondary);
+}
+
+.points {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.2rem 0 0;
+  list-style: none;
+}
+
+.points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--fg-primary);
+}
+
+.pointIcon {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  color: var(--accent-hover);
+}
+
+/* ---- And more ---- */
+.more {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 5rem;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.moreItem {
+  display: flex;
+  gap: 0.9rem;
+  padding: 1.5rem 1.4rem;
+  background: var(--bg-root);
+  transition: background 0.2s ease;
+}
+
+.moreItem:hover {
+  background: #0d0e10;
+}
+
+.moreIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--accent-hover);
+}
+
+.moreTitle {
+  margin: 0.3rem 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+.moreText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 960px) {
+  .showcase {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .tabs {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0.5rem;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    width: auto;
+    align-items: center;
+    padding: 0.5rem 0.85rem 0.5rem 0.55rem;
+    border-color: rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+  }
+
+  .tabIcon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+  }
+
+  .tabLabel {
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .more {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 1.25rem;
+  }
+
+  .points {
+    grid-column: 1;
+    grid-row: auto;
+    padding-top: 0.5rem;
+  }
+
+  .more {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 3.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot,
+  .detail {
+    transition: none;
+    animation: none;
+  }
 }

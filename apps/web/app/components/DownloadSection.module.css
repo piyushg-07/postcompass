@@ -1,184 +1,207 @@
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-10);
+.page {
+  padding-top: 9rem;
 }
 
-.tab {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--fg-muted);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  cursor: pointer;
-}
-
-.tab:hover {
-  color: var(--fg-primary);
-  border-color: var(--border-hover);
-}
-
-.tab.active {
-  color: var(--accent);
-  border-color: var(--border-accent);
-  background: var(--accent-subtle);
-}
-
-.recommended {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--accent-muted);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* Cards */
-.cards {
+.grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-6);
-  max-width: 900px;
-  margin: 0 auto var(--space-10);
-  text-align: left;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
 }
 
 .card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  transition: all var(--transition-base);
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
 }
 
-.card:hover {
-  border-color: var(--border-hover);
+.cardDetected {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.015));
+  box-shadow: 0 0 60px -30px rgba(16, 185, 129, 0.6);
 }
 
-.cardActive {
-  border-color: var(--border-accent);
-  background: var(--accent-subtle);
-  box-shadow: var(--shadow-accent);
-}
-
-.cardHeader {
+.cardHead {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: 0.85rem;
 }
 
-.cardIcon {
-  color: var(--fg-secondary);
-}
-
-.cardActive .cardIcon {
-  color: var(--accent);
-}
-
-.cardTitle {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--fg-primary);
-}
-
-.cardArch {
-  font-size: var(--text-xs);
-  color: var(--fg-muted);
-  font-family: var(--font-mono);
-}
-
-.cardActions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.format {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: rgba(255, 255, 255, 0.5);
-  margin-left: var(--space-1);
-}
-
-.cardNote {
-  font-size: var(--text-xs);
-  color: var(--fg-faint);
-  font-family: var(--font-mono);
-  text-align: center;
-}
-
-/* Release info */
-.releaseInfo {
-  display: flex;
+.osIcon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-  font-size: var(--text-sm);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--fg-primary);
 }
 
-.releaseRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.osName {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 650;
+  color: var(--fg-primary);
 }
 
-.releaseLabel {
+.osReq {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
   color: var(--fg-muted);
 }
 
-.releaseValue {
+.detected {
+  margin-left: auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.primary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--fg-primary);
-  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.primary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.primaryHot {
+  border: none;
+  background: var(--accent);
+  color: #03130c;
+}
+
+.primaryHot:hover {
+  background: var(--accent-hover);
+}
+
+.primary .size {
+  margin-left: auto;
+}
+
+.primaryHot .size {
+  color: rgba(3, 19, 12, 0.7);
+}
+
+.assets {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.asset {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--fg-secondary);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.asset:hover {
+  color: var(--fg-primary);
+}
+
+.assetLabel {
   font-weight: 500;
 }
 
-.releaseSep {
+.assetNote {
   color: var(--fg-faint);
+  font-size: 0.8rem;
+}
+
+.size {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+
+.assetIcon {
+  color: var(--fg-faint);
+}
+
+.asset:hover .assetIcon {
+  color: var(--accent-hover);
+}
+
+.notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.notes p {
+  margin: 0;
+}
+
+.notes strong {
+  color: var(--fg-secondary);
+}
+
+.notes em {
+  font-style: normal;
+  color: var(--fg-secondary);
 }
 
 .allReleases {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--accent);
+  gap: 0.35rem;
+  color: var(--accent-hover);
   font-weight: 500;
-  transition: color var(--transition-fast);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .allReleases:hover {
-  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .tabs {
-    flex-direction: column;
-    align-items: stretch;
-    max-width: 320px;
-    margin-left: auto;
-    margin-right: auto;
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .cards {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-  }
-
-  .releaseInfo {
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .releaseSep {
-    display: none;
+  .page {
+    padding-top: 7rem;
   }
 }
