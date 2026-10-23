@@ -1,15 +1,45 @@
-import { Checkbox, Field, Input, Select, Switch } from "@repo/ui";
-import { useState } from "react";
-import type { TableStructure } from "../../../lib/bindings";
 import {
-  addForeignKey,
+  Button,
+  Checkbox,
+  cn,
+  Dialog,
+  DialogClose,
+  Field,
+  Input,
+  Select,
+  SheetContent,
+  Switch,
+  toast,
+} from "@repo/ui";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import type { TableStructure } from "../../../lib/bindings";
+import { describeError } from "../../../lib/ipc";
+import {
   createIndex,
+  ident,
+  qualified,
   suggestIdentifier,
 } from "../../../lib/sql";
-import { useStructure, useTables } from "../explorer-context";
-import { RunSqlDialog } from "../run-sql-dialog";
+import { useRunSql } from "../explorer-context";
+import { SqlBlock } from "../sql/sql-editor";
+import {
+  type ForeignKeyDraft,
+  ForeignKeySheet,
+  foreignKeyClause,
+} from "./foreign-key-sheet";
 
-const METHODS = ["btree", "hash", "gin", "gist", "brin"];
+const METHODS = [
+  {
+    value: "btree",
+    label: "B-tree",
+    hint: "default · equality, ranges, sorting",
+  },
+  { value: "hash", label: "Hash", hint: "equality only" },
+  { value: "gin", label: "GIN", hint: "arrays, JSONB, full-text" },
+  { value: "gist", label: "GiST", hint: "geometry, ranges" },
+  { value: "brin", label: "BRIN", hint: "huge, naturally ordered tables" },
+];
 
 /** Ordered column picker: click to add/remove; order is the click order. */
 function ColumnPicker({
@@ -17,31 +47,45 @@ function ColumnPicker({
   value,
   onChange,
 }: {
-  columns: string[];
+  columns: { name: string; type: string }[];
   value: string[];
   onChange: (value: string[]) => void;
 }) {
   return (
-    <div className="flex max-h-44 flex-col overflow-y-auto rounded-control border border-border-strong bg-bg p-1">
+    <div className="flex max-h-64 flex-col overflow-y-auto rounded-control border border-border-strong bg-bg p-1">
       {columns.map((c) => {
-        const position = value.indexOf(c);
+        const position = value.indexOf(c.name);
         return (
           <label
-            key={c}
-            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-surface-hover"
+            key={c.name}
+            className={cn(
+              "flex cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 hover:bg-surface-hover",
+              position >= 0 && "bg-surface-hover/60",
+            )}
           >
             <Checkbox
               checked={position >= 0}
               onCheckedChange={(checked) =>
-                onChange(checked ? [...value, c] : value.filter((x) => x !== c))
+                onChange(
+                  checked
+                    ? [...value, c.name]
+                    : value.filter((x) => x !== c.name),
+                )
               }
             />
-            <span className="flex-1 font-mono text-xs">{c}</span>
-            {position >= 0 && value.length > 1 && (
-              <span className="text-[10px] text-fg-subtle">
-                #{position + 1}
-              </span>
-            )}
+            <span className="flex-1 truncate font-mono text-xs text-fg">
+              {c.name}
+            </span>
+            <span className="truncate font-mono text-[11px] text-fg-subtle">
+              {c.type}
+            </span>
+            <span className="flex w-5 justify-end">
+              {position >= 0 && value.length > 1 && (
+                <span className="flex size-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-fg">
+                  {position + 1}
+                </span>
+              )}
+            </span>
           </label>
         );
       })}
@@ -49,6 +93,7 @@ function ColumnPicker({
   );
 }
 
+/** "Add index" side panel: columns in order, the index type, unique, and the SQL it will run. */
 export function IndexDialog({
   open,
   onOpenChange,
@@ -60,12 +105,13 @@ export function IndexDialog({
   database: string;
   structure: TableStructure;
 }) {
+  const run = useRunSql();
   const [columns, setColumns] = useState<string[]>([]);
   const [unique, setUnique] = useState(false);
   const [method, setMethod] = useState("btree");
   const [name, setName] = useState("");
   const suggested = suggestIdentifier(
-    `${structure.name}_${columns.join("_")}_${unique ? "key" : "idx"}`,
+    `${structure.name}_${columns.join("_") || "col"}_${unique ? "key" : "idx"}`,
   ).slice(0, 63);
   const finalName = name.trim() || suggested;
   const sql = columns.length
@@ -77,38 +123,96 @@ export function IndexDialog({
         unique,
         method,
       )
-    : "-- pick at least one column";
+    : null;
+
+  const submit = () => {
+    if (!sql || run.isPending) return;
+    run.mutate(
+      { sql, database },
+      {
+        onSuccess: () => {
+          toast.success(`Index ${finalName} created`);
+          onOpenChange(false);
+        },
+      },
+    );
+  };
 
   return (
-    <RunSqlDialog
-      wide
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          setColumns([]);
-          setName("");
-          setUnique(false);
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        title={
+          <>
+            Add index to <span className="font-mono">{structure.name}</span>
+          </>
         }
-        onOpenChange(next);
-      }}
-      title="Add index"
-      sql={sql}
-      database={database}
-      confirmLabel="Create index"
-      successMessage={`Index ${finalName} created`}
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Columns">
-          {() => (
-            <ColumnPicker
-              columns={structure.columns.map((c) => c.name)}
-              value={columns}
-              onChange={setColumns}
-            />
-          )}
-        </Field>
-        <div className="flex flex-col gap-3">
-          <Field label="Name">
+        description="Makes filtering, joining and sorting on these columns faster."
+        className="w-[560px]"
+        footer={
+          <>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="primary"
+              disabled={!sql}
+              loading={run.isPending}
+              onClick={submit}
+            >
+              Create index
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-5">
+          <Field
+            label="Columns"
+            hint="Pick them in the order your queries filter by"
+          >
+            {() => (
+              <div className="flex flex-col gap-2">
+                <ColumnPicker
+                  columns={structure.columns.map((c) => ({
+                    name: c.name,
+                    type: c.dataType,
+                  }))}
+                  value={columns}
+                  onChange={setColumns}
+                />
+                {columns.length > 1 && (
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs text-fg-subtle">
+                    Order:
+                    {columns.map((c, i) => (
+                      <span key={c} className="flex items-center gap-1.5">
+                        {i > 0 && <ArrowRight className="size-3" />}
+                        <span className="font-mono text-fg-muted">{c}</span>
+                      </span>
+                    ))}
+                  </p>
+                )}
+              </div>
+            )}
+          </Field>
+
+          <Field label="Index type">
+            {(p) => (
+              <Select
+                {...p}
+                value={method}
+                onValueChange={setMethod}
+                options={METHODS}
+              />
+            )}
+          </Field>
+
+          <ToggleRow
+            title="Unique"
+            description="Reject rows that repeat these values"
+            checked={unique}
+            onChange={setUnique}
+          />
+
+          <Field label="Name" hint="Optional">
             {(p) => (
               <Input
                 {...p}
@@ -119,29 +223,15 @@ export function IndexDialog({
               />
             )}
           </Field>
-          <Field label="Method">
-            {(p) => (
-              <Select
-                {...p}
-                mono
-                value={method}
-                onValueChange={setMethod}
-                options={METHODS.map((m) => ({ value: m, label: m }))}
-              />
-            )}
-          </Field>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Switch checked={unique} onCheckedChange={setUnique} />
-            Unique
-          </label>
+
+          <SqlPreview sql={sql} error={run.isError ? run.error : null} />
         </div>
-      </div>
-    </RunSqlDialog>
+      </SheetContent>
+    </Dialog>
   );
 }
 
-const ACTIONS = ["NO ACTION", "CASCADE", "SET NULL", "RESTRICT", "SET DEFAULT"];
-
+/** "Add foreign key" side panel on the structure page: runs the change when saved. */
 export function ForeignKeyDialog({
   open,
   onOpenChange,
@@ -153,101 +243,84 @@ export function ForeignKeyDialog({
   database: string;
   structure: TableStructure;
 }) {
-  const tables = useTables(database, structure.schema);
-  const [columns, setColumns] = useState<string[]>([]);
-  const [refTable, setRefTable] = useState("");
-  const [refColumns, setRefColumns] = useState<string[]>([]);
-  const [onDelete, setOnDelete] = useState("NO ACTION");
-  const target = useStructure(
-    database,
-    structure.schema,
-    refTable || structure.name,
-  );
-  const refOptions =
-    refTable && target.data ? target.data.columns.map((c) => c.name) : [];
-
-  const name = suggestIdentifier(
-    `${structure.name}_${columns.join("_")}_fkey`,
-  ).slice(0, 63);
-  const ready =
-    columns.length > 0 && refTable && refColumns.length === columns.length;
-  const sql = ready
-    ? addForeignKey(
-        structure.schema,
-        structure.name,
-        name,
-        columns,
-        structure.schema,
-        refTable,
-        refColumns,
-        onDelete,
-      )
-    : "-- pick columns, a table, and the same number of referenced columns";
+  const run = useRunSql();
+  const nameFor = (fk: ForeignKeyDraft) =>
+    suggestIdentifier(
+      `${structure.name}_${fk.pairs.map((p) => p.column).join("_")}_fkey`,
+    ).slice(0, 63);
+  const sqlFor = (fk: ForeignKeyDraft) =>
+    `ALTER TABLE ${qualified(structure.schema, structure.name)}
+  ADD CONSTRAINT ${ident(nameFor(fk))}
+  ${foreignKeyClause(fk)};`;
 
   return (
-    <RunSqlDialog
-      wide
+    <ForeignKeySheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Add foreign key"
-      sql={sql}
       database={database}
-      confirmLabel="Add foreign key"
-      successMessage={`Foreign key ${name} added`}
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Columns">
-          {() => (
-            <ColumnPicker
-              columns={structure.columns.map((c) => c.name)}
-              value={columns}
-              onChange={setColumns}
-            />
-          )}
-        </Field>
-        <div className="flex flex-col gap-3">
-          <Field label="References table">
-            {(p) => (
-              <Select
-                {...p}
-                mono
-                placeholder="Choose a table…"
-                value={refTable}
-                onValueChange={(table) => {
-                  setRefTable(table);
-                  setRefColumns([]);
-                }}
-                options={(tables.data ?? [])
-                  .filter(
-                    (t) => t.kind === "table" || t.kind === "partitioned_table",
-                  )
-                  .map((t) => ({ value: t.name, label: t.name }))}
-              />
-            )}
-          </Field>
-          {refTable && (
-            <Field label="Referenced columns" hint="Usually the primary key">
-              {() => (
-                <ColumnPicker
-                  columns={refOptions}
-                  value={refColumns}
-                  onChange={setRefColumns}
-                />
-              )}
-            </Field>
-          )}
-          <Field label="On delete">
-            {(p) => (
-              <Select
-                {...p}
-                value={onDelete}
-                onValueChange={setOnDelete}
-                options={ACTIONS.map((a) => ({ value: a, label: a }))}
-              />
-            )}
-          </Field>
+      schema={structure.schema}
+      table={structure.name}
+      columns={structure.columns.map((c) => c.name)}
+      saveLabel="Add foreign key"
+      preview={sqlFor}
+      onSave={async (fk) => {
+        await run.mutateAsync({ sql: sqlFor(fk), database });
+        toast.success(`Foreign key ${nameFor(fk)} added`);
+      }}
+    />
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-control border border-border-strong px-3 py-2.5">
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm text-fg">{title}</span>
+        <span className="text-xs text-fg-subtle">{description}</span>
+      </span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
+  );
+}
+
+/** The statement a side panel will run, and the error if running it failed. */
+export function SqlPreview({
+  sql,
+  error,
+  empty = "Pick at least one column to see the SQL.",
+}: {
+  sql: string | null;
+  error: unknown;
+  empty?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {error !== null && error !== undefined && (
+        <div className="flex items-start gap-2 rounded-control border border-danger/30 bg-danger/5 p-2.5 text-xs">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-danger" />
+          <span className="break-words text-fg">
+            {describeError(error).message}
+          </span>
         </div>
-      </div>
-    </RunSqlDialog>
+      )}
+      <span className="text-xs font-medium text-fg-muted">SQL preview</span>
+      {sql ? (
+        <SqlBlock sql={sql} className="max-h-48" />
+      ) : (
+        <p className="rounded-control border border-dashed border-border px-3 py-2.5 text-xs text-fg-subtle">
+          {empty}
+        </p>
+      )}
+    </div>
   );
 }

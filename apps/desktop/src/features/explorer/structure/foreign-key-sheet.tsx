@@ -9,11 +9,13 @@ import {
   Select,
   SheetContent,
 } from "@repo/ui";
-import { ArrowRight, Plus, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Plus, X } from "lucide-react";
 import { useState } from "react";
 import type { ForeignKeyInfo } from "../../../lib/bindings";
+import { describeError } from "../../../lib/ipc";
 import { ident, qualified } from "../../../lib/sql";
 import { useSchemas, useStructure, useTables } from "../explorer-context";
+import { SqlBlock } from "../sql/sql-editor";
 
 /** A foreign key being set up in a form, before any SQL runs. */
 export interface ForeignKeyDraft {
@@ -222,6 +224,8 @@ export function ForeignKeySheet({
   columns,
   fixedColumn,
   initial,
+  saveLabel,
+  preview,
   onSave,
 }: {
   open: boolean;
@@ -236,7 +240,12 @@ export function ForeignKeySheet({
   /** Only this column can point elsewhere (the column panel). */
   fixedColumn?: string;
   initial?: ForeignKeyDraft;
-  onSave: (fk: ForeignKeyDraft) => void;
+  /** Defaults to "Save". */
+  saveLabel?: string;
+  /** The SQL the save will run, shown under the form once it's complete. */
+  preview?: (fk: ForeignKeyDraft) => string;
+  /** May return a promise (running the SQL); the panel stays open with the error if it fails. */
+  onSave: (fk: ForeignKeyDraft) => void | Promise<void>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -248,8 +257,10 @@ export function ForeignKeySheet({
           columns={columns}
           fixedColumn={fixedColumn}
           initial={initial}
-          onSave={(fk) => {
-            onSave(fk);
+          saveLabel={saveLabel}
+          preview={preview}
+          onSave={async (fk) => {
+            await onSave(fk);
             onOpenChange(false);
           }}
         />
@@ -265,6 +276,8 @@ function ForeignKeyForm({
   columns,
   fixedColumn,
   initial,
+  saveLabel = "Save",
+  preview,
   onSave,
 }: {
   database: string;
@@ -273,8 +286,12 @@ function ForeignKeyForm({
   columns: string[];
   fixedColumn?: string;
   initial?: ForeignKeyDraft;
-  onSave: (fk: ForeignKeyDraft) => void;
+  saveLabel?: string;
+  preview?: (fk: ForeignKeyDraft) => string;
+  onSave: (fk: ForeignKeyDraft) => Promise<void>;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [draft, setDraft] = useState<ForeignKeyDraft>(
     initial ?? {
       schema,
@@ -295,6 +312,16 @@ function ForeignKeyForm({
     }));
   const valid =
     draft.table !== "" && draft.pairs.every((p) => p.column && p.refColumn);
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(draft);
+    } catch (e) {
+      setError(e);
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetContent
@@ -304,6 +331,7 @@ function ForeignKeyForm({
           <span className="font-mono">{table || "new table"}</span>
         </>
       }
+      description="Links a column here to rows in another table, so it can only hold values that exist there."
       className="w-[560px]"
       footer={
         <>
@@ -313,9 +341,10 @@ function ForeignKeyForm({
           <Button
             variant="primary"
             disabled={!valid}
-            onClick={() => onSave(draft)}
+            loading={saving}
+            onClick={() => void save()}
           >
-            Save
+            {saveLabel}
           </Button>
         </>
       }
@@ -398,6 +427,29 @@ function ForeignKeyForm({
             />
           )}
         </Field>
+
+        {error !== null && (
+          <div className="flex items-start gap-2 rounded-control border border-danger/30 bg-danger/5 p-2.5 text-xs">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-danger" />
+            <span className="break-words text-fg">
+              {describeError(error).message}
+            </span>
+          </div>
+        )}
+        {preview && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-fg-muted">
+              SQL preview
+            </span>
+            {valid ? (
+              <SqlBlock sql={preview(draft)} className="max-h-48" />
+            ) : (
+              <p className="rounded-control border border-dashed border-border px-3 py-2.5 text-xs text-fg-subtle">
+                Pick a table and match the columns to see the SQL.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </SheetContent>
   );
