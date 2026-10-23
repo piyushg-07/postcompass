@@ -18,6 +18,7 @@ import {
   Skeleton,
   Checkbox,
   toast,
+  Tooltip,
 } from "@repo/ui";
 import {
   Blocks,
@@ -172,26 +173,28 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   return (
     <aside className="flex h-full w-full flex-col overflow-clip border-r border-border bg-surface">
       {/* Like Supabase: table editor, SQL editor, database objects */}
-      <div className="flex shrink-0 gap-1 border-b border-border p-2">
-        {(["tables", "sql", "database"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPanel(p)}
-            className={cn(
-              "h-7 flex-1 cursor-pointer rounded-control text-xs transition-colors",
-              panel === p
-                ? "bg-surface-hover text-fg"
-                : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {p === "tables" ? "Tables" : p === "sql" ? "SQL" : "Database"}
-          </button>
-        ))}
+      <div className="shrink-0 px-2 pt-2">
+        <div className="flex gap-0.5 rounded-control border border-border bg-bg p-0.5">
+          {(["tables", "sql", "database"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPanel(p)}
+              className={cn(
+                "h-6 flex-1 cursor-pointer rounded text-xs transition-colors",
+                panel === p
+                  ? "bg-surface-hover font-medium text-fg"
+                  : "text-fg-muted hover:text-fg",
+              )}
+            >
+              {p === "tables" ? "Tables" : p === "sql" ? "SQL" : "Database"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {panel !== "sql" && (
-        <div className="flex flex-col gap-2 border-b border-border p-2">
+        <div className="flex flex-col gap-2 px-2 pt-3 pb-2">
           {/* Schema */}
           <div className="flex items-center gap-1">
             <SchemaPicker
@@ -243,23 +246,7 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
 
           {panel === "tables" && (
             <>
-              <Button
-                size="sm"
-                variant="secondary"
-                iconLeft={<Plus />}
-                className="w-full justify-start"
-                disabled={!schema}
-                onClick={() =>
-                  schema &&
-                  useCreateTableSheet
-                    .getState()
-                    .open({ serverId, database, schema })
-                }
-              >
-                New table
-              </Button>
-
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <div className="relative flex-1">
                   <Search className="absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-fg-subtle" />
                   <Input
@@ -269,6 +256,23 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
+                <Tooltip content="New table">
+                  <Button
+                    size="icon"
+                    variant="primary"
+                    aria-label="New table"
+                    className="size-7 shrink-0"
+                    disabled={!schema}
+                    onClick={() =>
+                      schema &&
+                      useCreateTableSheet
+                        .getState()
+                        .open({ serverId, database, schema })
+                    }
+                  >
+                    <Plus />
+                  </Button>
+                </Tooltip>
                 <IconButton
                   size="sm"
                   label="Refresh"
@@ -284,8 +288,8 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
       {panel === "sql" ? (
         <SqlPanel database={database} />
       ) : panel === "database" ? (
-        <nav className="min-h-0 flex-1 overflow-y-auto py-1">
-          <ul className="flex flex-col">
+        <nav className="min-h-0 flex-1 overflow-y-auto py-2">
+          <ul className="flex flex-col gap-px">
             {DATABASE_PAGES.map(({ group, label, icon }) => (
               <Item
                 key={group}
@@ -352,7 +356,7 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                     : `No tables in ${schema ?? "this schema"} yet.`}
                 </p>
               ) : (
-                <ul className="flex flex-col pb-1">
+                <ul className="flex flex-col gap-px py-1">
                   {tableList.map((t) => (
                     <Item
                       key={t.name}
@@ -634,8 +638,9 @@ function Item({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex h-7 w-full cursor-pointer items-center gap-2 pr-2 pl-4 text-left text-xs text-fg-muted hover:bg-surface-hover hover:text-fg disabled:cursor-default disabled:hover:bg-transparent [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-subtle",
-        active && "bg-surface-hover text-fg [&_svg]:text-accent",
+        "mx-2 flex h-7 w-[calc(100%-16px)] cursor-pointer items-center gap-2 rounded-control px-2 text-left text-xs text-fg-muted transition-colors hover:bg-surface-hover/70 hover:text-fg disabled:cursor-default disabled:hover:bg-transparent [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-subtle",
+        active &&
+          "relative bg-surface-hover text-fg before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent [&_svg]:text-accent",
       )}
     >
       {icon}
