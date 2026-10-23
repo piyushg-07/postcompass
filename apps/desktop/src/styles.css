@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@import "@repo/ui/tokens.css";
+
+/* Scan shared components for Tailwind classes */
+@source "../../../packages/ui/src";
+
+/*
+ * Motion for the home screen and mascot. Pure CSS, GPU-friendly (transform/opacity only).
+ * tokens.css turns all animations off for people who prefer reduced motion.
+ */
+@layer components {
+  .pc-float {
+    animation: pc-float 5s ease-in-out infinite;
+  }
+  .pc-shadow {
+    animation: pc-shadow 5s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .pc-blink {
+    animation: pc-blink 4.5s infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .pc-sway {
+    animation: pc-sway 3.2s ease-in-out infinite;
+    transform-origin: 50% 100%;
+    transform-box: fill-box;
+  }
+  .pc-wave {
+    animation: pc-wave 2.4s ease-in-out infinite;
+    transform-origin: 0% 100%;
+    transform-box: fill-box;
+  }
+  .pc-glow {
+    animation: pc-glow 4s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .pc-stream {
+    stroke-dasharray: 2 14;
+    animation: pc-stream 1.6s linear infinite;
+  }
+  .pc-zzz {
+    animation: pc-zzz 3s ease-in-out infinite;
+    opacity: 0;
+  }
+  .pc-twinkle {
+    animation: pc-twinkle 3s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  /* Staggered entrance: set --pc-delay on the element */
+  .pc-rise {
+    animation: pc-rise 500ms var(--ease-out-soft) both;
+    animation-delay: var(--pc-delay, 0ms);
+  }
+  .pc-lift {
+    transition:
+      transform 200ms var(--ease-out-soft),
+      border-color 150ms,
+      background-color 150ms;
+  }
+  .pc-lift:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+  /* Faint dotted grid that fades out towards the edges */
+  .pc-grid {
+    background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(ellipse at 70% 50%, black 10%, transparent 70%);
+  }
+}
+
+@keyframes pc-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes pc-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.5; }
+  50% { transform: scaleX(0.82); opacity: 0.3; }
+}
+@keyframes pc-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes pc-sway {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(7deg); }
+}
+@keyframes pc-wave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(-28deg); }
+  20%, 40% { transform: rotate(6deg); }
+}
+@keyframes pc-glow {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes pc-stream {
+  to { stroke-dashoffset: -32; }
+}
+@keyframes pc-zzz {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(14px, -22px) scale(1.15); }
+}
+@keyframes pc-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.7); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+@keyframes pc-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
