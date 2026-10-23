@@ -13,6 +13,7 @@ Run local databases in one click, connect to the cloud, and browse, edit and que
   <img src="https://img.shields.io/badge/PostgreSQL-ready-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2" />
   <img src="https://img.shields.io/badge/Rust%20%2B%20React-000?style=flat-square&logo=rust&logoColor=white" alt="Rust and React" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3ecf8e?style=flat-square" alt="MIT License" /></a>
 </p>
 
 <p>
@@ -231,4 +232,6 @@ pnpm check-types && pnpm lint && pnpm rust:check && pnpm rust:test
 
 ## 📄 License
 
-Copyright © 2026 PostCompass. All rights reserved.
+PostCompass is open source under the [MIT License](LICENSE).
+
+Copyright © 2026 Piyush Gupta.

@@ -6,7 +6,7 @@ members = ["apps/desktop/src-tauri", "crates/*"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
-license = "UNLICENSED"
+license = "MIT"
 
 [workspace.dependencies]
 pc-core = { path = "crates/pc-core" }
