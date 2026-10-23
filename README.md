@@ -5,28 +5,27 @@
 <h1>PostCompass</h1>
 
 <p><strong>A fast, modern desktop app for PostgreSQL.</strong><br />
-Run local databases in one click, connect to the cloud, and browse, edit and query your data, all in one beautiful app.</p>
+Spin up a local database in one click, connect to any cloud, and browse, edit and query your data in one beautiful app.</p>
 
 <p>
   <a href="https://github.com/piyushg-07/postcompass/releases/latest"><img src="https://img.shields.io/github/v/release/piyushg-07/postcompass?style=flat-square&color=3ecf8e&label=download" alt="Latest release" /></a>
+  <a href="https://github.com/piyushg-07/postcompass/releases"><img src="https://img.shields.io/github/downloads/piyushg-07/postcompass/total?style=flat-square&color=3ecf8e" alt="Downloads" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111?style=flat-square" alt="Platforms" />
-  <img src="https://img.shields.io/badge/PostgreSQL-ready-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2" />
-  <img src="https://img.shields.io/badge/Rust%20%2B%20React-000?style=flat-square&logo=rust&logoColor=white" alt="Rust and React" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3ecf8e?style=flat-square" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/built%20with-Tauri%202%20%2B%20Rust-24c8db?style=flat-square&logo=tauri&logoColor=white" alt="Built with Tauri 2 and Rust" />
 </p>
 
 <p>
   <a href="#-download"><strong>Download</strong></a> ·
   <a href="#-features"><strong>Features</strong></a> ·
-  <a href="#-screenshots"><strong>Screenshots</strong></a> ·
-  <a href="#-development"><strong>Development</strong></a> ·
-  <a href="#-roadmap"><strong>Roadmap</strong></a>
+  <a href="#-faq"><strong>FAQ</strong></a> ·
+  <a href="CONTRIBUTING.md"><strong>Contributing</strong></a> ·
+  <a href="https://github.com/piyushg-07/postcompass/discussions"><strong>Discussions</strong></a>
 </p>
 
-<img src="docs/assets/demo.gif" alt="PostCompass demo: home, table editor, ER diagram and SQL editor" width="100%" />
+<a href="docs/assets/demo.mp4"><img src="docs/assets/demo.gif" alt="PostCompass in action: create a local database, filter a table, explain a query, explore the ER diagram" width="100%" /></a>
 
-<sub>Prefer video? <a href="docs/assets/demo.mp4">Watch the demo (MP4)</a>.</sub>
+<sub>▶ <a href="docs/assets/demo.mp4"><b>Watch the full 2-minute tour</b></a></sub>
 
 </div>
 
@@ -34,75 +33,138 @@ Run local databases in one click, connect to the cloud, and browse, edit and que
 
 ## Why PostCompass?
 
-Most PostgreSQL tools are either powerful but dated (pgAdmin) or beautiful but web-only (Supabase Studio). PostCompass brings a Supabase-quality experience to your desktop:
+Most PostgreSQL tools are either powerful but dated, or beautiful but web-only. PostCompass brings a Supabase-quality experience to a native desktop app:
 
-- **Zero setup.** No PostgreSQL on your machine? PostCompass installs and runs one for you, privately, with **no admin rights**.
-- **Local and cloud, side by side.** Your local databases and your AWS RDS, Supabase, Neon or Google Cloud SQL connections live in one place.
-- **Fast and light.** A native app built with Rust and Tauri: a small installer and low memory use, not a 300 MB Electron bundle.
-- **Safe by default.** Passwords live in your system keychain, local servers only listen on `127.0.0.1`, and destructive actions always ask first.
+- **Zero setup.** No PostgreSQL on your machine? PostCompass downloads, verifies and runs one for you, with **no admin rights** and no Docker.
+- **Local and cloud, side by side.** Your local servers and your AWS RDS, Supabase, Neon or Cloud SQL connections live in one place.
+- **Fast and tiny.** Built with Rust and Tauri, the Windows installer is about **3 MB**, not a 300 MB Electron bundle.
+- **Private by default.** Passwords live in your system keychain, local servers only listen on `127.0.0.1`, and there's no telemetry.
+
+### At a glance
+
+| | |
+|---|---|
+| **Platforms** | Windows 10/11 · macOS (Apple Silicon and Intel) · Linux (AppImage, `.deb`, `.rpm`) |
+| **Installer size** | ~3.3 MB (`setup.exe`) · ~4.2 MB (`.dmg`) · ~4.8 MB (`.deb`) |
+| **Local PostgreSQL** | 14, 15, 16, 17 and 18, installed per user with checksum-verified binaries |
+| **Cloud** | AWS RDS / Aurora, Google Cloud SQL, Azure, Supabase, Neon, Cloudflare Hyperdrive, Railway, Render, or any PostgreSQL |
+| **Passwords** | Windows Credential Manager · macOS Keychain · Linux Secret Service |
+| **License** | [MIT](LICENSE), free forever |
 
 ## ✨ Features
 
 <table>
 <tr>
-<td width="50%" valign="top">
+<td width="55%"><img src="docs/assets/create-server.png" alt="Creating a local PostgreSQL server" /></td>
+<td width="45%">
 
-### 🗄️ Local databases
-- One-click install of **PostgreSQL 18** (checksum-verified binaries)
+### 🗄️ PostgreSQL in one click
+
+Pick a version, name it, done. PostCompass downloads the official binaries, verifies the checksum, initialises the cluster and starts it, with live progress at every step.
+
+- PostgreSQL **14 to 18**, side by side
 - Start, stop and remove servers; detects existing installs
-- Create, rename and drop databases and schemas
+- Passwords generated for you and kept in your keychain
 - **Backup and restore** with bundled `pg_dump` / `pg_restore`
 
-### ☁️ Cloud connections
-- AWS RDS / Aurora, Google Cloud SQL, Azure, Supabase, Neon, Cloudflare Hyperdrive, Railway, Render, or any PostgreSQL
-- Encryption modes: Off, Prefer, Require, **Verify certificate** (with your provider's CA bundle)
-- Test before you save; passwords stored in the OS keychain
+</td>
+</tr>
+<tr>
+<td width="45%">
 
-### 📋 Table editor
-- Supabase-style grid with **inline editing that saves instantly**
-- Filter bar (`city = Delhi`, `price >= 100` …), multi-column sort, pagination
-- Insert and edit rows in a side panel; **follow foreign keys** to the linked record
-- Select rows to copy or export as CSV, JSON or SQL
+### 📋 A table editor you already know
+
+A Supabase-style grid where edits save instantly, with undo.
+
+- Filter pills (`status = refunded`) with value suggestions for enums
+- Multi-column sort, pagination, frozen and hidden columns
+- Insert rows in a side panel, paste rows straight from Excel, or import CSV
+- Copy or export selections as CSV, JSON or SQL
 
 </td>
-<td width="50%" valign="top">
+<td width="55%"><img src="docs/assets/table-editor.png" alt="Table editor with a filter applied" /></td>
+</tr>
+<tr>
+<td width="55%"><img src="docs/assets/foreign-key-peek.png" alt="Peeking at a referenced record" /></td>
+<td width="45%">
 
-### 🧱 Schema tools
-- Create tables and columns visually (types, defaults, PK, unique, identity, RLS)
-- Indexes, foreign keys, constraints and triggers
-- Functions, triggers, enums, sequences and **extensions** (pgvector, PostGIS…)
+### 🔗 Follow your foreign keys
 
-### ⚡ SQL editor
-- CodeMirror editor with autocomplete for your tables and columns
-- Run all or just the selection (`Ctrl+Enter`), multiple result sets
-- **Visual EXPLAIN / EXPLAIN ANALYZE** that highlights the slowest step
-- Query history and saved queries
-
-### 🧭 Everything else
-- Interactive **ER diagram**: draggable tables, column-to-column links, focus mode, minimap
-- **Command palette** (`Ctrl+K`) to jump to any table, database or action
-- Connect dialog with connection strings and snippets for Node.js, Python, Prisma, Drizzle and Go
-- Dark UI with a Supabase-inspired design
+Click the arrow in any foreign-key cell to peek at the linked record, then jump to its table in one click. Column headers show stats too: distinct values, NULLs and the most common values.
 
 </td>
 </tr>
+<tr>
+<td width="45%">
+
+### ⚡ A SQL editor that knows your schema
+
+- Autocomplete for your tables and columns
+- `Ctrl+Enter` runs the statement under the cursor, `Ctrl+Shift+Enter` runs everything
+- Warns before `DROP`, `TRUNCATE` or an `UPDATE` without `WHERE`
+- Query history, saved queries, snippets and templates
+- Export results as CSV, JSON, Markdown or `INSERT` statements
+
+</td>
+<td width="55%"><img src="docs/assets/sql-editor.png" alt="SQL editor with results" /></td>
+</tr>
+<tr>
+<td width="55%"><img src="docs/assets/explain-plan.png" alt="Visual EXPLAIN ANALYZE" /></td>
+<td width="45%">
+
+### 🔍 Visual EXPLAIN ANALYZE
+
+See your query plan as a tree with timing bars. The **slowest step** is flagged, and estimate-vs-actual row mismatches are highlighted. `EXPLAIN ANALYZE` runs inside a transaction that's rolled back, so it's safe on writes. Then chart any result as a bar or line chart.
+
+</td>
+</tr>
+<tr>
+<td width="45%">
+
+### 🧭 An ER diagram that's actually useful
+
+- Column-to-column relationship lines
+- Hover a table to light up everything it's connected to
+- Drag tables around (positions are remembered), auto-arrange, minimap
+- Double-click a table to open it
+
+</td>
+<td width="55%"><img src="docs/assets/er-diagram.png" alt="ER diagram with relationships highlighted" /></td>
+</tr>
+<tr>
+<td width="55%"><img src="docs/assets/cloud-providers.png" alt="Choosing a cloud provider" /></td>
+<td width="45%">
+
+### ☁️ Every cloud, one place
+
+Pick your provider and PostCompass fills in sensible defaults. Choose an encryption mode (Off, Prefer, Require or **Verify certificate** with your provider's CA bundle), and **test the connection** before you save it.
+
+</td>
+</tr>
+<tr>
+<td width="45%">
+
+### ⌨️ Everything is one keystroke away
+
+Press `Ctrl+K` to jump to any table, view, function or saved query, switch databases, or run an action like *Back up*, *New table* or *ER diagram*.
+
+The **Connect** panel gives you connection strings (URI, psql, `.env`, JDBC) and ready-made snippets for Node.js, Python, Prisma, Drizzle and Go.
+
+</td>
+<td width="55%"><img src="docs/assets/command-palette.png" alt="Command palette" /></td>
+</tr>
 </table>
 
-## 📸 Screenshots
+<details>
+<summary><b>And a lot more…</b></summary>
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/table-editor.png" alt="Table editor" /><p align="center"><sub><b>Table editor</b>: edit inline, filter, sort, follow foreign keys</sub></p></td>
-<td width="50%"><img src="docs/assets/er-diagram.png" alt="ER diagram" /><p align="center"><sub><b>ER diagram</b>: column-level relationships with focus mode</sub></p></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/assets/sql-editor.png" alt="SQL editor" /><p align="center"><sub><b>SQL editor</b>: autocomplete, results, history</sub></p></td>
-<td width="50%"><img src="docs/assets/explain-plan.png" alt="Explain plan" /><p align="center"><sub><b>Visual EXPLAIN ANALYZE</b>: find the slowest step at a glance</sub></p></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/assets/home.png" alt="Home" /><p align="center"><sub><b>Home</b>: every connection, local and cloud, plus where you left off</sub></p></td>
-</tr>
-</table>
+- **Schema tools.** Create and edit tables visually (types, defaults, primary keys, identity, arrays, foreign keys) and preview the SQL before you save.
+- **Indexes, constraints and triggers.** B-tree, Hash, GIN, GiST and BRIN indexes with a live SQL preview.
+- **Row Level Security.** Enable RLS and write policies from templates, with `USING` / `WITH CHECK` editors.
+- **Database objects.** Functions, triggers, enums, sequences and extensions (pgvector, PostGIS…) with install, update and remove.
+- **Keyboard first.** `Ctrl+T` new query, `Ctrl+W` close tab, `Ctrl+Tab` to cycle, `Ctrl+B` sidebar, and spreadsheet-style keys in the grid.
+
+</details>
 
 ## 📦 Download
 
@@ -111,109 +173,58 @@ Grab the latest installer from the **[Releases page](https://github.com/piyushg-
 | Platform | File |
 |---|---|
 | **Windows** 10 / 11 | `PostCompass_x.y.z_x64-setup.exe` (recommended), or the `.msi` for managed installs |
-| **macOS** (Apple Silicon) | `PostCompass_x.y.z_aarch64.dmg` |
-| **macOS** (Intel) | `PostCompass_x.y.z_x64.dmg` |
+| **macOS** Apple Silicon | `PostCompass_x.y.z_aarch64.dmg` |
+| **macOS** Intel | `PostCompass_x.y.z_x64.dmg` |
 | **Linux** | `.AppImage` (any distro), `.deb` (Ubuntu / Debian) or `.rpm` (Fedora) |
 
 > [!NOTE]
-> Builds aren't code-signed yet. On **Windows**, choose **More info → Run anyway** when SmartScreen appears. On **macOS**, right-click the app and choose **Open** the first time.
+> Installers aren't code-signed yet. On **Windows**, choose **More info → Run anyway** when SmartScreen appears. On **macOS**, right-click the app and choose **Open** the first time.
 
-### First run
+**First run:** answer two quick questions, then click **New local database** (or **Add remote connection** if your database is in the cloud). Open it and press `Ctrl+K` anytime to jump anywhere.
 
-1. Answer a couple of quick onboarding questions.
-2. **No PostgreSQL yet?** Click **New local database**. PostCompass downloads, verifies and starts PostgreSQL for you.
-3. **Already have one in the cloud?** Click **Add remote connection**, pick your provider and paste your details.
-4. Open a database and start exploring. Press `Ctrl+K` anytime to jump anywhere.
+## ❓ FAQ
 
-## 🛠️ Development
+<details>
+<summary><b>Is it really free?</b></summary>
 
-### Prerequisites
+Yes. PostCompass is open source under the MIT license, with no paid tier, no account and no sign-up.
+</details>
 
-| Tool | Version |
-|---|---|
-| [Node.js](https://nodejs.org) | 24 or newer |
-| [pnpm](https://pnpm.io) | 11 (`corepack enable` picks the pinned version) |
-| [Rust](https://rustup.rs) | stable (pinned in `rust-toolchain.toml`) |
-| Platform tools | [Tauri prerequisites](https://tauri.app/start/prerequisites/): WebView2 + VS Build Tools on Windows, Xcode CLT on macOS, `libwebkit2gtk-4.1-dev` on Linux |
+<details>
+<summary><b>Do I need to install PostgreSQL or Docker first?</b></summary>
 
-### Run it
+No. **New local database** downloads the official PostgreSQL binaries for your platform, verifies their SHA-256 checksum and runs the server as your user, with no admin rights needed. If you already have PostgreSQL, PostCompass can connect to it like any other server.
+</details>
 
-```bash
-git clone https://github.com/piyushg-07/postcompass.git
-cd postcompass
-pnpm install
-pnpm dev            # starts the desktop app with hot reload
-```
+<details>
+<summary><b>Where are my passwords stored?</b></summary>
 
-### Useful commands
+In your operating system's keychain: Windows Credential Manager, macOS Keychain or the Linux Secret Service. They're never written to PostCompass's own files.
+</details>
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Run the desktop app in development mode |
-| `pnpm build:app` | Build installers for your current OS (output in `target/release/bundle/`) |
-| `pnpm check-types` | Type-check every TypeScript package |
-| `pnpm lint` | Lint every package (zero warnings allowed) |
-| `pnpm rust:check` | Clippy across the Rust workspace |
-| `pnpm rust:test` | Run the Rust tests |
+<details>
+<summary><b>Does PostCompass collect any data?</b></summary>
 
-> [!TIP]
-> On Windows inside a synced folder (OneDrive, Dropbox), point Cargo's `target-dir` outside the synced folder in `.cargo/config.toml`. Sync clients lock build files and break builds.
+No. The app talks only to your own databases. The one request it makes by itself is downloading PostgreSQL binaries when you create a local server.
+</details>
 
-## 🏗️ Architecture
+<details>
+<summary><b>Can other machines reach the local servers it creates?</b></summary>
 
-```
-┌──────────────────────────────┐        typed IPC         ┌──────────────────────────────────┐
-│  React 19 UI (apps/desktop)  │ ◄──── tauri-specta ────► │  Rust core (apps/desktop/src-tauri) │
-│  TanStack Query/Table/Form   │   generated bindings.ts   │  commands · state · keychain      │
-│  Zustand · Radix · Tailwind  │                           └───────────────┬──────────────────┘
-└──────────────────────────────┘                                           │
-                                         ┌─────────────────────────────────┼───────────────────────────┐
-                                         ▼                                 ▼                           ▼
-                                 crates/pc-core                  crates/driver-postgres        crates/runtime-postgres
-                                 shared traits & types           connect · query · introspect  detect · install · start/stop
-                                 (DatabaseDriver, …)             (tokio-postgres, TLS)          backup / restore
-```
+No. Servers created by PostCompass listen only on `127.0.0.1` and use `scram-sha-256` authentication.
+</details>
 
-- **Modular by design.** Each database engine is a driver crate implementing the `DatabaseDriver` trait from `pc-core`, so more engines can be added without touching the UI.
-- **End-to-end types.** Rust commands export TypeScript types automatically ([tauri-specta](https://github.com/specta-rs/tauri-specta)), so the UI can't call the backend with the wrong shape.
-- **Secrets stay out of files.** Passwords go to Windows Credential Manager, macOS Keychain or Linux Secret Service, never to `state.json`.
+<details>
+<summary><b>Will it support MySQL or SQLite?</b></summary>
 
-### Project structure
-
-```
-postcompass/
-├── apps/
-│   ├── desktop/            # The PostCompass app (React + Tauri)
-│   │   ├── src/            #   UI: features/, app/, lib/
-│   │   └── src-tauri/      #   Rust: commands, state, keychain, window setup
-│   ├── server/             # Small Hono API (experimental)
-│   ├── web/ · docs/        # Next.js sites (placeholders)
-├── crates/
-│   ├── pc-core/            # Shared traits and types
-│   ├── driver-postgres/    # PostgreSQL driver
-│   └── runtime-postgres/   # Local PostgreSQL install / lifecycle / backups
-├── packages/
-│   ├── ui/                 # Shared design system (tokens + components)
-│   ├── eslint-config/
-│   └── typescript-config/
-├── docs/                   # PLAN.md, POSTGRES_GUIDE.md, assets/
-└── .github/workflows/      # release.yml
-```
-
-## 🚀 Releasing
-
-Releases are fully automated with GitHub Actions ([`release.yml`](.github/workflows/release.yml)):
-
-1. Bump `"version"` in `apps/desktop/src-tauri/tauri.conf.json` and commit.
-2. Push to the release branch: `git push origin HEAD:release`
-3. GitHub builds Windows, macOS (Apple Silicon and Intel) and Linux installers and creates a **draft release** `vX.Y.Z` with every file attached.
-4. Review the draft on the Releases page and click **Publish**.
+The backend is built around a driver interface, so more engines can be added. PostgreSQL comes first; see the roadmap below.
+</details>
 
 ## 🗺️ Roadmap
 
-- [x] One-click local PostgreSQL install, start/stop, detection
+- [x] One-click local PostgreSQL install, start / stop, detection
 - [x] Table editor with filters, sort, inline edits and foreign-key navigation
-- [x] SQL editor with visual EXPLAIN
+- [x] SQL editor with visual EXPLAIN and charts
 - [x] ER diagram, command palette, backup and restore
 - [x] Cloud connections (RDS, Supabase, Neon, Cloud SQL, Azure…)
 - [ ] Auto-updates
@@ -222,16 +233,35 @@ Releases are fully automated with GitHub Actions ([`release.yml`](.github/workfl
 - [ ] Roles and permissions UI
 - [ ] More engines (MySQL, SQLite…)
 
+Have an idea? [Start a discussion](https://github.com/piyushg-07/postcompass/discussions) or [open a feature request](https://github.com/piyushg-07/postcompass/issues/new?template=feature_request.yml).
+
 ## 🤝 Contributing
 
-Issues and ideas are welcome. Before opening a pull request, please make sure these pass:
+Contributions are welcome, from bug reports to pull requests. **[CONTRIBUTING.md](CONTRIBUTING.md)** covers setup, architecture, the project layout and how releases work. In short:
 
 ```bash
-pnpm check-types && pnpm lint && pnpm rust:check && pnpm rust:test
+git clone https://github.com/piyushg-07/postcompass.git
+cd postcompass
+pnpm install
+pnpm dev        # runs the desktop app with hot reload
 ```
+
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md), and report security issues privately as described in [SECURITY.md](SECURITY.md).
+
+<a href="https://github.com/piyushg-07/postcompass/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=piyushg-07/postcompass" alt="Contributors" />
+</a>
+
+## 💚 Built with
+
+[Tauri](https://tauri.app) · [Rust](https://www.rust-lang.org) · [React](https://react.dev) · [tokio-postgres](https://github.com/sfackler/rust-postgres) · [CodeMirror](https://codemirror.net) · [TanStack](https://tanstack.com) · [React Flow](https://reactflow.dev) · PostgreSQL binaries from [theseus-rs](https://github.com/theseus-rs/postgresql-binaries). The design is inspired by [Supabase Studio](https://supabase.com).
 
 ## 📄 License
 
 PostCompass is open source under the [MIT License](LICENSE).
 
 Copyright © 2026 Piyush Gupta.
+
+<div align="center">
+<sub>If PostCompass saves you time, a ⭐ helps other developers find it.</sub>
+</div>
