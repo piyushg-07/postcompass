@@ -1,5 +1,7 @@
 import {
   DropdownMenu,
+  Field,
+  Input,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -212,7 +214,12 @@ export function NewDatabaseDialog({
   onCreated: (name: string) => void;
 }) {
   const [name, setName] = useState("");
+  const databases = useDatabases();
   if (!open) return null;
+  const trimmed = name.trim();
+  const exists = (databases.data ?? []).some((d) => d.name === trimmed);
+  // Postgres folds unquoted names to lowercase; anything else needs quotes in every query
+  const plain = /^[a-z_][a-z0-9_$]*$/.test(trimmed);
   return (
     <RunSqlDialog
       open
@@ -221,15 +228,41 @@ export function NewDatabaseDialog({
         onOpenChange(o);
       }}
       title="New database"
-      description="Each database has its own schemas and tables. Apps connect to one database at a time."
-      sql={name.trim() ? createDatabase(name.trim()) : "-- type a name"}
+      description="Creates an empty database on this server, with its own schemas and tables."
+      sql={
+        !trimmed
+          ? "-- type a name"
+          : exists
+            ? "-- name taken"
+            : createDatabase(trimmed)
+      }
       database={database}
       confirmLabel="Create database"
-      successMessage={`Database ${name.trim()} created`}
+      successMessage={`Database ${trimmed} created`}
       refreshAll
-      onDone={() => onCreated(name.trim())}
+      onDone={() => onCreated(trimmed)}
     >
-      <NameField value={name} onChange={setName} placeholder="my_app" />
+      <Field
+        label="Name"
+        error={exists ? "A database with this name already exists." : undefined}
+        hint={
+          !trimmed || plain
+            ? "Lowercase letters, numbers and underscores. You'll switch to it once it's created."
+            : "Has capitals or symbols, so it must be written in double quotes in SQL."
+        }
+      >
+        {(p) => (
+          <Input
+            {...p}
+            className="font-mono"
+            autoFocus
+            spellCheck={false}
+            placeholder="my_app"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        )}
+      </Field>
     </RunSqlDialog>
   );
 }
