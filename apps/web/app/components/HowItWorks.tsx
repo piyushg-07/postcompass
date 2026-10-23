@@ -5,7 +5,7 @@ const STEPS = [
   {
     icon: Download,
     title: "Download the app",
-    text: "Grab the installer for Windows, macOS or Linux. On Windows it's about 3 MB. No account, no sign-up.",
+    text: "Grab the installer for Windows, macOS or Linux. No account, no sign-up.",
     detail: ["setup.exe", ".dmg", ".AppImage"],
   },
   {

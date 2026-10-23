@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PRODUCT } from "../config/product";
-import { ArrowRight, WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
+import { WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
 import Hyperspeed from "./Hyperspeed";
 import AppPreview from "./AppPreview";
 import styles from "./Hero.module.css";
@@ -22,6 +22,33 @@ export default function Hero() {
   }, []);
 
   const OsIcon = OS_ICON[os];
+
+  // The preview lies back in 3D and stands up as it scrolls into view
+  const previewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // 0 when the top of the preview sits near the bottom of the screen, 1 once it's well in view
+      const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.75)));
+      el.style.setProperty("--lift", p >= 0.995 ? "1" : p.toFixed(4));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
 
   return (
     <section className={styles.hero} id="hero">
@@ -57,15 +84,21 @@ export default function Hero() {
       <div className={styles.gridBackground} />
 
       <div className={`container ${styles.content}`}>
-        <a href="/download" className={styles.badge}>
-          <span className={styles.badgeVersion}>v{PRODUCT.version}</span>
-          <span>Free and open source</span>
-          <ArrowRight size={13} className={styles.badgeArrow} />
-        </a>
+        {/* The page opens by "running" a query; the headline is its result */}
+        <p className={styles.query} aria-hidden="true">
+          <span className={styles.queryPrompt}>=#</span>
+          <span className={styles.queryText}>
+            <span className={styles.qKw}>SELECT</span> tagline <span className={styles.qKw}>FROM</span> postcompass;
+          </span>
+          <span className={styles.queryCaret} />
+        </p>
 
         <h1 className={styles.headline}>
-          Your PostgreSQL, <em className={styles.headlineAccent}>charted.</em>
+          <span className={styles.word} style={{ ["--i" as string]: 0 }}>Your</span>{" "}
+          <span className={styles.word} style={{ ["--i" as string]: 1 }}>PostgreSQL,</span>{" "}
+          <em className={`${styles.word} ${styles.headlineAccent}`} style={{ ["--i" as string]: 2 }}>charted.</em>
         </h1>
+        <p className={styles.rowCount} aria-hidden="true">(1 row)</p>
 
         <p className={styles.subhead}>
           Run PostgreSQL locally in one click, connect to any cloud, and browse, edit and
@@ -80,14 +113,12 @@ export default function Hero() {
         </div>
 
         <p className={styles.meta}>
+          <span>Free and open source · v{PRODUCT.version}</span>
+          <span className={styles.metaDot} aria-hidden="true" />
           <span>Windows, macOS and Linux</span>
-          <span className={styles.metaDot} aria-hidden="true" />
-          <span>~3 MB installer</span>
-          <span className={styles.metaDot} aria-hidden="true" />
-          <span>No sign-up</span>
         </p>
 
-        <div className={styles.preview}>
+        <div className={styles.preview} ref={previewRef}>
           <div className={styles.previewGlow} aria-hidden="true" />
           <div className={styles.previewFrame}>
             <AppPreview />

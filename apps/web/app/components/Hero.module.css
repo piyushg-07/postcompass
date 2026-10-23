@@ -86,49 +86,13 @@
   z-index: -1;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.3rem 0.85rem 0.3rem 0.35rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(12, 14, 13, 0.72);
-  backdrop-filter: blur(10px);
-  color: var(--fg-secondary);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: border-color 0.2s ease, color 0.2s ease;
-}
 
-.badge:hover {
-  border-color: var(--border-accent);
-  color: var(--fg-primary);
-}
 
-.badgeVersion {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: var(--accent-muted);
-  color: var(--accent-hover);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
 
-.badgeArrow {
-  color: var(--fg-muted);
-  transition: transform 0.2s ease;
-}
 
-.badge:hover .badgeArrow {
-  transform: translateX(2px);
-  color: var(--accent-hover);
-}
 
 .headline {
-  margin: 1.75rem 0 0;
+  margin: 1.1rem 0 0;
   font-family: var(--font-sans);
   font-size: clamp(2.6rem, 6.4vw, 5rem);
   font-weight: 700;
@@ -195,8 +159,7 @@
 
 
 
-.primaryBtn:focus-visible,
-.badge:focus-visible {
+.primaryBtn:focus-visible {
   outline: 2px solid var(--accent-hover);
   outline-offset: 3px;
 }
@@ -308,5 +271,143 @@
 
   .hintTry {
     display: none;
+  }
+}
+
+/* ============================================================
+   Opening sequence: type a query, reveal its result
+   ============================================================ */
+.query {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 12, 11, 0.7);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: #d4d4d8;
+}
+
+.queryPrompt {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.queryText {
+  display: inline-block;
+  width: 32ch;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typeQuery 0.75s steps(32, end) 0.15s both;
+}
+
+.qKw {
+  color: #c792ea;
+}
+
+.queryCaret {
+  width: 7px;
+  height: 15px;
+  margin-left: -0.45rem;
+  border-radius: 1px;
+  background: #34d399;
+  animation: caretBlink 1s steps(1) infinite;
+}
+
+@keyframes typeQuery {
+  from { width: 0; }
+  to { width: 32ch; }
+}
+
+@keyframes caretBlink {
+  50% { opacity: 0; }
+}
+
+.word {
+  display: inline-block;
+  animation: wordIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(0.95s + var(--i) * 0.13s);
+}
+
+@keyframes wordIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.rowCount {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #52525b;
+  animation: fadeUp 0.5s ease 1.45s both;
+}
+
+.subhead {
+  animation: fadeUp 0.6s ease 1.3s both;
+}
+
+.ctas {
+  animation: fadeUp 0.6s ease 1.45s both;
+}
+
+.meta {
+  animation: fadeUp 0.6s ease 1.6s both;
+}
+
+.preview {
+  animation: fadeUp 0.9s ease 1.7s both;
+  perspective: 1800px;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Lies back like a laptop lid, stands up as you scroll */
+.previewFrame {
+  transform-origin: 50% 0%;
+  transform: rotateX(calc((1 - var(--lift, 1)) * 24deg)) scale(calc(0.9 + var(--lift, 1) * 0.1));
+  will-change: transform;
+}
+
+@media (max-width: 640px) {
+  .query {
+    font-size: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queryText,
+  .queryCaret,
+  .word,
+  .rowCount,
+  .subhead,
+  .ctas,
+  .meta,
+  .preview {
+    animation: none;
+  }
+
+  .previewFrame {
+    transform: none;
   }
 }

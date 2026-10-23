@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   Server,
   Table,
@@ -149,29 +149,67 @@ const MORE = [
   { icon: Lock, title: "Private by default", text: "No account, no telemetry. Local servers only listen on 127.0.0.1." },
 ];
 
-const ROTATE_MS = 7000;
+const STICKY_TOP = 96; // px below the fixed navbar
+const STEP_VH = 62; // scroll distance per feature while pinned
 
 export default function FeaturesSection() {
   const [active, setActive] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
-  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
 
+  // Pin the showcase and let scrolling drive it on wide screens
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setAutoplay(false);
+    const wide = window.matchMedia("(min-width: 961px)");
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPinned(wide.matches && !calm.matches);
+    update();
+    wide.addEventListener("change", update);
+    calm.addEventListener("change", update);
+    return () => {
+      wide.removeEventListener("change", update);
+      calm.removeEventListener("change", update);
+    };
   }, []);
 
-  const running = autoplay && !hovered;
+  const measure = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return null;
+    const r = track.getBoundingClientRect();
+    const total = Math.max(1, track.offsetHeight - (window.innerHeight - STICKY_TOP));
+    return { top: r.top + window.scrollY, total, progress: Math.min(1, Math.max(0, (STICKY_TOP - r.top) / total)) };
+  }, []);
 
   useEffect(() => {
-    if (!running) return;
-    const id = window.setTimeout(() => setActive((i) => (i + 1) % SHOWCASE.length), ROTATE_MS);
-    return () => window.clearTimeout(id);
-  }, [running, active]);
+    if (!pinned) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const m = measure();
+      if (!m) return;
+      railRef.current?.style.setProperty("--p", m.progress.toFixed(4));
+      setActive(Math.min(SHOWCASE.length - 1, Math.floor(m.progress * SHOWCASE.length)));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [pinned, measure]);
 
   const select = (i: number) => {
-    setAutoplay(false);
-    setActive(i);
+    if (!pinned) return setActive(i);
+    const m = measure();
+    if (!m) return;
+    // Land a little into the feature's slice of the scroll track
+    window.scrollTo({ top: m.top - STICKY_TOP + ((i + 0.3) / SHOWCASE.length) * m.total, behavior: "smooth" });
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
@@ -200,90 +238,106 @@ export default function FeaturesSection() {
         </div>
 
         <div
-          className={styles.showcase}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          ref={trackRef}
+          className={pinned ? styles.track : undefined}
+          style={pinned ? { height: `calc(${SHOWCASE.length * STEP_VH}vh + 100vh - ${STICKY_TOP}px)` } : undefined}
         >
-          <div className={styles.tabs} role="tablist" aria-label="PostCompass features" aria-orientation="vertical">
-            {SHOWCASE.map((f, i) => {
-              const Icon = f.icon;
-              const selected = i === active;
-              return (
-                <button
-                  key={f.id}
-                  ref={(el) => {
-                    tabRefs.current[i] = el;
-                  }}
-                  type="button"
-                  role="tab"
-                  id={`feature-tab-${f.id}`}
-                  aria-selected={selected}
-                  aria-controls="feature-panel"
-                  tabIndex={selected ? 0 : -1}
-                  className={`${styles.tab} ${selected ? styles.tabActive : ""}`}
-                  onClick={() => select(i)}
-                  onKeyDown={(e) => onKeyDown(e, i)}
-                >
-                  <span className={styles.tabIcon}>
-                    <Icon size={16} />
-                  </span>
-                  <span className={styles.tabText}>
-                    <span className={styles.tabLabel}>{f.label}</span>
-                  </span>
-                  {selected && autoplay && (
-                    <span
-                      key={active}
-                      className={styles.tabProgress}
-                      style={{ animationDuration: `${ROTATE_MS}ms`, animationPlayState: running ? "running" : "paused" }}
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div
-            className={styles.panel}
-            role="tabpanel"
-            id="feature-panel"
-            aria-labelledby={`feature-tab-${current.id}`}
-          >
-            <div className={styles.frame}>
-              <div className={styles.frameBar} aria-hidden="true">
-                <span />
-                <span />
-                <span />
+          <div className={pinned ? styles.sticky : undefined} style={pinned ? { top: STICKY_TOP } : undefined}>
+            <div className={styles.showcase}>
+              <div className={styles.list}>
+                <div ref={railRef} className={styles.rail} aria-hidden="true">
+                  <span className={styles.railFill} />
+                </div>
+                <div className={styles.tabs} role="tablist" aria-label="PostCompass features" aria-orientation="vertical">
+                  {SHOWCASE.map((f, i) => {
+                    const Icon = f.icon;
+                    const selected = i === active;
+                    const done = i < active;
+                    return (
+                      <div key={f.id} className={`${styles.item} ${selected ? styles.itemActive : ""} ${done ? styles.itemDone : ""}`}>
+                        <button
+                          ref={(el) => {
+                            tabRefs.current[i] = el;
+                          }}
+                          type="button"
+                          role="tab"
+                          id={`feature-tab-${f.id}`}
+                          aria-selected={selected}
+                          aria-controls="feature-panel"
+                          tabIndex={selected ? 0 : -1}
+                          className={styles.tab}
+                          onClick={() => select(i)}
+                          onKeyDown={(e) => onKeyDown(e, i)}
+                        >
+                          <span className={styles.tabIcon}>
+                            <Icon size={16} />
+                          </span>
+                          <span className={styles.tabLabel}>{f.label}</span>
+                          <span className={styles.tabIndex}>0{i + 1}</span>
+                        </button>
+                        <div className={styles.expand} aria-hidden={!selected}>
+                          <div className={styles.expandInner}>
+                            <h3 className={styles.expandTitle}>{f.title}</h3>
+                            <p className={styles.expandText}>{f.description}</p>
+                            <ul className={styles.points}>
+                              {f.points.map((p) => (
+                                <li key={p}>
+                                  <Check size={13} className={styles.pointIcon} />
+                                  <span>{p}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className={styles.shots}>
-                {SHOWCASE.map((f, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={f.id}
-                    src={f.image}
-                    alt={i === active ? f.alt : ""}
-                    width={1600}
-                    height={1000}
-                    loading={i === 0 ? "eager" : "lazy"}
-                    decoding="async"
-                    className={`${styles.shot} ${i === active ? styles.shotActive : ""}`}
-                    aria-hidden={i !== active}
-                  />
-                ))}
-              </div>
-            </div>
 
-            <div className={styles.detail} key={current.id}>
-              <h3 className={styles.detailTitle}>{current.title}</h3>
-              <p className={styles.detailText}>{current.description}</p>
-              <ul className={styles.points}>
-                {current.points.map((p) => (
-                  <li key={p}>
-                    <Check size={14} className={styles.pointIcon} />
-                    <span>{p}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className={styles.panel} role="tabpanel" id="feature-panel" aria-labelledby={`feature-tab-${current.id}`}>
+                <div className={styles.frame}>
+                  <div className={styles.frameBar} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                    <span className={styles.frameTitle}>{current.label}</span>
+                    <span className={styles.frameCount}>
+                      {active + 1} / {SHOWCASE.length}
+                    </span>
+                  </div>
+                  <div className={styles.shots}>
+                    {SHOWCASE.map((f, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={f.id}
+                        src={f.image}
+                        alt={i === active ? f.alt : ""}
+                        width={1600}
+                        height={1000}
+                        loading={i < 2 ? "eager" : "lazy"}
+                        decoding="async"
+                        className={`${styles.shot} ${i === active ? styles.shotActive : ""}`}
+                        aria-hidden={i !== active}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Small screens: the details sit under the screenshot */}
+                <div className={styles.detail} key={current.id}>
+                  <h3 className={styles.detailTitle}>{current.title}</h3>
+                  <p className={styles.detailText}>{current.description}</p>
+                  <ul className={styles.points}>
+                    {current.points.map((p) => (
+                      <li key={p}>
+                        <Check size={14} className={styles.pointIcon} />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

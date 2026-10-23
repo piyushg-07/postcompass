@@ -1,5 +1,5 @@
 /* ============================================================
-   Features — tabbed showcase with real screenshots
+   Features — a pinned, scroll-driven showcase of the real app
    ============================================================ */
 .section {
   padding-top: var(--space-20);
@@ -12,18 +12,12 @@
   z-index: 1;
 }
 
-/* ---- Ambient background ---- */
 .backdrop {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
-
-
-
-
-
 
 .dots {
   position: absolute;
@@ -34,41 +28,107 @@
   -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, black, transparent 75%);
 }
 
+/* ---- Pinning ---- */
+.track {
+  position: relative;
+}
+
+.sticky {
+  position: sticky;
+}
+
 .showcase {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 2.5rem;
   align-items: start;
 }
 
-/* ---- Tabs ---- */
+/* ---- Feature list with a progress rail ---- */
+.list {
+  position: relative;
+  padding-left: 22px;
+}
+
+.rail {
+  --p: 0;
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.railFill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.6);
+  transform-origin: top;
+  transform: scaleY(var(--p));
+}
+
 .tabs {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  position: sticky;
-  top: 88px;
+  gap: 2px;
+}
+
+.item {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.item::before {
+  content: "";
+  position: absolute;
+  top: 19px;
+  left: -21px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #26262b;
+  background: var(--bg-root);
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.itemDone::before {
+  border-color: #10b981;
+  background: #10b981;
+}
+
+.itemActive {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.itemActive::before {
+  border-color: #34d399;
+  background: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18), 0 0 12px rgba(52, 211, 153, 0.8);
 }
 
 .tab {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid transparent;
+  padding: 0.7rem 0.85rem;
+  border: none;
   border-radius: 12px;
-  background: transparent;
-  color: var(--fg-secondary);
+  background: none;
+  color: var(--fg-muted);
   text-align: left;
   cursor: pointer;
-  overflow: hidden;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: color 0.25s ease;
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.03);
   color: var(--fg-primary);
 }
 
@@ -77,9 +137,8 @@
   outline-offset: 2px;
 }
 
-.tabActive {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  border-color: rgba(255, 255, 255, 0.09);
+.itemActive .tab,
+.itemDone .tab {
   color: var(--fg-primary);
 }
 
@@ -88,53 +147,102 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  color: var(--fg-muted);
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  transition: color 0.25s ease, background 0.25s ease, border-color 0.25s ease;
 }
 
-.tabActive .tabIcon {
+.itemActive .tabIcon {
   background: var(--accent-muted);
   border-color: var(--border-accent);
   color: var(--accent-hover);
 }
 
-.tabText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
 .tabLabel {
-  font-size: 0.9375rem;
+  flex: 1;
+  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
-.tabProgress {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 2px;
-  width: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-  transform-origin: left;
-  animation-name: progress;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
+.tabIndex {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-faint);
 }
 
-@keyframes progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+.itemActive .tabIndex {
+  color: var(--accent-hover);
 }
 
-/* ---- Panel ---- */
+/* The active feature opens in place */
+.expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.itemActive .expand {
+  grid-template-rows: 1fr;
+}
+
+.expandInner {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 0.95rem;
+  opacity: 0;
+  transition: opacity 0.3s ease, padding 0.45s ease;
+}
+
+.itemActive .expandInner {
+  padding: 0 0.95rem 0.95rem;
+  opacity: 1;
+  transition-delay: 0.1s;
+}
+
+.expandTitle {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--fg-primary);
+}
+
+.expandText {
+  margin: 0 0 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--fg-secondary);
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--fg-primary);
+}
+
+.pointIcon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--accent-hover);
+}
+
+/* ---- Screenshot panel ---- */
 .panel {
   min-width: 0;
 }
@@ -144,20 +252,35 @@
   border-radius: 14px;
   padding: 5px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
-  box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.8), 0 0 60px -30px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.8);
 }
 
 .frameBar {
   display: flex;
+  align-items: center;
   gap: 6px;
-  padding: 7px 9px 9px;
+  padding: 7px 10px 9px;
 }
 
-.frameBar span {
+.frameBar > span:nth-child(-n + 3) {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.14);
+}
+
+.frameTitle {
+  margin-left: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+.frameCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-faint);
 }
 
 .shots {
@@ -176,69 +299,35 @@
   object-fit: cover;
   object-position: top left;
   opacity: 0;
-  transform: scale(1.012);
-  transition: opacity 0.45s ease, transform 0.6s ease;
+  transform: scale(1.03) translateY(8px);
+  filter: blur(4px);
+  transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.5s ease;
 }
 
 .shotActive {
   opacity: 1;
-  transform: scale(1);
+  transform: none;
+  filter: none;
 }
 
+/* Details below the screenshot are only for small screens */
 .detail {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 0.5rem 2.5rem;
-  padding: 1.75rem 0.25rem 0;
-  animation: fadeUp 0.45s ease both;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  display: none;
 }
 
 .detailTitle {
-  grid-column: 1;
-  margin: 0;
-  font-size: 1.375rem;
+  margin: 0 0 0.4rem;
+  font-size: 1.2rem;
   font-weight: 650;
   letter-spacing: -0.02em;
   color: var(--fg-primary);
 }
 
 .detailText {
-  grid-column: 1;
-  margin: 0;
-  font-size: 0.975rem;
-  line-height: 1.65;
+  margin: 0 0 0.8rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
   color: var(--fg-secondary);
-}
-
-.points {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0.2rem 0 0;
-  list-style: none;
-}
-
-.points li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--fg-primary);
-}
-
-.pointIcon {
-  flex-shrink: 0;
-  margin-top: 0.2rem;
-  color: var(--accent-hover);
 }
 
 /* ---- And more ---- */
@@ -279,7 +368,7 @@
 }
 
 .moreTitle {
-  margin: 0.3rem 0 0.3rem;
+  margin: 0.3rem 0;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--fg-primary);
@@ -292,18 +381,28 @@
   color: var(--fg-muted);
 }
 
-/* ---- Responsive ---- */
+/* ---- Small screens: chips, no pinning ---- */
 @media (max-width: 960px) {
   .showcase {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
   }
 
+  .list {
+    padding-left: 0;
+  }
+
+  .rail,
+  .item::before,
+  .expand,
+  .tabIndex {
+    display: none;
+  }
+
   .tabs {
-    position: static;
     flex-direction: row;
-    overflow-x: auto;
     gap: 0.5rem;
+    overflow-x: auto;
     padding-bottom: 0.25rem;
     scrollbar-width: none;
   }
@@ -312,12 +411,14 @@
     display: none;
   }
 
-  .tab {
+  .item {
     flex: 0 0 auto;
-    width: auto;
-    align-items: center;
-    padding: 0.5rem 0.85rem 0.5rem 0.55rem;
     border-color: rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+  }
+
+  .tab {
+    padding: 0.45rem 0.85rem 0.45rem 0.5rem;
     border-radius: 999px;
   }
 
@@ -332,23 +433,23 @@
     white-space: nowrap;
   }
 
+  .detail {
+    display: block;
+    padding-top: 1.25rem;
+    animation: fadeUp 0.4s ease both;
+  }
+
   .more {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (max-width: 640px) {
-  .detail {
-    grid-template-columns: minmax(0, 1fr);
-    padding-top: 1.25rem;
-  }
-
-  .points {
-    grid-column: 1;
-    grid-row: auto;
-    padding-top: 0.5rem;
-  }
-
   .more {
     grid-template-columns: minmax(0, 1fr);
     margin-top: 3.5rem;
@@ -357,6 +458,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .shot,
+  .expand,
+  .expandInner,
   .detail {
     transition: none;
     animation: none;
