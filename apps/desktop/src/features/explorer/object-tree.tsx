@@ -254,6 +254,11 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                     placeholder="Search tables"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setSearch("");
+                      if (e.key === "Enter" && tableList[0])
+                        open(tableList[0].name, tableList[0].kind);
+                    }}
                   />
                 </div>
                 <Tooltip content="New table">
@@ -350,78 +355,122 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
           ) : (
             <>
               {tableList.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-fg-subtle">
-                  {query
-                    ? "Nothing matches."
-                    : `No tables in ${schema ?? "this schema"} yet.`}
-                </p>
+                query ? (
+                  <p className="px-4 py-3 text-xs text-fg-subtle">
+                    No tables match “{search.trim()}”.
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                    <span className="flex size-9 items-center justify-center rounded-card border border-border bg-bg text-fg-subtle">
+                      <Table2 className="size-4" />
+                    </span>
+                    <p className="text-xs font-medium text-fg">No tables yet</p>
+                    <p className="text-xs text-fg-subtle">
+                      Create the first table in{" "}
+                      <span className="font-mono">
+                        {schema ?? "this schema"}
+                      </span>
+                      .
+                    </p>
+                    {schema && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        iconLeft={<Plus />}
+                        className="mt-1"
+                        onClick={() =>
+                          useCreateTableSheet
+                            .getState()
+                            .open({ serverId, database, schema })
+                        }
+                      >
+                        Create table
+                      </Button>
+                    )}
+                  </div>
+                )
               ) : (
                 <ul className="flex flex-col gap-px py-1">
-                  {tableList.map((t) => (
-                    <Item
-                      key={t.name}
-                      icon={
-                        t.kind === "view" ? (
-                          <Eye />
-                        ) : t.kind === "materialized_view" ? (
-                          <Layers />
-                        ) : (
-                          <Table2 />
-                        )
-                      }
-                      label={t.name}
-                      meta={
-                        t.kind === "view" ? "view" : formatCount(t.rowEstimate)
-                      }
-                      active={isActive(t.name)}
-                      onClick={() => open(t.name, t.kind)}
-                      menu={
-                        schema && (
-                          <TableMenu
-                            name={t.name}
-                            kind={t.kind}
-                            isView={
-                              t.kind === "view" ||
-                              t.kind === "materialized_view"
-                            }
-                            onAction={(action) =>
-                              setTableAction({
-                                target: {
-                                  database,
-                                  schema,
-                                  name: t.name,
-                                  kind: t.kind,
-                                },
-                                action,
-                              })
-                            }
-                            select={`SELECT *\nFROM ${qualified(schema, t.name)}\nLIMIT 100;`}
-                            onView={(view) =>
-                              ws.openTab({
-                                type: "table",
+                  {tableList.map((t) => {
+                    const menuProps = schema
+                      ? {
+                          name: t.name,
+                          kind: t.kind,
+                          isView:
+                            t.kind === "view" || t.kind === "materialized_view",
+                          select: `SELECT *\nFROM ${qualified(schema, t.name)}\nLIMIT 100;`,
+                          onAction: (action: TableAction) =>
+                            setTableAction({
+                              target: {
                                 database,
                                 schema,
                                 name: t.name,
                                 kind: t.kind,
-                                view,
-                              })
-                            }
-                            onQuery={(sql) => ws.newQuery(database, sql)}
-                            onRefresh={() => void refresh()}
-                            onTableSheet={(mode) =>
-                              useCreateTableSheet.getState().open({
-                                serverId,
-                                database,
-                                schema,
-                                table: t.name,
-                                mode,
-                              })
-                            }
-                          />
-                        )
-                      }
-                    />
-                  ))}
+                              },
+                              action,
+                            }),
+                          onView: (view: "data" | "structure" | "definition") =>
+                            ws.openTab({
+                              type: "table",
+                              database,
+                              schema,
+                              name: t.name,
+                              kind: t.kind,
+                              view,
+                            }),
+                          onQuery: (sql: string) => ws.newQuery(database, sql),
+                          onRefresh: () => void refresh(),
+                          onTableSheet: (mode: "edit" | "duplicate") =>
+                            useCreateTableSheet.getState().open({
+                              serverId,
+                              database,
+                              schema,
+                              table: t.name,
+                              mode,
+                            }),
+                        }
+                      : null;
+                    return (
+                      <Item
+                        key={t.name}
+                        icon={
+                          t.kind === "view" ? (
+                            <Eye />
+                          ) : t.kind === "materialized_view" ? (
+                            <Layers />
+                          ) : (
+                            <Table2 />
+                          )
+                        }
+                        label={t.name}
+                        highlight={query}
+                        meta={
+                          t.kind === "view"
+                            ? "view"
+                            : formatCount(t.rowEstimate)
+                        }
+                        active={isActive(t.name)}
+                        onClick={() => open(t.name, t.kind)}
+                        menu={menuProps && <TableMenu {...menuProps} />}
+                        actions={
+                          menuProps && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label={`${t.name} actions`}
+                                  className="flex size-5 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-border hover:text-fg"
+                                >
+                                  <MoreHorizontal className="size-3.5" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <TableMenu {...menuProps} as="dropdown" />
+                            </DropdownMenu>
+                          )
+                        }
+                      />
+                    );
+                  })}
                 </ul>
               )}
             </>
@@ -621,6 +670,8 @@ function Item({
   plain,
   onClick,
   menu,
+  highlight,
+  actions,
 }: {
   icon: ReactNode;
   label: string;
@@ -631,6 +682,10 @@ function Item({
   onClick?: () => void;
   /** Right-click menu. */
   menu?: ReactNode;
+  /** Search text to mark in the label. */
+  highlight?: string;
+  /** Shown in place of `meta` while the row is hovered (a ⋯ menu). */
+  actions?: ReactNode;
 }) {
   const button = (
     <button
@@ -645,17 +700,22 @@ function Item({
     >
       {icon}
       <span className={cn("min-w-0 flex-1 truncate", !plain && "font-mono")}>
-        {label}
+        <Highlighted text={label} query={highlight} />
       </span>
       {meta && (
-        <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
+        <span
+          className={cn(
+            "shrink-0 font-mono text-[10px] text-fg-subtle",
+            actions && "group-hover/row:invisible",
+          )}
+        >
           {meta}
         </span>
       )}
     </button>
   );
   return (
-    <li>
+    <li className="group/row relative">
       {menu ? (
         <ContextMenu>
           <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
@@ -664,12 +724,46 @@ function Item({
       ) : (
         button
       )}
+      {actions && (
+        <div className="absolute top-1/2 right-3 flex -translate-y-1/2 opacity-0 group-hover/row:opacity-100 has-[[data-state=open]]:opacity-100">
+          {actions}
+        </div>
+      )}
     </li>
   );
 }
 
-/** Right-click menu of a table or view in the sidebar. */
+/** `text` with the first case-insensitive match of `query` marked. */
+function Highlighted({ text, query }: { text: string; query?: string }) {
+  const at = query ? text.toLowerCase().indexOf(query) : -1;
+  if (!query || at === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <mark className="rounded-sm bg-accent/20 text-accent">
+        {text.slice(at, at + query.length)}
+      </mark>
+      {text.slice(at + query.length)}
+    </>
+  );
+}
+
+const CONTEXT_PARTS = {
+  Content: ContextMenuContent,
+  Item: ContextMenuItem,
+  Label: ContextMenuLabel,
+  Separator: ContextMenuSeparator,
+};
+const DROPDOWN_PARTS = {
+  Content: DropdownMenuContent,
+  Item: DropdownMenuItem,
+  Label: DropdownMenuLabel,
+  Separator: DropdownMenuSeparator,
+};
+
+/** Actions of a table or view in the sidebar: its right-click menu, or the row's ⋯ menu. */
 function TableMenu({
+  as = "context",
   name,
   kind,
   isView,
@@ -689,85 +783,68 @@ function TableMenu({
   onRefresh: () => void;
   onTableSheet: (mode: "edit" | "duplicate") => void;
   onAction: (action: TableAction) => void;
+  as?: "context" | "dropdown";
 }) {
+  const M = as === "dropdown" ? DROPDOWN_PARTS : CONTEXT_PARTS;
   const copy = (text: string, what: string) =>
     void navigator.clipboard
       .writeText(text)
       .then(() => toast.success(`${what} copied`));
   return (
-    <ContextMenuContent>
-      <ContextMenuLabel>{name}</ContextMenuLabel>
-      <ContextMenuItem icon={<Table2 />} onSelect={() => onView("data")}>
+    <M.Content>
+      <M.Label>{name}</M.Label>
+      <M.Item icon={<Table2 />} onSelect={() => onView("data")}>
         View data
-      </ContextMenuItem>
+      </M.Item>
       {!isView && (
-        <ContextMenuItem icon={<Layers />} onSelect={() => onView("structure")}>
+        <M.Item icon={<Layers />} onSelect={() => onView("structure")}>
           View structure
-        </ContextMenuItem>
+        </M.Item>
       )}
       {isView && (
-        <ContextMenuItem icon={<Code />} onSelect={() => onView("definition")}>
+        <M.Item icon={<Code />} onSelect={() => onView("definition")}>
           View definition
-        </ContextMenuItem>
+        </M.Item>
       )}
-      <ContextMenuItem
-        icon={<TerminalSquare />}
-        onSelect={() => onQuery(select)}
-      >
+      <M.Item icon={<TerminalSquare />} onSelect={() => onQuery(select)}>
         Query in SQL editor
-      </ContextMenuItem>
+      </M.Item>
       {!isView && (
         <>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            icon={<Settings2 />}
-            onSelect={() => onTableSheet("edit")}
-          >
+          <M.Separator />
+          <M.Item icon={<Settings2 />} onSelect={() => onTableSheet("edit")}>
             Edit table
-          </ContextMenuItem>
-          <ContextMenuItem
+          </M.Item>
+          <M.Item
             icon={<CopyPlus />}
             onSelect={() => onTableSheet("duplicate")}
           >
             Duplicate table
-          </ContextMenuItem>
+          </M.Item>
         </>
       )}
-      <ContextMenuSeparator />
-      <ContextMenuItem icon={<Copy />} onSelect={() => copy(name, "Name")}>
+      <M.Separator />
+      <M.Item icon={<Copy />} onSelect={() => copy(name, "Name")}>
         Copy name
-      </ContextMenuItem>
-      <ContextMenuItem
-        icon={<Copy />}
-        onSelect={() => copy(select, "SELECT statement")}
-      >
+      </M.Item>
+      <M.Item icon={<Copy />} onSelect={() => copy(select, "SELECT statement")}>
         Copy SELECT statement
-      </ContextMenuItem>
-      <ContextMenuSeparator />
+      </M.Item>
+      <M.Separator />
       {kind === "materialized_view" && (
-        <ContextMenuItem
-          icon={<RefreshCw />}
-          onSelect={() => onAction("refresh")}
-        >
+        <M.Item icon={<RefreshCw />} onSelect={() => onAction("refresh")}>
           Refresh materialized view…
-        </ContextMenuItem>
+        </M.Item>
       )}
-      <ContextMenuItem icon={<Pencil />} onSelect={() => onAction("rename")}>
+      <M.Item icon={<Pencil />} onSelect={() => onAction("rename")}>
         Rename…
-      </ContextMenuItem>
+      </M.Item>
       {!isView && (
-        <ContextMenuItem
-          icon={<Eraser />}
-          onSelect={() => onAction("truncate")}
-        >
+        <M.Item icon={<Eraser />} onSelect={() => onAction("truncate")}>
           Empty table (truncate)…
-        </ContextMenuItem>
+        </M.Item>
       )}
-      <ContextMenuItem
-        icon={<Trash2 />}
-        danger
-        onSelect={() => onAction("drop")}
-      >
+      <M.Item icon={<Trash2 />} danger onSelect={() => onAction("drop")}>
         Drop{" "}
         {kind === "view"
           ? "view"
@@ -775,11 +852,11 @@ function TableMenu({
             ? "materialized view"
             : "table"}
         …
-      </ContextMenuItem>
-      <ContextMenuSeparator />
-      <ContextMenuItem icon={<RefreshCw />} onSelect={onRefresh}>
+      </M.Item>
+      <M.Separator />
+      <M.Item icon={<RefreshCw />} onSelect={onRefresh}>
         Refresh list
-      </ContextMenuItem>
-    </ContextMenuContent>
+      </M.Item>
+    </M.Content>
   );
 }
