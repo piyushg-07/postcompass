@@ -14,6 +14,7 @@ mod rows;
 mod sql;
 
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -56,12 +57,14 @@ impl DatabaseDriver for PostgresDriver {
     async fn connect(&self, config: ConnectionConfig) -> CoreResult<Box<dyn DriverSession>> {
         let client = open(&config, &config.database).await?;
         let version = server_version(&client).await?;
+        limit_browsing(&client).await;
         let mut clients = HashMap::new();
         clients.insert(Purpose::Browse.key(&config.database), Arc::new(client));
         Ok(Box::new(PostgresSession {
             config,
             version,
             clients: Mutex::new(clients),
+            editor_locks: Mutex::new(HashMap::new()),
         }))
     }
 }
@@ -81,15 +84,54 @@ impl Purpose {
     }
 }
 
+/// Longest a catalog query or table page may run before the server stops it.
+const BROWSE_TIMEOUT: &str = "30s";
+
+/// A connection plus the NOTICE / WARNING messages the server sent on it.
+pub(crate) struct Conn {
+    client: Client,
+    notices: Arc<std::sync::Mutex<Vec<String>>>,
+}
+
+impl Conn {
+    fn take_notices(&self) -> Vec<String> {
+        std::mem::take(&mut *self.notices.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+}
+
+impl Deref for Conn {
+    type Target = Client;
+    fn deref(&self) -> &Client {
+        &self.client
+    }
+}
+
+impl DerefMut for Conn {
+    fn deref_mut(&mut self) -> &mut Client {
+        &mut self.client
+    }
+}
+
+/// Browse connections give up on slow catalog queries instead of hanging the sidebar. Ignored where
+/// the server refuses (some poolers).
+async fn limit_browsing(client: &Client) {
+    let _ = client
+        .batch_execute(&format!("SET statement_timeout = '{BROWSE_TIMEOUT}'"))
+        .await;
+}
+
 struct PostgresSession {
     config: ConnectionConfig,
     version: String,
-    clients: Mutex<HashMap<String, Arc<Client>>>,
+    clients: Mutex<HashMap<String, Arc<Conn>>>,
+    /// One per database: SQL runs on the shared editor connection take turns, so a cancel or a
+    /// `SET ROLE` never lands on another tab's query.
+    editor_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
 }
 
 impl PostgresSession {
     /// A live client for `database`, reconnecting if the cached one was closed (e.g. server restart).
-    async fn client(&self, database: &str, purpose: Purpose) -> CoreResult<Arc<Client>> {
+    async fn client(&self, database: &str, purpose: Purpose) -> CoreResult<Arc<Conn>> {
         let key = purpose.key(database);
         let mut clients = self.clients.lock().await;
         if let Some(client) = clients.get(&key)
@@ -97,13 +139,21 @@ impl PostgresSession {
         {
             return Ok(client.clone());
         }
-        let client = Arc::new(open(&self.config, database).await?);
+        let client = open(&self.config, database).await?;
+        if matches!(purpose, Purpose::Browse) {
+            limit_browsing(&client).await;
+        }
+        let client = Arc::new(client);
         clients.insert(key, client.clone());
         Ok(client)
     }
 
-    async fn browse(&self, database: &str) -> CoreResult<Arc<Client>> {
+    async fn browse(&self, database: &str) -> CoreResult<Arc<Conn>> {
         self.client(database, Purpose::Browse).await
+    }
+
+    async fn editor_lock(&self, database: &str) -> Arc<Mutex<()>> {
+        self.editor_locks.lock().await.entry(database.to_owned()).or_default().clone()
     }
 }
 
@@ -190,9 +240,39 @@ impl DriverSession for PostgresSession {
         sql: &str,
         max_rows: u32,
         cancel: CancellationToken,
+        role: Option<&str>,
     ) -> CoreResult<ExecuteResult> {
+        let lock = self.editor_lock(database).await;
+        let _turn = lock.lock().await;
         let client = self.client(database, Purpose::Editor).await?;
-        execute::execute(&client, sql, max_rows, cancel).await
+        let tls = cancel_tls(&self.config)?;
+        client.take_notices();
+
+        if let Some(role) = role {
+            let set = execute::execute(
+                &client,
+                &format!("SET ROLE {}", sql::ident(role)),
+                0,
+                CancellationToken::new(),
+                None,
+            )
+            .await?;
+            if set.error.is_some() {
+                return Ok(set);
+            }
+        }
+        let mut result = execute::execute(&client, sql, max_rows, cancel, tls).await;
+        if role.is_some() {
+            // The editor keeps its connection, so the role must go back even after a failure. In an
+            // aborted transaction RESET is refused until it's rolled back, which is all it can do.
+            if client.batch_execute("RESET ROLE").await.is_err() {
+                let _ = client.batch_execute("ROLLBACK; RESET ROLE").await;
+            }
+        }
+        if let Ok(result) = &mut result {
+            result.notices = client.take_notices();
+        }
+        result
     }
 
     async fn explain(&self, database: &str, sql: &str, analyze: bool) -> CoreResult<ExplainResult> {
@@ -206,7 +286,16 @@ impl DriverSession for PostgresSession {
     }
 }
 
-async fn open(config: &ConnectionConfig, database: &str) -> CoreResult<Client> {
+/// TLS for a cancel request, made the same way as the connection it cancels.
+fn cancel_tls(config: &ConnectionConfig) -> CoreResult<Option<MakeTlsConnector>> {
+    Ok(match config.ssl_mode {
+        SslMode::Disable => None,
+        SslMode::Prefer | SslMode::Require => Some(MakeTlsConnector::new(unverified_tls()?)),
+        SslMode::VerifyFull => Some(MakeTlsConnector::new(verified_tls(config.ca_cert.as_deref())?)),
+    })
+}
+
+async fn open(config: &ConnectionConfig, database: &str) -> CoreResult<Conn> {
     use tokio_postgres::config::SslMode as PgSslMode;
 
     let mut pg = tokio_postgres::Config::new();
@@ -242,13 +331,14 @@ async fn open(config: &ConnectionConfig, database: &str) -> CoreResult<Client> {
     finish(config, pg.connect(MakeTlsConnector::new(tls))).await
 }
 
-/// Waits for the connection (with a hard timeout) and drives it in the background.
+/// Waits for the connection (with a hard timeout) and drives it in the background, keeping the
+/// NOTICE / WARNING messages it receives.
 async fn finish<S, T>(
     config: &ConnectionConfig,
     connecting: impl std::future::Future<
         Output = Result<(Client, tokio_postgres::Connection<S, T>), tokio_postgres::Error>,
     >,
-) -> CoreResult<Client>
+) -> CoreResult<Conn>
 where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
     T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
@@ -257,10 +347,24 @@ where
         .await
         .map_err(|_| CoreError::ConnectionFailed(format!("{}:{} did not respond", config.host, config.port)))?
         .map_err(map_error)?;
+    let notices = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = notices.clone();
+    let mut connection = connection;
     tokio::spawn(async move {
-        let _ = connection.await;
+        use futures_util::StreamExt;
+        let mut messages = futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+        while let Some(Ok(message)) = messages.next().await {
+            if let tokio_postgres::AsyncMessage::Notice(notice) = message {
+                let mut list = sink.lock().unwrap_or_else(|e| e.into_inner());
+                // Keep the most recent ones if a loop raises thousands
+                if list.len() >= 500 {
+                    list.remove(0);
+                }
+                list.push(format!("{}: {}", notice.severity(), notice.message()));
+            }
+        }
     });
-    Ok(client)
+    Ok(Conn { client, notices })
 }
 
 fn unverified_tls() -> CoreResult<TlsConnector> {
@@ -312,6 +416,9 @@ pub(crate) fn map_error(error: tokio_postgres::Error) -> CoreError {
         let mut message = db.message().to_owned();
         if let Some(detail) = db.detail() {
             message.push_str(&format!(" ({detail})"));
+        }
+        if let Some(hint) = db.hint() {
+            message.push_str(&format!(" Hint: {hint}"));
         }
         return CoreError::QueryFailed(message);
     }

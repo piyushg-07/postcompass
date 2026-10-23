@@ -12,7 +12,13 @@ const RESERVED = new Set(
     "from full grant group having ilike in initially inner intersect into is isnull join lateral leading left like limit " +
     "localtime localtimestamp natural not notnull null offset on only or order outer overlaps placing primary references " +
     "returning right select session_user similar some symmetric system_user table tablesample then to trailing true union " +
-    "unique user using variadic verbose when where window with"
+    "unique user using variadic verbose when where window with " +
+    // Can't be column names or types either, so quote_ident quotes them too
+    "between bigint bit boolean char character coalesce dec decimal exists extract float greatest grouping inout int " +
+    "integer interval json json_array json_arrayagg json_exists json_object json_objectagg json_query json_scalar " +
+    "json_serialize json_table json_value least merge_action national nchar none normalize nullif numeric out overlay " +
+    "position precision real row setof smallint substring time timestamp treat trim values varchar xmlattributes " +
+    "xmlconcat xmlelement xmlexists xmlforest xmlnamespaces xmlparse xmlpi xmlroot xmlserialize xmltable"
   ).split(" "),
 );
 

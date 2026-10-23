@@ -707,6 +707,14 @@ function ResultsPanel({
         </div>
       )}
 
+      {result.notices.length > 0 && (
+        <div className="flex max-h-24 shrink-0 flex-col gap-0.5 overflow-y-auto border-b border-border bg-surface px-3 py-2 font-mono text-[11px] text-fg-muted">
+          {result.notices.map((n, i) => (
+            <span key={i}>{n}</span>
+          ))}
+        </div>
+      )}
+
       {result.error && (
         <div className="flex shrink-0 items-start gap-2 border-b border-danger/30 bg-danger/5 px-3 py-2.5 text-xs">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-danger" />

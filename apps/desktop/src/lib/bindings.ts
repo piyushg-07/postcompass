@@ -229,6 +229,8 @@ export type ExecuteResult = {
 	error: SqlError | null,
 	cancelled: boolean,
 	durationMs: number,
+	/**  NOTICE / WARNING / RAISE messages the server sent while the statements ran. */
+	notices: string[],
 };
 
 export type Experience = "new" | "some" | "expert";

@@ -2,7 +2,7 @@
 
 use pc_core::CoreError;
 use pc_core::driver::{
-    ApplyResult, CancellationToken, ExecuteResult, ExplainResult, RowChange, RowsPage, RowsRequest,
+    ApplyResult, ExecuteResult, ExplainResult, RowChange, RowsPage, RowsRequest,
 };
 use tauri::State;
 
@@ -83,22 +83,9 @@ pub async fn execute_sql(
     let session = connections.get(&connection_id).await?;
     let max_rows = max_rows.unwrap_or(MAX_RESULT_ROWS).clamp(1, HARD_MAX_ROWS);
     let role = role.filter(|r| !r.is_empty());
-    if let Some(role) = &role {
-        let quoted = format!("\"{}\"", role.replace('"', "\"\""));
-        let set = session
-            .execute(&database, &format!("SET ROLE {quoted}"), 0, CancellationToken::new())
-            .await?;
-        if set.error.is_some() {
-            return Ok(set);
-        }
-    }
     let cancel = connections.begin_run(&run_id).await;
-    let result = session.execute(&database, &sql, max_rows, cancel).await;
+    let result = session.execute(&database, &sql, max_rows, cancel, role.as_deref()).await;
     connections.end_run(&run_id).await;
-    if role.is_some() {
-        // The editor keeps its connection, so put the role back even if the query failed
-        let _ = session.execute(&database, "RESET ROLE", 0, CancellationToken::new()).await;
-    }
     result
 }
 

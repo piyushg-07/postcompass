@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use pc_core::driver::{CancellationToken, ExecuteResult, ExplainResult, SqlError, StatementResult};
 use pc_core::{CoreError, CoreResult};
 use tokio_postgres::error::ErrorPosition;
+use postgres_native_tls::MakeTlsConnector;
 use tokio_postgres::{Client, NoTls, SimpleQueryMessage};
 
 use crate::map_error;
@@ -20,7 +21,14 @@ struct Pending {
 
 /// Runs `sql` with the simple query protocol, so several statements can be sent at once and every
 /// value comes back as text. Keeps at most `max_rows` rows per result set (but keeps counting).
-pub async fn execute(client: &Client, sql: &str, max_rows: u32, cancel: CancellationToken) -> CoreResult<ExecuteResult> {
+/// `tls` is how the connection was made, so a cancel request reaches TLS-only servers too.
+pub async fn execute(
+    client: &Client,
+    sql: &str,
+    max_rows: u32,
+    cancel: CancellationToken,
+    tls: Option<MakeTlsConnector>,
+) -> CoreResult<ExecuteResult> {
     let started = Instant::now();
     let mut statements: Vec<StatementResult> = Vec::new();
     let mut current: Option<Pending> = None;
@@ -38,8 +46,12 @@ pub async fn execute(client: &Client, sql: &str, max_rows: u32, cancel: Cancella
                     _ = cancel.cancelled(), if !cancelled => {
                         cancelled = true;
                         let token = client.cancel_token();
+                        let tls = tls.clone();
                         tokio::spawn(async move {
-                            let _ = token.cancel_query(NoTls).await;
+                            let _ = match tls {
+                                Some(tls) => token.cancel_query(tls).await,
+                                None => token.cancel_query(NoTls).await,
+                            };
                         });
                         continue;
                     }
@@ -87,6 +99,7 @@ pub async fn execute(client: &Client, sql: &str, max_rows: u32, cancel: Cancella
     }
 
     Ok(ExecuteResult {
+        notices: Vec::new(),
         statements,
         error,
         cancelled,
@@ -103,6 +116,16 @@ pub async fn explain(client: &Client, sql: &str, analyze: bool) -> CoreResult<Ex
     }
     let options = if analyze { "ANALYZE, BUFFERS, FORMAT JSON" } else { "FORMAT JSON" };
     let explain_sql = format!("EXPLAIN ({options}) {statement}");
+    // The simple protocol would run anything after a `;` too (even a COMMIT); preparing first
+    // rejects more than one statement without running anything
+    if let Err(e) = client.prepare(&explain_sql).await {
+        if e.as_db_error().is_some_and(|db| db.message().contains("multiple commands")) {
+            return Err(CoreError::InvalidInput(
+                "Explain works on one statement at a time. Select the one you want and try again.".into(),
+            ));
+        }
+        return Err(map_error(e));
+    }
 
     if analyze {
         client.batch_execute("BEGIN").await.map_err(map_error)?;

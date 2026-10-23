@@ -70,8 +70,22 @@ pub async fn rows(client: &Client, schema: &str, table: &str, request: RowsReque
 
     // Total: exact for small tables (or any filtered small table), estimated for large unfiltered ones
     let estimate = rel.row_estimate;
+    // Views, partitioned and foreign tables have no estimate of their own (0 or -1), so they are
+    // counted, but only up to the limit: a huge one costs at most that many rows per page
+    let trusted = matches!(rel.kind, TableKind::Table) && estimate >= 0.0;
     let small = estimate < EXACT_COUNT_LIMIT; // -1 (never analyzed) counts as small
-    let (total, total_is_estimate) = if small {
+    let (total, total_is_estimate) = if !trusted {
+        let count_sql = format!(
+            "select count(*)::float8 from (select 1 from {from}{where_sql} limit {}) as capped",
+            EXACT_COUNT_LIMIT as u64 + 1
+        );
+        let row = client
+            .query_one(count_sql.as_str(), &as_refs(&params[..filter_params]))
+            .await
+            .map_err(map_error)?;
+        let counted: f64 = row.get(0);
+        if counted > EXACT_COUNT_LIMIT { (None, false) } else { (Some(counted), false) }
+    } else if small {
         let count_sql = format!("select count(*)::float8 from {from}{where_sql}");
         let row = client
             .query_one(count_sql.as_str(), &as_refs(&params[..filter_params]))

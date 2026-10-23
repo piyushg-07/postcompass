@@ -1,6 +1,7 @@
 //! Quoting helpers. Every identifier or literal written into SQL text goes through here.
 
-/// Words that must be quoted when used as identifiers (PostgreSQL reserved keywords).
+/// Words that must be quoted when used as identifiers: PostgreSQL's reserved keywords plus the ones
+/// that can't be column names or types (`time`, `values`, `position` …), as `quote_ident` does.
 const RESERVED: &[&str] = &[
     "all", "analyse", "analyze", "and", "any", "array", "as", "asc", "asymmetric", "authorization", "binary", "both",
     "case", "cast", "check", "collate", "collation", "column", "concurrently", "constraint", "create", "cross",
@@ -12,6 +13,13 @@ const RESERVED: &[&str] = &[
     "overlaps", "placing", "primary", "references", "returning", "right", "select", "session_user", "similar",
     "some", "symmetric", "system_user", "table", "tablesample", "then", "to", "trailing", "true", "union", "unique",
     "user", "using", "variadic", "verbose", "when", "where", "window", "with",
+    "between", "bigint", "bit", "boolean", "char", "character", "coalesce", "dec", "decimal", "exists",
+    "extract", "float", "greatest", "grouping", "inout", "int", "integer", "interval", "json", "json_array",
+    "json_arrayagg", "json_exists", "json_object", "json_objectagg", "json_query", "json_scalar", "json_serialize",
+    "json_table", "json_value", "least", "merge_action", "national", "nchar", "none", "normalize", "nullif",
+    "numeric", "out", "overlay", "position", "precision", "real", "row", "setof", "smallint", "substring", "time",
+    "timestamp", "treat", "trim", "values", "varchar", "xmlattributes", "xmlconcat", "xmlelement", "xmlexists",
+    "xmlforest", "xmlnamespaces", "xmlparse", "xmlpi", "xmlroot", "xmlserialize", "xmltable",
 ];
 
 /// Quotes an identifier only when needed, like PostgreSQL's `quote_ident`.

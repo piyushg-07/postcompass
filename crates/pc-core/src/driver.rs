@@ -471,6 +471,8 @@ pub struct ExecuteResult {
     pub error: Option<SqlError>,
     pub cancelled: bool,
     pub duration_ms: u32,
+    /// NOTICE / WARNING / RAISE messages the server sent while the statements ran.
+    pub notices: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -556,13 +558,15 @@ pub trait DriverSession: Send + Sync {
     ) -> CoreResult<ApplyResult>;
 
     // SQL
-    /// Runs one or more statements. SQL errors are returned in the result, not as `Err`.
+    /// Runs one or more statements, as `role` when given. SQL errors are returned in the result,
+    /// not as `Err`. Runs on one database never overlap, so a cancel only stops its own run.
     async fn execute(
         &self,
         database: &str,
         sql: &str,
         max_rows: u32,
         cancel: CancellationToken,
+        role: Option<&str>,
     ) -> CoreResult<ExecuteResult>;
     /// `analyze` really runs the statement inside a transaction that is rolled back.
     async fn explain(&self, database: &str, sql: &str, analyze: bool) -> CoreResult<ExplainResult>;

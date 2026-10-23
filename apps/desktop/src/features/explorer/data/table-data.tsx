@@ -1083,7 +1083,7 @@ export function TableData({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={`Delete ${selected.size} row${selected.size === 1 ? "" : "s"}?`}
-        description="This can't be undone."
+        description="You can undo this right after with Ctrl+Z."
         confirmLabel="Delete"
         destructive
         loading={removeRows.isPending}
