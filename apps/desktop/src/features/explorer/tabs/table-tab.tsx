@@ -1,42 +1,17 @@
 import {
   Button,
   cn,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Field,
-  Input,
   Popover,
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Switch,
   toast,
 } from "@repo/ui";
-import {
-  Copy,
-  CopyPlus,
-  Eraser,
-  MoreHorizontal,
-  Pencil,
-  RefreshCw,
-  Settings2,
-  SquareTerminal,
-  Trash2,
-  Unlock,
-} from "lucide-react";
+import { Copy, SquareTerminal, Unlock } from "lucide-react";
 import { useState } from "react";
 import type { ObjectKind } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
-import {
-  dropTable,
-  qualified,
-  renameTable,
-  truncateTable,
-} from "../../../lib/sql";
-import { useCreateTableSheet } from "../create-table-sheet";
+import { qualified } from "../../../lib/sql";
 import { TableData, TableFooter } from "../data/table-data";
 import { useDefinition, useExplorer, useStructure } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
@@ -55,30 +30,13 @@ const VIEWS: { id: TableView; label: string }[] = [
 /** Like Supabase, views only have data and their SQL definition. */
 const VIEW_VIEWS = VIEWS.filter((v) => v.id !== "structure");
 
-type Action = "rename" | "truncate" | "drop" | "refresh" | "secure";
+type Action = "secure";
 
 export function TableTab({ tab }: { tab: TableTabModel }) {
   const { serverId } = useExplorer();
-  const { updateTab, closeTab } = useWorkspace(serverId);
+  const { updateTab } = useWorkspace(serverId);
   const [action, setAction] = useState<Action | null>(null);
-  const [newName, setNewName] = useState(tab.name);
-  const [cascade, setCascade] = useState(false);
   const isView = tab.kind === "view" || tab.kind === "materialized_view";
-  const kindLabel =
-    tab.kind === "view"
-      ? "view"
-      : tab.kind === "materialized_view"
-        ? "materialized view"
-        : "table";
-
-  const openTableSheet = (mode: "edit" | "duplicate") =>
-    useCreateTableSheet.getState().open({
-      serverId,
-      database: tab.database,
-      schema: tab.schema,
-      table: tab.name,
-      mode,
-    });
 
   const footerRight = (
     <>
@@ -99,71 +57,6 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           </button>
         ))}
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost" aria-label="Table actions">
-            <MoreHorizontal />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="top">
-          <DropdownMenuItem
-            icon={<Copy />}
-            onSelect={() =>
-              void navigator.clipboard
-                .writeText(qualified(tab.schema, tab.name))
-                .then(() => toast.success("Name copied"))
-            }
-          >
-            Copy name
-          </DropdownMenuItem>
-          {!isView && (
-            <DropdownMenuItem
-              icon={<Settings2 />}
-              onSelect={() => openTableSheet("edit")}
-            >
-              Edit table
-            </DropdownMenuItem>
-          )}
-          {!isView && (
-            <DropdownMenuItem
-              icon={<CopyPlus />}
-              onSelect={() => openTableSheet("duplicate")}
-            >
-              Duplicate table
-            </DropdownMenuItem>
-          )}
-          {tab.kind === "materialized_view" && (
-            <DropdownMenuItem
-              icon={<RefreshCw />}
-              onSelect={() => setAction("refresh")}
-            >
-              Refresh materialized view…
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            icon={<Pencil />}
-            onSelect={() => setAction("rename")}
-          >
-            Rename…
-          </DropdownMenuItem>
-          {!isView && (
-            <DropdownMenuItem
-              icon={<Eraser />}
-              onSelect={() => setAction("truncate")}
-            >
-              Empty table (truncate)…
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            icon={<Trash2 />}
-            danger
-            onSelect={() => setAction("drop")}
-          >
-            Drop {kindLabel}…
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </>
   );
 
@@ -221,48 +114,6 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
         </>
       )}
 
-      {action === "rename" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(open) => !open && setAction(null)}
-          title={`Rename ${tab.name}`}
-          sql={
-            newName.trim() && newName !== tab.name
-              ? renameTable(tab.schema, tab.name, newName.trim())
-              : "-- type a new name"
-          }
-          database={tab.database}
-          confirmLabel="Rename"
-          successMessage={`Renamed to ${newName.trim()}`}
-          onDone={() => {
-            closeTab(tab.id);
-          }}
-        >
-          <Field label="New name">
-            {(p) => (
-              <Input
-                {...p}
-                className="font-mono"
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-            )}
-          </Field>
-        </RunSqlDialog>
-      )}
-      {action === "refresh" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(open) => !open && setAction(null)}
-          title={`Refresh ${tab.name}?`}
-          description="Runs the view's query again and replaces its stored rows."
-          sql={`REFRESH MATERIALIZED VIEW ${qualified(tab.schema, tab.name)};`}
-          database={tab.database}
-          confirmLabel="Refresh"
-          successMessage={`${tab.name} refreshed`}
-        />
-      )}
       {action === "secure" && (
         <RunSqlDialog
           open
@@ -281,38 +132,6 @@ export function TableTab({ tab }: { tab: TableTabModel }) {
           confirmLabel="Confirm"
           successMessage={`${tab.name} now runs as the querying user`}
         />
-      )}
-      {action === "truncate" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(open) => !open && setAction(null)}
-          title={`Empty ${tab.name}?`}
-          description="Deletes every row. This can't be undone."
-          sql={truncateTable(tab.schema, tab.name)}
-          database={tab.database}
-          confirmLabel="Delete all rows"
-          destructive
-          successMessage={`${tab.name} emptied`}
-        />
-      )}
-      {action === "drop" && (
-        <RunSqlDialog
-          open
-          onOpenChange={(open) => !open && setAction(null)}
-          title={`Drop ${tab.name}?`}
-          description={`Permanently deletes the ${kindLabel} and all its data.`}
-          sql={dropTable(tab.schema, tab.name, kindLabel, cascade)}
-          database={tab.database}
-          confirmLabel={`Drop ${kindLabel}`}
-          destructive
-          successMessage={`${tab.name} dropped`}
-          onDone={() => closeTab(tab.id)}
-        >
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Switch checked={cascade} onCheckedChange={setCascade} />
-            Also drop objects that depend on it (CASCADE)
-          </label>
-        </RunSqlDialog>
       )}
     </div>
   );

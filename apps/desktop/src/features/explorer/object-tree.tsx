@@ -27,6 +27,7 @@ import {
   Code,
   Copy,
   CopyPlus,
+  Eraser,
   Eye,
   FunctionSquare,
   Hash,
@@ -56,6 +57,11 @@ import {
   renameSchema,
 } from "../../lib/sql";
 import { useCreateTableSheet } from "./create-table-sheet";
+import {
+  type TableAction,
+  TableActionDialog,
+  type TableTarget,
+} from "./tabs/table-actions";
 import {
   useExplorer,
   useSchemaObjects,
@@ -90,6 +96,10 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [name, setName] = useState("");
   const [cascade, setCascade] = useState(false);
+  const [tableAction, setTableAction] = useState<{
+    target: TableTarget;
+    action: TableAction;
+  } | null>(null);
 
   // Pick a sensible schema when none is chosen (or the chosen one disappeared)
   useEffect(() => {
@@ -365,9 +375,21 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                         schema && (
                           <TableMenu
                             name={t.name}
+                            kind={t.kind}
                             isView={
                               t.kind === "view" ||
                               t.kind === "materialized_view"
+                            }
+                            onAction={(action) =>
+                              setTableAction({
+                                target: {
+                                  database,
+                                  schema,
+                                  name: t.name,
+                                  kind: t.kind,
+                                },
+                                action,
+                              })
                             }
                             select={`SELECT *\nFROM ${qualified(schema, t.name)}\nLIMIT 100;`}
                             onView={(view) =>
@@ -403,6 +425,14 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
         </div>
       )}
 
+      {tableAction && (
+        <TableActionDialog
+          key={`${tableAction.target.name}:${tableAction.action}`}
+          target={tableAction.target}
+          action={tableAction.action}
+          onClose={() => setTableAction(null)}
+        />
+      )}
       {dialog === "create-schema" && (
         <RunSqlDialog
           open
@@ -636,20 +666,24 @@ function Item({
 /** Right-click menu of a table or view in the sidebar. */
 function TableMenu({
   name,
+  kind,
   isView,
   select,
   onView,
   onQuery,
   onRefresh,
   onTableSheet,
+  onAction,
 }: {
   name: string;
+  kind: string;
   isView: boolean;
   select: string;
   onView: (view: "data" | "structure" | "definition") => void;
   onQuery: (sql: string) => void;
   onRefresh: () => void;
   onTableSheet: (mode: "edit" | "duplicate") => void;
+  onAction: (action: TableAction) => void;
 }) {
   const copy = (text: string, what: string) =>
     void navigator.clipboard
@@ -703,6 +737,39 @@ function TableMenu({
         onSelect={() => copy(select, "SELECT statement")}
       >
         Copy SELECT statement
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      {kind === "materialized_view" && (
+        <ContextMenuItem
+          icon={<RefreshCw />}
+          onSelect={() => onAction("refresh")}
+        >
+          Refresh materialized view…
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem icon={<Pencil />} onSelect={() => onAction("rename")}>
+        Rename…
+      </ContextMenuItem>
+      {!isView && (
+        <ContextMenuItem
+          icon={<Eraser />}
+          onSelect={() => onAction("truncate")}
+        >
+          Empty table (truncate)…
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem
+        icon={<Trash2 />}
+        danger
+        onSelect={() => onAction("drop")}
+      >
+        Drop{" "}
+        {kind === "view"
+          ? "view"
+          : kind === "materialized_view"
+            ? "materialized view"
+            : "table"}
+        …
       </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem icon={<RefreshCw />} onSelect={onRefresh}>
