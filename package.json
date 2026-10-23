@@ -3,8 +3,8 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --filter=web --filter=docs --filter=server --filter=@repo/ui",
-    "dev:web": "turbo run dev --filter=web --filter=docs --filter=server --filter=@repo/ui",
+    "dev": "turbo run dev --filter=web --filter=server --filter=@repo/ui",
+    "dev:web": "turbo run dev --filter=web --filter=server --filter=@repo/ui",
     "dev:desktop": "turbo run dev --filter=desktop",
     "dev:server": "turbo run dev --filter=server",
     "dev:all": "turbo run dev",
