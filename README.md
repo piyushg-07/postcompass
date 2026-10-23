@@ -178,7 +178,11 @@ Grab the latest installer from the **[Releases page](https://github.com/piyushg-
 | **Linux** | `.AppImage` (any distro), `.deb` (Ubuntu / Debian) or `.rpm` (Fedora) |
 
 > [!NOTE]
-> Installers aren't code-signed yet. On **Windows**, choose **More info → Run anyway** when SmartScreen appears. On **macOS**, right-click the app and choose **Open** the first time.
+> Installers aren't code-signed yet, so your system warns you the first time:
+>
+> - **Windows:** the installer shows *Unknown publisher*. On the SmartScreen prompt, click **More info → Run anyway**.
+> - **macOS:** drag PostCompass to Applications and open it. When macOS says it can't verify the app, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+> - **macOS, if it says the app "is damaged":** run `xattr -cr /Applications/PostCompass.app` in Terminal, then open it again.
 
 **First run:** answer two quick questions, then click **New local database** (or **Add remote connection** if your database is in the cloud). Open it and press `Ctrl+K` anytime to jump anywhere.
 

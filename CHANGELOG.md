@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-24
+
 ### Added
 
 - Contributor docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, issue forms and a pull request template.
+
+### Fixed
+
+- macOS builds are now ad-hoc signed, so macOS no longer reports the downloaded app as "damaged".
+- First-launch instructions for unsigned installers on Windows and macOS.
 
 ### Removed
 
