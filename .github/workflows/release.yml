@@ -92,13 +92,8 @@ jobs:
           # __VERSION__ is replaced with the version from tauri.conf.json
           tagName: v__VERSION__
           releaseName: PostCompass v__VERSION__
-          # Before publishing, replace the "Highlights" bullets in the draft with what's new in this
-          # version. "What's Changed" and "Full Changelog" are added below automatically.
+          # Before publishing, replace the "Highlights" bullets in the draft with what's new in this version.
           releaseBody: |
-            <p align="center">
-              <img src="https://raw.githubusercontent.com/piyushg-07/postcompass/release/docs/assets/banner.png" alt="PostCompass" width="100%" />
-            </p>
-
             **PostCompass v__VERSION__** is here. A fast, modern desktop app for PostgreSQL: run local databases in one click, connect to the cloud, and browse, edit and query your data in one place.
 
             ## ✨ Highlights
@@ -132,9 +127,6 @@ jobs:
 
             Found a bug or have an idea? [Open an issue](https://github.com/piyushg-07/postcompass/issues/new). If PostCompass is useful to you, a ⭐ on the repo helps a lot.
 
-            ---
-          # Appends GitHub's auto-generated "What's Changed", "New Contributors" and "Full Changelog"
-          generateReleaseNotes: true
           # Stays a draft until you review and publish it
           releaseDraft: true
           prerelease: false
