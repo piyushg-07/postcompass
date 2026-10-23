@@ -32,6 +32,7 @@ import {
   Suspense,
   useEffect,
   useRef,
+  useState,
 } from "react";
 import { useExplorer } from "./explorer-context";
 import { PoliciesTab } from "./policies/policies-tab";
@@ -163,6 +164,7 @@ export function Workspace() {
     closeTab,
     closeOtherTabs,
     closeTabsFor,
+    moveTab,
     newQuery,
     openTab,
     database,
@@ -179,12 +181,58 @@ export function Workspace() {
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeTabId, tabs.length]);
 
+  /** The tab being dragged and the gap it would drop into (x inside the tab bar). */
+  const [drag, setDrag] = useState<{ id: string; x: number } | null>(null);
+  // A drag ends with a click on the tab; this stops that click from switching tabs
+  const dragged = useRef(false);
+
   const onTabMouseDown = (event: MouseEvent, id: string) => {
     // Middle click closes, like a browser
     if (event.button === 1) {
       event.preventDefault();
       closeTab(id);
+      return;
     }
+    const bar = tabBar.current;
+    if (event.button !== 0 || !bar) return;
+    if ((event.target as HTMLElement).closest("button")) return;
+    const startX = event.clientX;
+    dragged.current = false;
+    let target: number | null = null;
+
+    const move = (e: globalThis.MouseEvent) => {
+      if (target === null && Math.abs(e.clientX - startX) < 5) return;
+      dragged.current = true;
+      document.body.style.cursor = "grabbing";
+      const others = [
+        ...bar.querySelectorAll<HTMLElement>("[data-tab-id]"),
+      ].filter((el) => el.dataset.tabId !== id);
+      const barLeft = bar.getBoundingClientRect().left - bar.scrollLeft;
+      // Drop before the first tab whose middle is right of the pointer
+      let index = others.length;
+      for (let i = 0; i < others.length; i++) {
+        const r = others[i]!.getBoundingClientRect();
+        if (e.clientX < r.left + r.width / 2) {
+          index = i;
+          break;
+        }
+      }
+      target = index;
+      const edge =
+        index < others.length
+          ? others[index]!.getBoundingClientRect().left
+          : (others.at(-1)?.getBoundingClientRect().right ?? startX);
+      setDrag({ id, x: edge - barLeft });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+      setDrag(null);
+      if (target !== null) moveTab(id, target);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
   };
 
   return (
@@ -196,8 +244,14 @@ export function Workspace() {
         onWheel={(e) => {
           if (e.deltaY && tabBar.current) tabBar.current.scrollLeft += e.deltaY;
         }}
-        className="flex h-9 shrink-0 items-end gap-px overflow-x-auto overflow-y-hidden border-b border-border bg-surface px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="relative flex h-9 shrink-0 items-end gap-px overflow-x-auto overflow-y-hidden border-b border-border bg-surface px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
+        {drag && (
+          <span
+            className="pointer-events-none absolute top-1.5 bottom-1.5 z-10 w-0.5 -translate-x-1/2 rounded-full bg-accent"
+            style={{ left: drag.x }}
+          />
+        )}
         {tabs.map((tab) => {
           const { icon, label } = tabLabel(tab);
           const isActive = tab.id === activeTabId;
@@ -207,14 +261,17 @@ export function Workspace() {
                 <div
                   data-tab-id={tab.id}
                   onMouseDown={(e) => onTabMouseDown(e, tab.id)}
-                  onDoubleClick={() => closeOtherTabs(tab.id)}
                   className={cn(
-                    "group relative flex h-8 max-w-52 shrink-0 cursor-pointer items-center gap-1.5 rounded-t-control pr-1 pl-2.5 text-xs [&_svg]:size-3.5",
+                    "group relative flex h-8 max-w-52 shrink-0 cursor-pointer items-center select-none gap-1.5 rounded-t-control pr-1 pl-2.5 text-xs [&_svg]:size-3.5",
                     isActive
                       ? "bg-bg text-fg"
                       : "text-fg-muted hover:bg-surface-hover/50 hover:text-fg",
+                    drag?.id === tab.id && "opacity-50",
                   )}
-                  onClick={() => setActive(tab.id)}
+                  onClick={() => {
+                    if (!dragged.current) setActive(tab.id);
+                    dragged.current = false;
+                  }}
                 >
                   {isActive && (
                     <span className="absolute inset-x-0 top-0 h-0.5 rounded-full bg-accent" />

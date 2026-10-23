@@ -25,10 +25,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
-import { describeError } from "../../../lib/ipc";
 import { useExplorer, useSchemaObjects } from "../explorer-context";
 import { type ObjectGroup, useWorkspace } from "../workspace-store";
 import { type ObjectAction, ObjectForms, TriggerSwitch } from "./object-forms";
+import { LoadError } from "../load-error";
 
 export const OBJECT_GROUP_TITLES: Record<ObjectGroup, string> = {
   functions: "Functions",
@@ -90,12 +90,7 @@ export function ObjectsTab({
         ))}
       </div>
     );
-  if (objects.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(objects.error).message}
-      </p>
-    );
+  if (objects.isError) return <LoadError query={objects} />;
 
   const mono = (text: string) => <span className="font-mono">{text}</span>;
   let headers: string[];

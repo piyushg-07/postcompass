@@ -10,7 +10,6 @@ import {
 import { Copy, SquareTerminal, Unlock } from "lucide-react";
 import { useState } from "react";
 import type { ObjectKind } from "../../../lib/bindings";
-import { describeError } from "../../../lib/ipc";
 import { qualified } from "../../../lib/sql";
 import { TableData, TableFooter } from "../data/table-data";
 import { useDefinition, useExplorer, useStructure } from "../explorer-context";
@@ -18,6 +17,7 @@ import { RunSqlDialog } from "../run-sql-dialog";
 import { SqlBlock } from "../sql/sql-editor";
 import { StructureView } from "../structure/structure-view";
 import { type Tab, type TableView, useWorkspace } from "../workspace-store";
+import { LoadError } from "../load-error";
 
 type TableTabModel = Extract<Tab, { type: "table" }>;
 
@@ -209,12 +209,7 @@ export function DefinitionView({
       </div>
     );
   }
-  if (definition.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(definition.error).message}
-      </p>
-    );
+  if (definition.isError) return <LoadError query={definition} />;
   return (
     <div className="flex h-full flex-col">
       {title && (

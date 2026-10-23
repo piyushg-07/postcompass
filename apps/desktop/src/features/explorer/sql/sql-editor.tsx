@@ -16,6 +16,59 @@ import { tags as t } from "@lezer/highlight";
 import { cn } from "@repo/ui";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
+/* ── Statements ─────────────────────────────────────────────────────────── */
+
+/**
+ * The statement around `pos`: the text between the semicolons before and after it, skipping
+ * semicolons inside quotes, comments and $$ bodies. On a blank line after a statement it's that
+ * statement. Returns trimmed bounds, or null when the document is empty.
+ */
+export function statementAt(text: string, pos: number): { from: number; to: number } | null {
+  const ends: number[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i]!;
+    const next = text[i + 1];
+    if (c === "-" && next === "-") {
+      const nl = text.indexOf("\n", i);
+      i = nl === -1 ? text.length : nl;
+    } else if (c === "/" && next === "*") {
+      const close = text.indexOf("*/", i + 2);
+      i = close === -1 ? text.length : close + 2;
+    } else if (c === "'" || c === '"') {
+      let j = i + 1;
+      while (j < text.length && !(text[j] === c && text[j + 1] !== c)) j += text[j] === c ? 2 : 1;
+      i = j + 1;
+    } else if (c === "$") {
+      const tag = /^\$[A-Za-z_]*\$/.exec(text.slice(i))?.[0];
+      if (tag) {
+        const close = text.indexOf(tag, i + tag.length);
+        i = close === -1 ? text.length : close + tag.length;
+      } else i++;
+    } else {
+      if (c === ";") ends.push(i + 1);
+      i++;
+    }
+  }
+  const bounds = [0, ...ends, text.length];
+  const segments: { from: number; to: number }[] = [];
+  for (let k = 0; k < bounds.length - 1; k++) {
+    let from = bounds[k]!;
+    let to = bounds[k + 1]!;
+    while (from < to && /\s/.test(text[from]!)) from++;
+    while (to > from && /\s/.test(text[to - 1]!)) to--;
+    segments.push({ from, to });
+  }
+  // The segment the cursor is in, or the last non-empty one before it
+  let found: { from: number; to: number } | null = null;
+  for (let k = 0; k < bounds.length - 1; k++) {
+    const seg = segments[k]!;
+    if (seg.to > seg.from && seg.from <= pos) found = seg;
+    if (pos <= bounds[k + 1]! && seg.to > seg.from && seg.from <= pos) return seg;
+  }
+  return found;
+}
+
 /* ── Theme: black surfaces, emerald only for the cursor and matches ─────── */
 
 const theme = EditorView.theme(
@@ -105,12 +158,28 @@ export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(function Sq
     if (!host.current) return;
     const runKeymap = keymap.of([
       {
+        // The selection, or just the statement under the cursor (selected, so you see what ran)
         key: "Mod-Enter",
         preventDefault: true,
         run: (v) => {
           const sel = v.state.selection.main;
-          const text = sel.empty ? v.state.doc.toString() : v.state.sliceDoc(sel.from, sel.to);
-          callbacks.current.onRun?.(text);
+          if (!sel.empty) {
+            callbacks.current.onRun?.(v.state.sliceDoc(sel.from, sel.to));
+            return true;
+          }
+          const statement = statementAt(v.state.doc.toString(), sel.head);
+          if (!statement) return true;
+          v.dispatch({ selection: EditorSelection.range(statement.from, statement.to) });
+          callbacks.current.onRun?.(v.state.sliceDoc(statement.from, statement.to));
+          return true;
+        },
+      },
+      {
+        // Everything in the editor
+        key: "Mod-Shift-Enter",
+        preventDefault: true,
+        run: (v) => {
+          callbacks.current.onRun?.(v.state.doc.toString());
           return true;
         },
       },

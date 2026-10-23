@@ -1,7 +1,6 @@
 import { Badge, Button, Input, Skeleton } from "@repo/ui";
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { describeError } from "../../../lib/ipc";
 import {
   createExtension,
   dropExtension,
@@ -9,6 +8,7 @@ import {
 } from "../../../lib/sql";
 import { useExtensions } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
+import { LoadError } from "../load-error";
 
 /** Install and remove extensions (pgvector, PostGIS, pgcrypto, …) in a database. */
 export function ExtensionsTab({
@@ -35,12 +35,7 @@ export function ExtensionsTab({
       </div>
     );
   }
-  if (extensions.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(extensions.error).message}
-      </p>
-    );
+  if (extensions.isError) return <LoadError query={extensions} />;
 
   const query = search.trim().toLowerCase();
   const list = extensions.data.filter(

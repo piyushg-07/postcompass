@@ -40,8 +40,8 @@ import {
   useState,
 } from "react";
 import type { GraphRelation, GraphTable } from "../../../lib/bindings";
-import { describeError } from "../../../lib/ipc";
 import { useSchemaGraph } from "../explorer-context";
+import { LoadError } from "../load-error";
 
 const NODE_WIDTH = 300;
 const HEADER_HEIGHT = 40;
@@ -468,12 +468,7 @@ function Diagram({
         <Spinner />
       </div>
     );
-  if (graph.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(graph.error).message}
-      </p>
-    );
+  if (graph.isError) return <LoadError query={graph} />;
   if (tables.length === 0)
     return (
       <EmptyState

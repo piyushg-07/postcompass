@@ -12,13 +12,13 @@ import {
 import { type ReactNode, useState } from "react";
 import type { ColumnInfo, TableKind } from "../../../lib/bindings";
 import { formatBytes } from "../../../lib/format";
-import { describeError } from "../../../lib/ipc";
 import { dropColumn, dropConstraint, dropIndex } from "../../../lib/sql";
 import { useExplorer, useSchemaGraph, useStructure } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
 import { useWorkspace } from "../workspace-store";
 import { ColumnSheet } from "./add-column-sheet";
 import { ForeignKeyDialog, IndexDialog } from "./index-dialogs";
+import { LoadError } from "../load-error";
 
 interface PendingSql {
   title: string;
@@ -57,12 +57,7 @@ export function StructureView({
       </div>
     );
   }
-  if (structure.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(structure.error).message}
-      </p>
-    );
+  if (structure.isError) return <LoadError query={structure} />;
 
   const s = structure.data;
   const isTable = s.kind === "table" || s.kind === "partitioned_table";

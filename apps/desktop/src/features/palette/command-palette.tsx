@@ -10,6 +10,7 @@ import {
   DatabaseBackup,
   Eye,
   FunctionSquare,
+  Hash,
   Home,
   Layers,
   Network,
@@ -19,9 +20,12 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Square,
   Table2,
   TerminalSquare,
+  Type,
+  Zap,
 } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -386,6 +390,34 @@ function useCommands(): Command[] {
           <Blocks key="e" />,
           () => ws.openTab(openServerId, { type: "extensions", database }),
         ],
+        [
+          "policies",
+          `Policies (RLS) in ${schema}`,
+          <ShieldCheck key="p" />,
+          () =>
+            ws.openTab(openServerId, { type: "policies", database, schema }),
+        ],
+        ...(
+          [
+            ["functions", "Functions", <FunctionSquare key="f" />],
+            ["triggers", "Triggers", <Zap key="tr" />],
+            ["enums", "Enumerated types", <Type key="en" />],
+            ["sequences", "Sequences", <Hash key="sq" />],
+          ] as const
+        ).map(
+          ([group, label, icon]): [string, string, ReactNode, () => void] => [
+            `objects-${group}`,
+            `${label} in ${schema}`,
+            icon,
+            () =>
+              ws.openTab(openServerId, {
+                type: "objects",
+                database,
+                schema,
+                group,
+              }),
+          ],
+        ),
       ];
       for (const [id, label, icon, run] of actions) {
         list.push({
@@ -475,7 +507,8 @@ function useCommands(): Command[] {
           group: "Databases",
           label: `Open ${remote.name}`,
           keywords: `${remote.host} ${remote.provider} remote cloud`,
-          hint: (PROVIDER_LOGOS[remote.provider] ?? PROVIDER_LOGOS.other)!.label,
+          hint: (PROVIDER_LOGOS[remote.provider] ?? PROVIDER_LOGOS.other)!
+            .label,
           icon: <Cloud />,
           run: () => nav.openServer(`remote:${remote.id}`),
         },

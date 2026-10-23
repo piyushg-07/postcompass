@@ -3,10 +3,12 @@ import { LocalServerLogo, ProviderLogo } from "../servers/provider-logos";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Unplug } from "lucide-react";
+import { useEffect } from "react";
 import { useAppState } from "../../app/app-state";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import { ConnectButton } from "./connect-dialog";
+import { ConnectionBanner } from "./connection-banner";
 import { CreateTableSheet } from "./create-table-sheet";
 import { DatabaseSwitcher } from "./database-switcher";
 import { ExplorerProvider } from "./explorer-context";
@@ -77,6 +79,27 @@ export function ExplorerPage({
     if (ws?.activeTabId)
       useWorkspaceStore.getState().closeTab(serverId, ws.activeTabId);
   });
+
+  // Ctrl+Tab / Ctrl+Shift+Tab cycle through tabs; Ctrl+1…8 pick one, Ctrl+9 the last
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const store = useWorkspaceStore.getState();
+      const ws = store.workspaces[serverId];
+      if (!ws?.tabs.length) return;
+      const at = ws.tabs.findIndex((t) => t.id === ws.activeTabId);
+      let next: number | null = null;
+      if (e.key === "Tab")
+        next = (at + (e.shiftKey ? -1 : 1) + ws.tabs.length) % ws.tabs.length;
+      else if (/^[1-9]$/.test(e.key) && !e.shiftKey)
+        next = e.key === "9" ? ws.tabs.length - 1 : Number(e.key) - 1;
+      if (next === null || next >= ws.tabs.length) return;
+      e.preventDefault();
+      store.setActive(serverId, ws.tabs[next]!.id);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [serverId]);
 
   const disconnect = async () => {
     const id = connection.data?.connectionId;
@@ -160,6 +183,10 @@ export function ExplorerPage({
       >
         <div className="flex h-full flex-col overflow-clip">
           {header}
+          <ConnectionBanner
+            connectionId={connection.data.connectionId}
+            name={displayName}
+          />
           <div className="flex min-h-0 flex-1 overflow-clip">
             <SidePanel>
               <ObjectTree defaultDatabase={connection.data.database} />

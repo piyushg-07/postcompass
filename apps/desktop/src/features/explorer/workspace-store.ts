@@ -163,6 +163,8 @@ interface WorkspaceState {
   updateTab: (serverId: string, id: string, patch: Partial<Tab>) => void;
   closeTab: (serverId: string, id: string) => void;
   closeOtherTabs: (serverId: string, id: string) => void;
+  /** Moves a tab to `index` (its position after the move). */
+  moveTab: (serverId: string, id: string, index: number) => void;
   /** Closes tabs for a table that no longer exists (renamed or dropped). */
   closeTabsFor: (serverId: string, predicate: (tab: Tab) => boolean) => void;
   setActive: (serverId: string, id: string) => void;
@@ -297,6 +299,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             activeTabId: id,
           })),
 
+        moveTab: (serverId, id, index) =>
+          update(serverId, (ws) => {
+            const tab = ws.tabs.find((t) => t.id === id);
+            if (!tab) return {};
+            const tabs = ws.tabs.filter((t) => t.id !== id);
+            tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, tab);
+            return { tabs };
+          }),
+
         closeTabsFor: (serverId, predicate) =>
           update(serverId, (ws) => {
             const tabs = ws.tabs.filter((t) => !predicate(t));
@@ -359,6 +370,8 @@ export function useWorkspace(serverId: string) {
       actions.updateTab(serverId, id, patch),
     closeTab: (id: string) => actions.closeTab(serverId, id),
     closeOtherTabs: (id: string) => actions.closeOtherTabs(serverId, id),
+    moveTab: (id: string, index: number) =>
+      actions.moveTab(serverId, id, index),
     closeTabsFor: (predicate: (tab: Tab) => boolean) =>
       actions.closeTabsFor(serverId, predicate),
     setActive: (id: string) => actions.setActive(serverId, id),

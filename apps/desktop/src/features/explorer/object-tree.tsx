@@ -31,6 +31,7 @@ import {
   Eraser,
   Eye,
   FunctionSquare,
+  Globe,
   Hash,
   Layers,
   MoreHorizontal,
@@ -40,16 +41,23 @@ import {
   RefreshCw,
   Search,
   Settings2,
+  SquareStack,
   Table2,
   TerminalSquare,
   Trash2,
   Type,
   Zap,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatCount } from "../../lib/format";
-import { describeError } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 import {
   createSchema,
@@ -72,6 +80,7 @@ import {
 import { NameField, RunSqlDialog } from "./run-sql-dialog";
 import { SqlPanel } from "./sql-panel";
 import { type ObjectGroup, useWorkspace } from "./workspace-store";
+import { LoadError } from "./load-error";
 
 const DATABASE_PAGES: { group: ObjectGroup; label: string; icon: ReactNode }[] =
   [
@@ -123,6 +132,15 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
 
   // Tables and views share one list, like Supabase; the icon tells them apart
   const tableList = (tables.data ?? []).filter((t) => match(t.name));
+  // Big schemas only render the rows in view, so thousands of tables stay smooth
+  const listScroll = useRef<HTMLDivElement>(null);
+  const virtual = tableList.length > VIRTUAL_FROM;
+  const virtualizer = useVirtualizer({
+    count: tableList.length,
+    getScrollElement: () => listScroll.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 20,
+  });
   const counts: Record<ObjectGroup, number | undefined> = {
     functions: objects.data?.functions.length,
     triggers: objects.data?.triggers.length,
@@ -340,12 +358,8 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
           </ul>
         </nav>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto py-1">
-          {schemas.isError && (
-            <p className="p-3 text-xs text-danger">
-              {describeError(schemas.error).message}
-            </p>
-          )}
+        <div ref={listScroll} className="min-h-0 flex-1 overflow-y-auto py-1">
+          {schemas.isError && <LoadError query={schemas} compact />}
           {tables.isPending && schema ? (
             <div className="flex flex-col gap-1.5 p-2">
               {[0, 1, 2, 3].map((i) => (
@@ -390,8 +404,18 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                   </div>
                 )
               ) : (
-                <ul className="flex flex-col gap-px py-1">
-                  {tableList.map((t) => {
+                <ul
+                  className="relative flex flex-col gap-px py-1"
+                  style={
+                    virtual ? { height: virtualizer.getTotalSize() } : undefined
+                  }
+                >
+                  {(virtual
+                    ? virtualizer
+                        .getVirtualItems()
+                        .map((v) => [tableList[v.index]!, v.start] as const)
+                    : tableList.map((t) => [t, null] as const)
+                  ).map(([t, top]) => {
                     const menuProps = schema
                       ? {
                           name: t.name,
@@ -433,11 +457,26 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                     return (
                       <Item
                         key={t.name}
+                        style={
+                          top === null
+                            ? undefined
+                            : {
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                transform: `translateY(${top + 4}px)`,
+                              }
+                        }
                         icon={
                           t.kind === "view" ? (
                             <Eye />
                           ) : t.kind === "materialized_view" ? (
                             <Layers />
+                          ) : t.kind === "partitioned_table" ? (
+                            <SquareStack />
+                          ) : t.kind === "foreign_table" ? (
+                            <Globe />
                           ) : (
                             <Table2 />
                           )
@@ -662,6 +701,11 @@ function SchemaPicker({
   );
 }
 
+/** Sidebar row height (h-7 plus the 1px gap), for the virtual list. */
+const ROW_HEIGHT = 29;
+/** Above this many tables the list only renders the visible rows. */
+const VIRTUAL_FROM = 200;
+
 function Item({
   icon,
   label,
@@ -672,6 +716,7 @@ function Item({
   menu,
   highlight,
   actions,
+  style,
 }: {
   icon: ReactNode;
   label: string;
@@ -686,6 +731,8 @@ function Item({
   highlight?: string;
   /** Shown in place of `meta` while the row is hovered (a ⋯ menu). */
   actions?: ReactNode;
+  /** Position in a virtual list. */
+  style?: CSSProperties;
 }) {
   const button = (
     <button
@@ -715,7 +762,7 @@ function Item({
     </button>
   );
   return (
-    <li className="group/row relative">
+    <li className="group/row relative" style={style}>
       {menu ? (
         <ContextMenu>
           <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>

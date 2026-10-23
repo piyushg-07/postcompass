@@ -11,11 +11,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { PolicyInfo, PolicyTable } from "../../../lib/bindings";
-import { describeError } from "../../../lib/ipc";
 import { qualified } from "../../../lib/sql";
 import { usePolicies } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
 import { dropPolicySql, PolicySheet } from "./policy-sheet";
+import { LoadError } from "../load-error";
 
 interface PendingSql {
   title: string;
@@ -57,12 +57,7 @@ export function PoliciesTab({
       </div>
     );
   }
-  if (policies.isError)
-    return (
-      <p className="p-4 text-sm text-danger">
-        {describeError(policies.error).message}
-      </p>
-    );
+  if (policies.isError) return <LoadError query={policies} />;
 
   const query = search.trim().toLowerCase();
   const tables = policies.data.tables.filter(

@@ -83,6 +83,7 @@ import { isTabular, PasteRowsDialog } from "./paste-rows";
 import { ColumnStatsButton } from "./column-stats";
 import { RecordPicker, type Reference, ReferencePeek } from "./reference";
 import { type ExportFormat, exportRows } from "./export";
+import { LoadError } from "../load-error";
 
 const EMPTY_PAGE: RowsPage = {
   columns: [],
@@ -196,6 +197,12 @@ export function TableData({
     new Map(),
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Set after "Select all N rows": actions cover every row matching the filters, not just this page. */
+  const [allRows, setAllRows] = useState(false);
+  const changeSelection = (next: Set<string>) => {
+    setSelected(next);
+    setAllRows(false);
+  };
 
   const request = { offset: page * pageSize, limit: pageSize, sort, filters };
   const rowsQuery = useQuery({
@@ -313,6 +320,43 @@ export function TableData({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data],
   );
+
+  /* ── Whole-table selection ── */
+
+  const pageAllSelected =
+    gridRows.length > 0 && gridRows.every((r) => selected.has(r.id));
+  const everyRow = allRows && pageAllSelected;
+  // Only worth offering when the table has more than this page
+  const canSelectAll = pageAllSelected && (data.hasMore || page > 0);
+  const totalLabel =
+    data.total === null ? "all" : Math.round(data.total).toLocaleString();
+  const selectedCount = everyRow
+    ? (data.total ?? selected.size)
+    : selected.size;
+
+  /** Every row matching the current filters and sort, fetched page by page. */
+  const fetchAllRows = async () => {
+    const all: (string | null)[][] = [];
+    for (let offset = 0; ; offset += ALL_ROWS_PAGE) {
+      const batch = await unwrap(
+        commands.tableRows(connectionId, database, schema, table, {
+          offset,
+          limit: ALL_ROWS_PAGE,
+          sort,
+          filters,
+        }),
+      );
+      all.push(...batch.rows);
+      if (!batch.hasMore || all.length >= ALL_ROWS_MAX) break;
+    }
+    return all;
+  };
+
+  /** The selected rows' cells: this page's picks, or every row after "Select all". */
+  const selectedCells = async () =>
+    everyRow
+      ? fetchAllRows()
+      : gridRows.filter((r) => selected.has(r.id)).map((r) => r.cells);
 
   /* ── Editing ── */
 
@@ -483,21 +527,38 @@ export function TableData({
 
   const removeRows = useMutation({
     mutationFn: async () => {
-      const ids = [...selected].filter((id) => originalRows.has(id));
-      const deletes: RowChange[] = ids.map((id) => ({
+      const rows = everyRow
+        ? await fetchAllRows()
+        : [...selected].flatMap((id) => {
+            const cells = originalRows.get(id);
+            return cells ? [cells] : [];
+          });
+      const deletes: RowChange[] = rows.map((cells) => ({
         type: "delete",
-        key: keyOf(id),
+        key: data.keyColumns.map((column, i) => ({
+          column,
+          value: cells[keyIndexes[i]!] ?? null,
+        })),
       }));
-      const result = await unwrap(
-        commands.applyChanges(connectionId, database, schema, table, deletes),
-      );
+      // Big deletes go in batches so each request stays small
+      const result = { inserted: 0, updated: 0, deleted: 0 };
+      for (let i = 0; i < deletes.length; i += ALL_ROWS_PAGE) {
+        const done = await unwrap(
+          commands.applyChanges(
+            connectionId,
+            database,
+            schema,
+            table,
+            deletes.slice(i, i + ALL_ROWS_PAGE),
+          ),
+        );
+        result.deleted += done.deleted;
+      }
       // Undo inserts the rows again with every value they had (generated ones are recomputed)
-      const inserts: RowChange[] = ids.map((id) => ({
+      const inserts: RowChange[] = rows.map((cells) => ({
         type: "insert",
         values: data.columns.flatMap((c, i) =>
-          c.generated
-            ? []
-            : [{ column: c.name, value: originalRows.get(id)![i] ?? null }],
+          c.generated ? [] : [{ column: c.name, value: cells[i] ?? null }],
         ),
       }));
       return { result, deletes, inserts };
@@ -508,7 +569,7 @@ export function TableData({
         { label, undo: inserts, redo: deletes },
         `Deleted ${result.deleted} row${result.deleted === 1 ? "" : "s"}`,
       );
-      setSelected(new Set());
+      changeSelection(new Set());
       setConfirmDelete(false);
       void reload();
     },
@@ -626,33 +687,36 @@ export function TableData({
 
   /* ── Sorting, paging, copying ── */
 
-  const copy = (format: ExportFormat) => {
-    const source = selected.size
-      ? gridRows.filter((r) => selected.has(r.id))
-      : gridRows;
-    const text = exportRows(
-      format,
-      data.columns.map((c) => c.name),
-      source.map((r) => r.cells),
-      { schema, table },
-    );
-    void navigator.clipboard
-      .writeText(text)
-      .then(() =>
-        toast.success(
-          `Copied ${source.length} row${source.length === 1 ? "" : "s"} as ${format.toUpperCase()}`,
-        ),
+  const copy = async (format: ExportFormat) => {
+    try {
+      const rows = await selectedCells();
+      const text = exportRows(
+        format,
+        data.columns.map((c) => c.name),
+        rows,
+        { schema, table },
       );
+      await navigator.clipboard.writeText(text);
+      toast.success(
+        `Copied ${rows.length.toLocaleString()} row${rows.length === 1 ? "" : "s"} as ${format.toUpperCase()}`,
+      );
+    } catch (e) {
+      toast.error("Couldn't copy", { description: describeError(e).message });
+    }
   };
 
   const exportFile = async (format: ExportFormat) => {
-    const source = selected.size
-      ? gridRows.filter((r) => selected.has(r.id))
-      : gridRows;
+    let source: Awaited<ReturnType<typeof selectedCells>>;
+    try {
+      source = await selectedCells();
+    } catch (e) {
+      toast.error("Couldn't export", { description: describeError(e).message });
+      return;
+    }
     const text = exportRows(
       format,
       data.columns.map((c) => c.name),
-      source.map((r) => r.cells),
+      source,
       { schema, table },
     );
     const path = await saveFile({
@@ -663,7 +727,7 @@ export function TableData({
     try {
       await unwrap(commands.saveTextFile(path, text));
       toast.success(
-        `Exported ${source.length} row${source.length === 1 ? "" : "s"}`,
+        `Exported ${source.length.toLocaleString()} row${source.length === 1 ? "" : "s"}`,
         { description: path },
       );
     } catch (e) {
@@ -726,17 +790,28 @@ export function TableData({
               className="ml-2"
               label="Clear selection"
               icon={<X />}
-              onClick={() => setSelected(new Set())}
+              onClick={() => changeSelection(new Set())}
             />
             <span className="px-1 text-xs text-fg">
-              {selected.size} row{selected.size === 1 ? "" : "s"} selected
+              {everyRow
+                ? `All ${totalLabel} rows selected`
+                : `${selected.size} row${selected.size === 1 ? "" : "s"} selected`}
             </span>
+            {canSelectAll && !everyRow && (
+              <button
+                type="button"
+                onClick={() => setAllRows(true)}
+                className="cursor-pointer rounded px-1.5 py-0.5 text-xs text-accent hover:bg-accent-muted"
+              >
+                Select all {totalLabel} rows
+              </button>
+            )}
             <span className="mx-1 h-4 w-px bg-border" />
             <RowsMenu
               icon={<Copy />}
               label="Copy"
               verb="Copy as"
-              onPick={copy}
+              onPick={(f) => void copy(f)}
             />
             <RowsMenu
               icon={<Download />}
@@ -865,7 +940,9 @@ export function TableData({
               iconLeft={<Trash2 />}
               onClick={() => setConfirmDelete(true)}
             >
-              Delete {selected.size} row{selected.size === 1 ? "" : "s"}
+              {everyRow
+                ? `Delete all ${totalLabel} rows`
+                : `Delete ${selected.size} row${selected.size === 1 ? "" : "s"}`}
             </Button>
           )}
         </div>
@@ -874,9 +951,7 @@ export function TableData({
       {/* Grid */}
       <div className="relative min-h-0 flex-1">
         {rowsQuery.isError ? (
-          <p className="p-4 text-sm text-danger">
-            {describeError(rowsQuery.error).message}
-          </p>
+          <LoadError query={rowsQuery} />
         ) : rowsQuery.isPending ? (
           <div className="flex h-full items-center justify-center text-fg-subtle">
             <Spinner />
@@ -945,7 +1020,7 @@ export function TableData({
             onEditReference={setPicking}
             onExpandRow={editable ? expandRow : undefined}
             selected={selected}
-            onSelectedChange={setSelected}
+            onSelectedChange={changeSelection}
             onEdit={editable ? editCell : undefined}
             onAddColumn={editable ? () => setInsert("column") : undefined}
             hidden={hidden}
@@ -1082,7 +1157,7 @@ export function TableData({
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Delete ${selected.size} row${selected.size === 1 ? "" : "s"}?`}
+        title={`Delete ${everyRow ? `all ${totalLabel}` : selectedCount} row${selectedCount === 1 ? "" : "s"}?`}
         description="You can undo this right after with Ctrl+Z."
         confirmLabel="Delete"
         destructive
@@ -1146,6 +1221,11 @@ export function TableFooter({
     </div>
   );
 }
+
+/** Rows fetched (and deleted) per request when acting on the whole table. */
+const ALL_ROWS_PAGE = 1000;
+/** Most rows "Select all" copies or exports in one go. */
+const ALL_ROWS_MAX = 200_000;
 
 function RowsMenu({
   icon,
