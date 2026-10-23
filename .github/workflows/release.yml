@@ -92,15 +92,49 @@ jobs:
           # __VERSION__ is replaced with the version from tauri.conf.json
           tagName: v__VERSION__
           releaseName: PostCompass v__VERSION__
+          # Before publishing, replace the "Highlights" bullets in the draft with what's new in this
+          # version. "What's Changed" and "Full Changelog" are added below automatically.
           releaseBody: |
-            Download the installer for your system from **Assets** below.
+            <p align="center">
+              <img src="https://raw.githubusercontent.com/piyushg-07/postcompass/release/docs/assets/banner.png" alt="PostCompass" width="100%" />
+            </p>
 
-            - **Windows:** `PostCompass_*_x64-setup.exe` (recommended), or the `.msi` for managed installs
-            - **macOS:** `PostCompass_*_aarch64.dmg` for Apple Silicon, `PostCompass_*_x64.dmg` for Intel
-            - **Linux:** `.AppImage` (any distribution), `.deb` (Ubuntu/Debian) or `.rpm` (Fedora)
+            **PostCompass v__VERSION__** is here. A fast, modern desktop app for PostgreSQL: run local databases in one click, connect to the cloud, and browse, edit and query your data in one place.
 
-            The app isn't code-signed yet: on Windows choose **More info → Run anyway**; on macOS
-            right-click the app and choose **Open** the first time.
+            ## ✨ Highlights
+
+            - **One-click local PostgreSQL 18.** Installed and run for you, no admin rights needed
+            - **Cloud connections.** AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and any PostgreSQL, with passwords in your system keychain
+            - **Table editor.** Inline editing, filters, sorting and foreign-key navigation
+            - **SQL editor.** Autocomplete, query history and visual `EXPLAIN ANALYZE`
+            - **ER diagram, command palette (`Ctrl+K`), backup and restore**
+
+            ## 📦 Download
+
+            | Platform | Installer |
+            |---|---|
+            | **Windows** 10 / 11 (x64) | [**PostCompass___VERSION___x64-setup.exe**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64-setup.exe) · [`.msi`](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64_en-US.msi) |
+            | **macOS** Apple Silicon (M1–M4) | [**PostCompass___VERSION___aarch64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___aarch64.dmg) |
+            | **macOS** Intel | [**PostCompass___VERSION___x64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64.dmg) |
+            | **Linux** (any distro) | [**.AppImage**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.AppImage) |
+            | **Linux** Ubuntu / Debian | [**.deb**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.deb) |
+            | **Linux** Fedora / RHEL | [**.rpm**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass-__VERSION__-1.x86_64.rpm) |
+
+            ## 🛡️ First launch
+
+            PostCompass isn't code-signed yet, so your system may show a warning the first time:
+
+            - **Windows:** on the SmartScreen prompt, click **More info → Run anyway**.
+            - **macOS:** right-click **PostCompass** in Applications and choose **Open**, then **Open** again.
+            - **Linux (AppImage):** run `chmod +x PostCompass_*.AppImage`, then open it.
+
+            ## 💬 Feedback
+
+            Found a bug or have an idea? [Open an issue](https://github.com/piyushg-07/postcompass/issues/new). If PostCompass is useful to you, a ⭐ on the repo helps a lot.
+
+            ---
+          # Appends GitHub's auto-generated "What's Changed", "New Contributors" and "Full Changelog"
+          generateReleaseNotes: true
           # Stays a draft until you review and publish it
           releaseDraft: true
           prerelease: false
