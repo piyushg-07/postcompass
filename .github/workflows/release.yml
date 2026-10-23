@@ -95,7 +95,7 @@ jobs:
           releaseBody: |
             Download the installer for your system from **Assets** below.
 
-            - **Windows:** `PostCompass_*_x64-setup.exe` (or the `.msi`)
+            - **Windows:** `PostCompass_*_x64-setup.exe` (recommended), or the `.msi` for managed installs
             - **macOS:** `PostCompass_*_aarch64.dmg` for Apple Silicon, `PostCompass_*_x64.dmg` for Intel
             - **Linux:** `.AppImage` (any distribution), `.deb` (Ubuntu/Debian) or `.rpm` (Fedora)
 

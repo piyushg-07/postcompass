@@ -110,7 +110,7 @@ Grab the latest installer from the **[Releases page](https://github.com/piyushg-
 
 | Platform | File |
 |---|---|
-| **Windows** 10 / 11 | `PostCompass_x.y.z_x64-setup.exe` (or the `.msi`) |
+| **Windows** 10 / 11 | `PostCompass_x.y.z_x64-setup.exe` (recommended), or the `.msi` for managed installs |
 | **macOS** (Apple Silicon) | `PostCompass_x.y.z_aarch64.dmg` |
 | **macOS** (Intel) | `PostCompass_x.y.z_x64.dmg` |
 | **Linux** | `.AppImage` (any distro), `.deb` (Ubuntu / Debian) or `.rpm` (Fedora) |
