@@ -25,6 +25,7 @@ import {
   memo,
   type MouseEvent,
   type ReactNode,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -73,7 +74,7 @@ export interface CellTarget {
 
 const ROW_HEIGHT = 34;
 const SELECT_WIDTH = 65;
-const ADD_COLUMN_WIDTH = 100;
+const ADD_COLUMN_WIDTH = 96;
 const MIN_WIDTH = 100;
 
 /** Supabase's default widths: narrow for numbers and booleans, wide for text. */
@@ -171,10 +172,19 @@ export function DataGrid({
   const [menuTarget, setMenuTarget] = useState<CellTarget | null>(null);
   const lastChecked = useRef<number | null>(null);
 
-  const colWidths = useMemo(
+  const baseWidths = useMemo(
     () => columns.map((c) => widths[c.id] ?? initialWidth(c)),
     [columns, widths],
   );
+  // The grid's visible width, so a narrow table can stretch its last column to the edge
+  const [viewWidth, setViewWidth] = useState(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setViewWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   // Results of a query have no checkboxes or expand buttons, so no column for them
   const selectWidth = onSelectedChange || onExpandRow ? SELECT_WIDTH : 0;
   /** Every column index in the user's arrangement. */
@@ -191,6 +201,18 @@ export function DataGrid({
     const pinned = visible.filter((i) => frozen?.has(columns[i]!.id));
     return [...pinned, ...visible.filter((i) => !frozen?.has(columns[i]!.id))];
   }, [arranged, columns, hidden, frozen]);
+  /** Column widths; the last visible column takes up any room left on the right. */
+  const colWidths = useMemo(() => {
+    const last = order.at(-1);
+    if (last === undefined) return baseWidths;
+    const used =
+      selectWidth +
+      order.reduce((sum, i) => sum + baseWidths[i]!, 0) +
+      (onAddColumn ? ADD_COLUMN_WIDTH : 0);
+    const spare = viewWidth - used;
+    if (spare <= 0) return baseWidths;
+    return baseWidths.map((w, i) => (i === last ? w + spare : w));
+  }, [baseWidths, order, selectWidth, onAddColumn, viewWidth]);
   const frozenCount = order.filter((i) => frozen?.has(columns[i]!.id)).length;
   /** Left edge of each column (by its index), counting from the grid's left. */
   const offsets = useMemo(() => {
@@ -525,21 +547,17 @@ export function DataGrid({
               />
             )}
             {onAddColumn && (
-              <div
-                className="flex shrink-0 items-center justify-center"
-                style={{ width: ADD_COLUMN_WIDTH }}
-              >
-                <Tooltip content="Add new column">
-                  <button
-                    type="button"
-                    aria-label="Add new column"
-                    onClick={onAddColumn}
-                    className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-subtle hover:bg-surface-hover hover:text-fg"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </Tooltip>
-              </div>
+              <Tooltip content="Add new column">
+                <button
+                  type="button"
+                  aria-label="Add new column"
+                  onClick={onAddColumn}
+                  className="flex shrink-0 cursor-pointer items-center justify-center text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg"
+                  style={{ width: ADD_COLUMN_WIDTH }}
+                >
+                  <Plus className="size-4" />
+                </button>
+              </Tooltip>
             )}
           </div>
 

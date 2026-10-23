@@ -1,6 +1,5 @@
 import {
   Button,
-  cn,
   Dialog,
   DialogClose,
   DropdownMenu,
@@ -16,7 +15,14 @@ import {
   toast,
 } from "@repo/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Key, Maximize2, Pencil } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Key,
+  Maximize2,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { ColumnInfo, ColumnValue, RowChange } from "../../../lib/bindings";
 import { commands, describeError, unwrap } from "../../../lib/ipc";
@@ -234,6 +240,11 @@ function RowForm({
           <span className="font-mono">{table}</span>
         </>
       }
+      description={
+        editing
+          ? "Only the fields you change are saved."
+          : "Fields you leave empty get the column's default, or NULL."
+      }
       className="w-[640px]"
       footer={
         <>
@@ -260,7 +271,7 @@ function RowForm({
       }
     >
       <form
-        className="flex flex-col gap-6"
+        className="flex flex-col gap-8"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
@@ -273,25 +284,24 @@ function RowForm({
         }}
       >
         {required.length > 0 && (
-          <div className="flex flex-col gap-5">{required.map(field)}</div>
+          <FieldGroup
+            title="Required"
+            hint={optional.length > 0 ? "These need a value." : undefined}
+          >
+            {required.map(field)}
+          </FieldGroup>
         )}
         {optional.length > 0 && (
-          <div
-            className={cn(
-              "flex flex-col gap-5",
-              required.length > 0 && "border-t border-border pt-6",
-            )}
+          <FieldGroup
+            title={required.length > 0 ? "Optional" : undefined}
+            hint={
+              required.length > 0
+                ? "Can be left empty; they use their default or NULL."
+                : undefined
+            }
           >
-            {required.length > 0 && (
-              <div className="flex flex-col gap-0.5">
-                <h3 className="text-sm text-fg">Optional Fields</h3>
-                <p className="text-xs text-fg-subtle">
-                  These are columns that do not need any value
-                </p>
-              </div>
-            )}
             {optional.map(field)}
-          </div>
+          </FieldGroup>
         )}
         {save.isError && (
           <div className="flex items-start gap-2 rounded-control border border-danger/30 bg-danger/5 p-2.5 text-xs">
@@ -407,20 +417,25 @@ function FieldRow({
     );
   } else if (reference) {
     control = (
-      <Input
-        id={id}
-        className="font-mono text-xs"
-        placeholder={placeholder}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <div className="relative">
+        <Input
+          id={id}
+          className="pr-24 font-mono text-xs"
+          placeholder={placeholder}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={onPick}
+          className="absolute top-1/2 right-1 flex h-6 -translate-y-1/2 cursor-pointer items-center gap-1 rounded-md border border-border-strong bg-surface px-2 text-[11px] text-fg-muted transition-colors hover:border-accent/50 hover:text-accent"
+        >
+          <Search className="size-3" />
+          Select
+        </button>
+      </div>
     );
-    actions = menu(
-      <>
-        {nullItem}
-        <DropdownMenuItem onSelect={onPick}>Select record</DropdownMenuItem>
-      </>,
-    );
+    if (nullItem) actions = menu(nullItem);
   } else if (kind === "bool") {
     control = (
       <Select
@@ -525,15 +540,15 @@ function FieldRow({
   }
 
   return (
-    <div className="grid grid-cols-[1fr_2fr] items-start gap-4">
-      <label htmlFor={id} className="flex min-w-0 flex-col gap-0.5 pt-1.5">
-        <span className="flex items-center gap-1.5 truncate text-sm text-fg-muted">
+    <div className="grid grid-cols-[180px_1fr] items-start gap-4">
+      <label htmlFor={id} className="flex min-w-0 flex-col gap-0.5 pt-1">
+        <span className="flex items-center gap-1.5 truncate font-mono text-[13px] text-fg">
           {c.isPrimaryKey && (
             <Key className="size-3 shrink-0 rotate-45 text-accent" />
           )}
           {c.name}
         </span>
-        <span className="truncate font-mono text-xs text-fg-subtle">
+        <span className="truncate font-mono text-[11px] text-fg-subtle">
           {shortType(c.dataType)}
         </span>
       </label>
@@ -543,9 +558,9 @@ function FieldRow({
           {actions}
         </div>
         {reference && (
-          <span className="text-xs text-fg-subtle">
-            Has a foreign key relation to{" "}
-            <span className="font-mono text-fg-muted">
+          <span className="flex items-center gap-1 text-[11px] text-fg-subtle">
+            <ArrowRight className="size-3" />
+            <span className="font-mono">
               {reference.schema}.{reference.table}.{reference.column}
             </span>
           </span>
@@ -558,6 +573,31 @@ function FieldRow({
   );
 }
 
+/** A set of fields under a small heading. */
+function FieldGroup({
+  title,
+  hint,
+  children,
+}: {
+  title?: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      {title && (
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-[11px] font-medium tracking-wider text-fg-subtle uppercase">
+            {title}
+          </h3>
+          {hint && <p className="text-xs text-fg-subtle/80">{hint}</p>}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
 function FieldMenu({ children }: { children: ReactNode }) {
   return (
     <DropdownMenu>
@@ -565,9 +605,9 @@ function FieldMenu({ children }: { children: ReactNode }) {
         <button
           type="button"
           aria-label="Field options"
-          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control border border-border text-fg-subtle hover:border-border-strong hover:text-fg data-[state=open]:text-fg"
+          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg data-[state=open]:bg-surface-hover data-[state=open]:text-fg"
         >
-          <Pencil className="size-3.5" />
+          <MoreHorizontal className="size-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">{children}</DropdownMenuContent>
