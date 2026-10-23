@@ -11,7 +11,15 @@ import {
   Tooltip,
 } from "@repo/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowRight, Key, Link2, Maximize2, Plus } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  Key,
+  Link2,
+  Maximize2,
+  Plus,
+} from "lucide-react";
 import {
   type KeyboardEvent,
   memo,
@@ -669,7 +677,7 @@ function HeaderCell({
   return (
     <div
       className={cn(
-        "group/header relative flex shrink-0 items-center gap-1.5 border-r border-border px-2",
+        "group/header relative flex shrink-0 items-center gap-1.5 border-r border-border px-2 transition-colors hover:bg-surface-hover/50",
         left !== undefined && "sticky z-10 bg-surface",
         lastFrozen &&
           "border-r-border-strong shadow-[4px_0_6px_-4px_rgba(0,0,0,0.6)]",
@@ -715,15 +723,16 @@ function HeaderCell({
       {column.format && (
         <span className="truncate text-xs text-fg-subtle">{column.format}</span>
       )}
-      {sort && (
-        <span className="shrink-0 text-[10px] text-accent">
-          {sort.descending ? "↓" : "↑"}
-        </span>
-      )}
+      {sort &&
+        (sort.descending ? (
+          <ArrowDown className="size-3 shrink-0 text-accent" />
+        ) : (
+          <ArrowUp className="size-3 shrink-0 text-accent" />
+        ))}
       <span className="ml-auto flex shrink-0 items-center gap-0.5">{menu}</span>
       <span
         data-resize
-        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-accent/40"
+        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize transition-colors hover:bg-accent/40"
         onMouseDown={onResize}
       />
     </div>
@@ -776,9 +785,10 @@ const GridRowView = memo(function GridRowView({
     <div
       data-index={index}
       className={cn(
-        "group/row absolute left-0 flex w-full border-b border-border",
-        selected ? "bg-surface-hover" : "bg-bg hover:bg-surface/60",
-        row.state === "new" && "bg-accent/5",
+        "group/row absolute left-0 flex w-full border-b border-border transition-colors duration-75",
+        selected ? "bg-accent/[0.07]" : "bg-bg hover:bg-surface/70",
+        row.state === "new" &&
+          "bg-accent/5 shadow-[inset_2px_0_0_var(--color-accent)]",
         row.state === "deleted" && "bg-danger/10 text-fg-subtle line-through",
       )}
       style={{ top, height: ROW_HEIGHT }}
@@ -786,8 +796,8 @@ const GridRowView = memo(function GridRowView({
       {(onCheck || onExpand) && (
         <div
           className={cn(
-            "sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border pl-3",
-            selected ? "bg-surface-hover" : "bg-bg group-hover/row:bg-surface",
+            "sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border pl-3 transition-colors duration-75",
+            selected ? "bg-accent-muted" : "bg-bg group-hover/row:bg-surface",
           )}
           style={{ width: SELECT_WIDTH }}
         >
@@ -808,7 +818,7 @@ const GridRowView = memo(function GridRowView({
                 type="button"
                 aria-label="Expand row"
                 onClick={onExpand}
-                className="hidden size-5 cursor-pointer items-center justify-center rounded text-fg-subtle group-hover/row:flex hover:bg-surface-hover hover:text-fg"
+                className="hidden size-5 cursor-pointer items-center justify-center rounded-md text-fg-subtle group-hover/row:flex hover:bg-surface-hover hover:text-fg"
               >
                 <Maximize2 className="size-3" />
               </button>
@@ -830,9 +840,9 @@ const GridRowView = memo(function GridRowView({
               // Frozen cells need a background to cover what scrolls under them
               left !== undefined &&
                 cn(
-                  "sticky z-[5]",
+                  "sticky z-[5] transition-colors duration-75",
                   selected
-                    ? "bg-surface-hover"
+                    ? "bg-accent-muted"
                     : "bg-bg group-hover/row:bg-surface",
                 ),
               col === lastFrozen &&
@@ -844,7 +854,7 @@ const GridRowView = memo(function GridRowView({
             onDoubleClick={() => onCellDoubleClick(col)}
           >
             {activeCol === col && !isEditing && (
-              <span className="pointer-events-none absolute inset-0 hidden ring-1 ring-accent ring-inset group-focus-within/grid:block" />
+              <span className="pointer-events-none absolute inset-px hidden rounded-[3px] ring-[1.5px] ring-accent group-focus-within/grid:block" />
             )}
             {isEditing ? (
               <CellEditor
@@ -913,15 +923,15 @@ function ReferenceButton({
             aria-label="View referencing record"
             onClick={(e) => e.stopPropagation()}
             onDoubleClick={(e) => e.stopPropagation()}
-            className="ml-auto flex size-6 shrink-0 cursor-pointer items-center justify-center rounded border border-border-strong bg-surface text-fg-subtle hover:border-fg-subtle hover:text-fg"
+            className="ml-auto flex size-[22px] shrink-0 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-fg-subtle opacity-60 shadow-sm transition-all group-hover/row:opacity-100 hover:border-accent/60 hover:bg-accent-muted hover:text-accent aria-expanded:border-accent/60 aria-expanded:bg-accent-muted aria-expanded:text-accent aria-expanded:opacity-100"
           >
-            <ArrowRight className="size-3.5" />
+            <ArrowRight className="size-3" />
           </button>
         </PopoverTrigger>
       </Tooltip>
       <PopoverContent
         align="end"
-        className="w-96 overflow-hidden p-0"
+        className="w-96 overflow-hidden rounded-card p-0 shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

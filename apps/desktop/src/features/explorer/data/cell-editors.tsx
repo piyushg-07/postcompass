@@ -62,9 +62,12 @@ export function CellEditor({
     case "number":
     case "time":
       return (
-        <InlineEditor
+        <ValueEditor
+          kind={column.kind}
           initial={start}
-          placeholder={column.kind === "time" ? "HH:mm:ss" : undefined}
+          nullable={column.nullable}
+          width={width}
+          rowHeight={rowHeight}
           onCommit={onCommit}
         />
       );
@@ -132,37 +135,84 @@ function useOnce(commit: Commit) {
   };
 }
 
-function InlineEditor({
+const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$|^[-+]?(nan|infinity)$/i;
+
+/** Numbers and times: one line in the same popover box as text, checked before saving. */
+function ValueEditor({
+  kind,
   initial,
-  placeholder,
+  nullable,
+  width,
+  rowHeight,
   onCommit,
 }: {
+  kind: "number" | "time";
   initial: string;
-  placeholder?: string;
+  nullable: boolean;
+  width: number;
+  rowHeight: number;
   onCommit: Commit;
 }) {
   const [text, setText] = useState(initial);
   const finish = useOnce(onCommit);
-  // An empty number or time is saved as NULL
-  const value = () => (text.trim() === "" ? null : text.trim());
+  const trimmed = text.trim();
+  const invalid = kind === "number" && trimmed !== "" && !NUMBER.test(trimmed);
+
+  const save = () => {
+    // "Not a number" already shows under the input; stay open until it's fixed or cancelled
+    if (invalid) return false;
+    // An empty number or time is saved as NULL
+    finish(trimmed === "" ? null : trimmed);
+    return true;
+  };
+
   return (
-    <input
-      autoFocus
-      value={text}
-      placeholder={placeholder}
-      onFocus={(e) => {
-        // A typed first key stays; an existing value is selected so typing replaces it
-        if (initial.length > 1) e.currentTarget.select();
-      }}
-      onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === "Enter" || e.key === "Tab") finish(value());
-        if (e.key === "Escape") finish(false);
-      }}
-      onBlur={() => finish(value())}
-      className="absolute inset-0 z-10 bg-surface-raised px-2 text-[13px] text-fg ring-1 ring-accent outline-none ring-inset select-text placeholder:text-fg-subtle"
-    />
+    <CellPopover
+      width={Math.max(width, 300)}
+      rowHeight={rowHeight}
+      onOutside={() => !save()}
+      onEscape={() => finish(false)}
+    >
+      <input
+        autoFocus
+        spellCheck={false}
+        inputMode={kind === "number" ? "decimal" : undefined}
+        value={text}
+        placeholder={kind === "time" ? "HH:mm:ss" : "0"}
+        onChange={(e) => setText(e.target.value)}
+        onFocus={(e) => {
+          // A typed first key stays; an existing value is selected so typing replaces it
+          if (initial.length > 1) e.currentTarget.select();
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            save();
+          }
+          if (e.key === "Escape") finish(false);
+        }}
+        className="block h-10 w-full bg-bg px-2.5 font-mono text-sm text-fg outline-none select-text placeholder:text-fg-subtle"
+      />
+      {invalid && (
+        <p className="border-t border-border bg-danger/5 px-2.5 py-1.5 text-[11px] text-danger">
+          Not a number
+        </p>
+      )}
+      <div className="flex items-center gap-2 border-t border-border bg-surface px-2.5 py-1.5">
+        <KeyHints />
+        {nullable && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ml-auto"
+            onClick={() => finish(null)}
+          >
+            Set to NULL
+          </Button>
+        )}
+      </div>
+    </CellPopover>
   );
 }
 
@@ -192,7 +242,7 @@ function ListEditor({
         value={value ?? NULL_OPTION}
         onValueChange={(v) => finish(v === NULL_OPTION ? null : v)}
         onOpenChange={(open) => !open && setTimeout(() => finish(false))}
-        className="h-full rounded-none border-0 bg-surface-raised text-[13px] ring-1 ring-accent ring-inset"
+        className="h-full rounded-[3px] border-0 bg-surface-raised text-[13px] ring-[1.5px] ring-accent ring-inset"
         options={[
           ...(nullable ? [{ value: NULL_OPTION, label: "NULL" }] : []),
           ...options,
@@ -233,7 +283,7 @@ function CellPopover({
   return (
     <Popover open>
       <PopoverAnchor asChild>
-        <div className="absolute inset-0 ring-1 ring-accent ring-inset" />
+        <div className="absolute inset-px rounded-[3px] ring-[1.5px] ring-accent" />
       </PopoverAnchor>
       <PopoverContent
         side="bottom"
