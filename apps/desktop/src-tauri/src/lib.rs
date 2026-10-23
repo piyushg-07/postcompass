@@ -52,6 +52,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         explorer::object_definition,
         explorer::schema_graph,
         explorer::list_extensions,
+        explorer::list_policies,
         data::table_rows,
         data::preview_changes,
         data::apply_changes,

@@ -295,6 +295,43 @@ pub struct ExtensionInfo {
     pub comment: Option<String>,
 }
 
+/* ── Row Level Security ───────────────────────────────────────────────── */
+
+/// A Row Level Security policy on a table (`pg_policies`).
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PolicyInfo {
+    pub name: String,
+    /// `ALL`, `SELECT`, `INSERT`, `UPDATE` or `DELETE`.
+    pub command: String,
+    /// `false` for a `RESTRICTIVE` policy.
+    pub permissive: bool,
+    /// Roles the policy applies to; `public` means everyone.
+    pub roles: Vec<String>,
+    /// The `USING` expression: which existing rows are visible / changeable.
+    pub using: Option<String>,
+    /// The `WITH CHECK` expression: which new or updated rows are allowed.
+    pub with_check: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PolicyTable {
+    pub name: String,
+    pub rls_enabled: bool,
+    /// RLS applies to the table owner too (`FORCE ROW LEVEL SECURITY`).
+    pub rls_forced: bool,
+    pub policies: Vec<PolicyInfo>,
+}
+
+/// Tables of a schema with their RLS state and policies, plus the roles a policy can target.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SchemaPolicies {
+    pub tables: Vec<PolicyTable>,
+    pub roles: Vec<String>,
+}
+
 /* ── ER diagram ───────────────────────────────────────────────────────── */
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -497,6 +534,7 @@ pub trait DriverSession: Send + Sync {
     async fn definition(&self, database: &str, schema: &str, kind: ObjectKind, name: &str) -> CoreResult<String>;
     async fn schema_graph(&self, database: &str, schema: &str) -> CoreResult<SchemaGraph>;
     async fn extensions(&self, database: &str) -> CoreResult<Vec<ExtensionInfo>>;
+    async fn policies(&self, database: &str, schema: &str) -> CoreResult<SchemaPolicies>;
 
     // Data
     async fn rows(&self, database: &str, schema: &str, table: &str, request: RowsRequest) -> CoreResult<RowsPage>;

@@ -22,6 +22,7 @@ use native_tls::TlsConnector;
 use pc_core::driver::{
     ApplyResult, CancellationToken, ConnectionConfig, DatabaseDriver, DatabaseInfo, DriverSession, ExecuteResult,
     ExplainResult, ExtensionInfo, ObjectKind, RowChange, RowsPage, RowsRequest, SchemaGraph, SchemaInfo, SchemaObjects,
+    SchemaPolicies,
     SslMode, TableInfo, TableStructure, TestResult,
 };
 use pc_core::{CoreError, CoreResult, DatabaseKind};
@@ -149,6 +150,10 @@ impl DriverSession for PostgresSession {
 
     async fn extensions(&self, database: &str) -> CoreResult<Vec<ExtensionInfo>> {
         introspect::extensions(&*self.browse(database).await?).await
+    }
+
+    async fn policies(&self, database: &str, schema: &str) -> CoreResult<SchemaPolicies> {
+        introspect::policies(&*self.browse(database).await?, schema).await
     }
 
     async fn rows(&self, database: &str, schema: &str, table: &str, request: RowsRequest) -> CoreResult<RowsPage> {

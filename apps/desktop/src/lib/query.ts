@@ -45,6 +45,8 @@ export const queryKeys = {
       ["explorer", connectionId, "db", database, "graph", schema] as const,
     extensions: (connectionId: string, database: string) =>
       ["explorer", connectionId, "db", database, "extensions"] as const,
+    policies: (connectionId: string, database: string, schema: string) =>
+      ["explorer", connectionId, "db", database, "policies", schema] as const,
     /** Everything about one table. */
     table: (connectionId: string, database: string, schema: string, table: string) =>
       ["explorer", connectionId, "db", database, "table", schema, table] as const,

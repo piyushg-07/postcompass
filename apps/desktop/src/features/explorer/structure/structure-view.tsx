@@ -85,24 +85,21 @@ export function StructureView({
   return (
     <div className="flex h-full flex-col gap-8 overflow-y-auto p-4 pb-10">
       <div className="-mb-2 flex items-center justify-between gap-4">
-        <p className="text-sm text-fg-muted">
-          {s.comment ?? (
-            <span className="text-fg-subtle">
-              {s.columns.length} column{s.columns.length === 1 ? "" : "s"} ·{" "}
-              {s.indexes.length} index{s.indexes.length === 1 ? "" : "es"} ·{" "}
-              {s.foreignKeys.length} foreign key
-              {s.foreignKeys.length === 1 ? "" : "s"}
-            </span>
-          )}
-        </p>
+        <p className="text-sm text-fg-muted">{s.comment}</p>
         <Tooltip
           content={
             s.rlsEnabled
-              ? "Row Level Security is on: policies decide which rows each role sees"
-              : "Row Level Security is off: anyone with access sees every row"
+              ? "Row Level Security is on: policies decide which rows each role sees. Click to manage policies."
+              : "Row Level Security is off: anyone with access sees every row. Click to set it up."
           }
         >
-          <span className="shrink-0">
+          <button
+            type="button"
+            className="shrink-0 cursor-pointer transition-opacity hover:opacity-80"
+            onClick={() =>
+              openTab({ type: "policies", database, schema, table })
+            }
+          >
             {s.rlsEnabled ? (
               <Badge variant="accent">
                 <ShieldCheck className="size-3" />
@@ -114,7 +111,7 @@ export function StructureView({
                 RLS disabled
               </Badge>
             )}
-          </span>
+          </button>
         </Tooltip>
       </div>
 

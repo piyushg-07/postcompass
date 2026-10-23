@@ -8,15 +8,14 @@ import {
   toast,
 } from "@repo/ui";
 import { AlertTriangle } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { describeError } from "../../lib/ipc";
 import { useRunSql } from "./explorer-context";
-import { SqlBlock } from "./sql/sql-editor";
 
 /**
  * A small confirm dialog for one change (rename, create, drop…): just the inputs and a button.
- * The SQL it runs stays one click away under "View SQL". A `sql` starting with `--` means the
- * form isn't complete yet, so the button stays disabled. Enter confirms.
+ * A `sql` starting with `--` means the form isn't complete yet, so the button stays disabled.
+ * Enter confirms.
  */
 export function RunSqlDialog({
   open,
@@ -51,7 +50,6 @@ export function RunSqlDialog({
   children?: ReactNode;
 }) {
   const run = useRunSql();
-  const [showSql, setShowSql] = useState(false);
   const ready = !sql.trimStart().startsWith("--");
 
   const submit = () => {
@@ -74,7 +72,6 @@ export function RunSqlDialog({
       onOpenChange={(next) => {
         if (!next) {
           run.reset();
-          setShowSql(false);
         }
         onOpenChange(next);
       }}
@@ -100,19 +97,9 @@ export function RunSqlDialog({
               </span>
             </div>
           )}
-          {showSql && ready && <SqlBlock sql={sql} className="max-h-48" />}
           <div className="flex items-center gap-2 pt-1">
-            {ready && (
-              <button
-                type="button"
-                onClick={() => setShowSql((v) => !v)}
-                className="mr-auto cursor-pointer text-xs text-fg-subtle hover:text-fg"
-              >
-                {showSql ? "Hide SQL" : "View SQL"}
-              </button>
-            )}
             <DialogClose asChild>
-              <Button variant="ghost" className={ready ? undefined : "ml-auto"}>
+              <Button variant="ghost" className="ml-auto">
                 Cancel
               </Button>
             </DialogClose>

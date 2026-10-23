@@ -21,6 +21,7 @@ import {
 } from "@repo/ui";
 import {
   Blocks,
+  ShieldCheck,
   Check,
   ChevronsUpDown,
   Code,
@@ -294,6 +295,19 @@ export function ObjectTree({ defaultDatabase }: { defaultDatabase: string }) {
                 }
               />
             ))}
+            <Item
+              icon={<ShieldCheck />}
+              label="Policies"
+              plain
+              active={
+                activeTab?.type === "policies" &&
+                activeTab.database === database &&
+                activeTab.schema === schema
+              }
+              onClick={() =>
+                schema && ws.openTab({ type: "policies", database, schema })
+              }
+            />
             <Item
               icon={<Blocks />}
               label="Extensions"
@@ -648,10 +662,7 @@ function TableMenu({
         View data
       </ContextMenuItem>
       {!isView && (
-        <ContextMenuItem
-          icon={<Layers />}
-          onSelect={() => onView("structure")}
-        >
+        <ContextMenuItem icon={<Layers />} onSelect={() => onView("structure")}>
           View structure
         </ContextMenuItem>
       )}

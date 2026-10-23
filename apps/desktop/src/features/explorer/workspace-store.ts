@@ -41,6 +41,14 @@ export type Tab =
   | { id: string; type: "extensions"; database: string }
   | {
       id: string;
+      type: "policies";
+      database: string;
+      schema: string;
+      /** The table to scroll to, when opened from a table's structure. */
+      table?: string;
+    }
+  | {
+      id: string;
       type: "objects";
       database: string;
       schema: string;
@@ -129,6 +137,8 @@ function tabId(tab: NewTab, queryCount: number) {
       return `diagram:${tab.database}.${tab.schema}`;
     case "extensions":
       return `extensions:${tab.database}`;
+    case "policies":
+      return `policies:${tab.database}.${tab.schema}`;
     case "objects":
       return `objects:${tab.database}.${tab.schema}.${tab.group}`;
     case "query":
@@ -193,17 +203,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             if (existing) {
               // Re-opening a table on a different view switches the view
               const tabs =
-                tab.type === "table"
+                tab.type === "policies"
                   ? ws.tabs.map((t) =>
-                      t.id === id
-                        ? ({
-                            ...t,
-                            view: tab.view,
-                            ...(tab.filters ? { filters: tab.filters } : {}),
-                          } as Tab)
-                        : t,
+                      t.id === id ? ({ ...t, table: tab.table } as Tab) : t,
                     )
-                  : ws.tabs;
+                  : tab.type === "table"
+                    ? ws.tabs.map((t) =>
+                        t.id === id
+                          ? ({
+                              ...t,
+                              view: tab.view,
+                              ...(tab.filters ? { filters: tab.filters } : {}),
+                            } as Tab)
+                          : t,
+                      )
+                    : ws.tabs;
               return {
                 tabs,
                 activeTabId: id,

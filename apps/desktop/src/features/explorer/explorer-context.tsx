@@ -93,6 +93,15 @@ export function useExtensions(database: string) {
   });
 }
 
+/** Tables of a schema with their Row Level Security state and policies. */
+export function usePolicies(database: string, schema: string) {
+  const { connectionId } = useExplorer();
+  return useQuery({
+    queryKey: queryKeys.explorer.policies(connectionId, database, schema),
+    queryFn: () => unwrap(commands.listPolicies(connectionId, database, schema)),
+  });
+}
+
 /* ── Running schema changes ───────────────────────────────────────────── */
 
 /** Thrown when SQL the app generated is rejected by the server. */

@@ -4,7 +4,8 @@ use std::collections::HashMap;
 
 use pc_core::driver::{
     ColumnInfo, ConstraintInfo, ConstraintKind, DatabaseInfo, EnumInfo, ExtensionInfo, ForeignKeyInfo, FunctionArg, FunctionInfo,
-    GraphColumn, GraphRelation, GraphTable, IndexInfo, SchemaGraph, SchemaInfo, SchemaObjects, SchemaTriggerInfo,
+    GraphColumn, GraphRelation, GraphTable, IndexInfo, PolicyInfo, PolicyTable, SchemaGraph, SchemaInfo, SchemaObjects,
+    SchemaPolicies, SchemaTriggerInfo,
     SequenceInfo,
     TableInfo, TableKind, TableStructure, TriggerInfo,
 };
@@ -586,6 +587,67 @@ pub async fn extensions(client: &Client) -> CoreResult<Vec<ExtensionInfo>> {
             comment: row.get(3),
         })
         .collect())
+}
+
+pub async fn policies(client: &Client, schema: &str) -> CoreResult<SchemaPolicies> {
+    let table_rows = client
+        .query(
+            "select c.relname::text, c.relrowsecurity, c.relforcerowsecurity
+               from pg_class c
+               join pg_namespace n on n.oid = c.relnamespace
+              where n.nspname = $1 and c.relkind in ('r', 'p')
+              order by c.relname",
+            &[&schema],
+        )
+        .await
+        .map_err(map_error)?;
+    let policy_rows = client
+        .query(
+            "select tablename::text, policyname::text, cmd::text, permissive = 'PERMISSIVE',
+                    roles::text[], qual, with_check
+               from pg_policies
+              where schemaname = $1
+              order by tablename, policyname",
+            &[&schema],
+        )
+        .await
+        .map_err(map_error)?;
+    let role_rows = client
+        .query(
+            "select rolname::text from pg_roles where rolname !~ '^pg_' order by rolname",
+            &[],
+        )
+        .await
+        .map_err(map_error)?;
+
+    let mut by_table: HashMap<String, Vec<PolicyInfo>> = HashMap::new();
+    for row in &policy_rows {
+        by_table.entry(row.get(0)).or_default().push(PolicyInfo {
+            name: row.get(1),
+            command: row.get(2),
+            permissive: row.get(3),
+            roles: row.get(4),
+            using: row.get(5),
+            with_check: row.get(6),
+        });
+    }
+    Ok(SchemaPolicies {
+        tables: table_rows
+            .iter()
+            .map(|row| {
+                let name: String = row.get(0);
+                PolicyTable {
+                    policies: by_table.remove(&name).unwrap_or_default(),
+                    name,
+                    rls_enabled: row.get(1),
+                    rls_forced: row.get(2),
+                }
+            })
+            .collect(),
+        roles: std::iter::once("public".to_owned())
+            .chain(role_rows.iter().map(|row| row.get(0)))
+            .collect(),
+    })
 }
 
 pub fn table_kind(relkind: &str) -> TableKind {

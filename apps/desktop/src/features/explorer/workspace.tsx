@@ -20,6 +20,7 @@ import {
   List,
   Network,
   Plus,
+  ShieldCheck,
   Table2,
   TerminalSquare,
   X,
@@ -33,6 +34,7 @@ import {
   useRef,
 } from "react";
 import { useExplorer } from "./explorer-context";
+import { PoliciesTab } from "./policies/policies-tab";
 import { QueryTab } from "./sql/query-tab";
 import { ExtensionsTab } from "./tabs/extensions-tab";
 import { OBJECT_GROUP_TITLES, ObjectsTab } from "./tabs/objects-tab";
@@ -67,6 +69,8 @@ function tabLabel(tab: Tab): { icon: ReactNode; label: string } {
       return { icon: <Network />, label: `Diagram · ${tab.schema}` };
     case "extensions":
       return { icon: <Blocks />, label: `Extensions · ${tab.database}` };
+    case "policies":
+      return { icon: <ShieldCheck />, label: `Policies · ${tab.schema}` };
     case "objects":
       return {
         icon: <List />,
@@ -334,6 +338,14 @@ export function Workspace() {
             )}
             {active.type === "extensions" && (
               <ExtensionsTab database={active.database} schema={schema} />
+            )}
+            {active.type === "policies" && (
+              <PoliciesTab
+                key={`${active.id}:${active.table ?? ""}`}
+                database={active.database}
+                schema={active.schema}
+                focusTable={active.table}
+              />
             )}
           </div>
         )}

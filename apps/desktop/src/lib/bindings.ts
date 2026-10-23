@@ -69,6 +69,8 @@ export const commands = {
 	objectDefinition: (connectionId: string, database: string, schema: string, kind: ObjectKind, name: string) => typedError<string, CoreError>(__TAURI_INVOKE("object_definition", { connectionId, database, schema, kind, name })),
 	schemaGraph: (connectionId: string, database: string, schema: string) => typedError<SchemaGraph, CoreError>(__TAURI_INVOKE("schema_graph", { connectionId, database, schema })),
 	listExtensions: (connectionId: string, database: string) => typedError<ExtensionInfo[], CoreError>(__TAURI_INVOKE("list_extensions", { connectionId, database })),
+	/**  Tables of a schema with their Row Level Security state and policies. */
+	listPolicies: (connectionId: string, database: string, schema: string) => typedError<SchemaPolicies, CoreError>(__TAURI_INVOKE("list_policies", { connectionId, database, schema })),
 	tableRows: (connectionId: string, database: string, schema: string, table: string, request: RowsRequest) => typedError<RowsPage, CoreError>(__TAURI_INVOKE("table_rows", { connectionId, database, schema, table, request })),
 	/**  The SQL that `apply_changes` would run, for review before saving. */
 	previewChanges: (connectionId: string, database: string, schema: string, table: string, changes: RowChange[]) => typedError<string[], CoreError>(__TAURI_INVOKE("preview_changes", { connectionId, database, schema, table, changes })),
@@ -393,6 +395,29 @@ export type OpenedConnection = {
 	database: string,
 };
 
+/**  A Row Level Security policy on a table (`pg_policies`). */
+export type PolicyInfo = {
+	name: string,
+	/**  `ALL`, `SELECT`, `INSERT`, `UPDATE` or `DELETE`. */
+	command: string,
+	/**  `false` for a `RESTRICTIVE` policy. */
+	permissive: boolean,
+	/**  Roles the policy applies to; `public` means everyone. */
+	roles: string[],
+	/**  The `USING` expression: which existing rows are visible / changeable. */
+	using: string | null,
+	/**  The `WITH CHECK` expression: which new or updated rows are allowed. */
+	withCheck: string | null,
+};
+
+export type PolicyTable = {
+	name: string,
+	rlsEnabled: boolean,
+	/**  RLS applies to the table owner too (`FORCE ROW LEVEL SECURITY`). */
+	rlsForced: boolean,
+	policies: PolicyInfo[],
+};
+
 /**  Answers from onboarding. Present once onboarding is complete. */
 export type Profile = {
 	name: string | null,
@@ -506,6 +531,12 @@ export type SchemaObjects = {
 	sequences: SequenceInfo[],
 	enums: EnumInfo[],
 	triggers: SchemaTriggerInfo[],
+};
+
+/**  Tables of a schema with their RLS state and policies, plus the roles a policy can target. */
+export type SchemaPolicies = {
+	tables: PolicyTable[],
+	roles: string[],
 };
 
 /**  A trigger anywhere in a schema, with the table it fires on. */

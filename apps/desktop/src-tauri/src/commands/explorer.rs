@@ -1,7 +1,7 @@
 //! Inspecting a connected server beyond the basic tree: structure, other objects, definitions, ER graph.
 
 use pc_core::CoreError;
-use pc_core::driver::{ExtensionInfo, ObjectKind, SchemaGraph, SchemaObjects, TableStructure};
+use pc_core::driver::{ExtensionInfo, ObjectKind, SchemaGraph, SchemaObjects, SchemaPolicies, TableStructure};
 use tauri::State;
 
 use crate::connections::Connections;
@@ -70,4 +70,16 @@ pub async fn list_extensions(
     database: String,
 ) -> Result<Vec<ExtensionInfo>, CoreError> {
     connections.get(&connection_id).await?.extensions(&database).await
+}
+
+/// Tables of a schema with their Row Level Security state and policies.
+#[tauri::command]
+#[specta::specta]
+pub async fn list_policies(
+    connections: State<'_, Connections>,
+    connection_id: String,
+    database: String,
+    schema: String,
+) -> Result<SchemaPolicies, CoreError> {
+    connections.get(&connection_id).await?.policies(&database, &schema).await
 }
