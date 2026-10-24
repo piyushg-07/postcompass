@@ -219,8 +219,8 @@
   }
 }
 
-/* Phones: the modal fills the screen so Drive's player has room for its controls */
-@media (max-width: 640px) {
+/* Phones, held either way: the modal fills the screen so the video gets all of it */
+@media (pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px) {
   .dialog {
     width: 100vw;
     height: 100dvh;
@@ -232,6 +232,11 @@
   .dialog[open] {
     display: flex;
     flex-direction: column;
+  }
+
+  /* The close button on the video replaces the title bar */
+  .dialogHead {
+    display: none;
   }
 
   .player {

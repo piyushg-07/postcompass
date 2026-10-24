@@ -7,10 +7,8 @@ import styles from "./DemoVideo.module.css";
 
 // Hosts the Drive player loads from; connecting to them early saves the handshakes on click
 const PLAYER_ORIGINS = ["https://drive.google.com", "https://www.gstatic.com", "https://drive.usercontent.google.com"];
-const PHONE = "(max-width: 640px) and (pointer: coarse)";
-
-// Screen orientation locking isn't in every browser's typings yet
-type LockableOrientation = ScreenOrientation & { lock?: (o: "landscape") => Promise<void> };
+// A phone held either way: narrow in portrait, short in landscape (same rule as the CSS)
+const PHONE = "(pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px)";
 
 export default function DemoVideo() {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -60,7 +58,7 @@ export default function DemoVideo() {
     else reset();
   };
 
-  // On phones the player goes straight to real full screen (and landscape where allowed). Browsers that can't
+  // On phones the player goes straight to real full screen, in whichever way the phone is held. Browsers that can't
   // do this for an embedded player, like Safari on iPhone, still get the full-screen modal from the CSS.
   const openPlayer = () => {
     warmUp();
@@ -72,10 +70,7 @@ export default function DemoVideo() {
     const player = playerRef.current;
     if (!dialog || !player || !window.matchMedia(PHONE).matches || !player.requestFullscreen) return;
     if (!dialog.open) dialog.showModal(); // must be showing, inside this tap, before it can go full screen
-    player
-      .requestFullscreen()
-      .then(() => (screen.orientation as LockableOrientation | undefined)?.lock?.("landscape"))
-      .catch(() => {});
+    player.requestFullscreen().catch(() => {});
   };
 
   // Back closes the player, and leaving full screen on a phone closes it too, so there's no second step
