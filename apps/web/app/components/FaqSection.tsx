@@ -1,24 +1,24 @@
 import { FAQ_ITEMS } from "../config/product";
 import { ChevronDown } from "./Icons";
-import styles from "./FaqSection.module.css";
+import SectionHeader from "./SectionHeader";
 
 export default function FaqSection() {
   return (
-    <section className="section" id="faq">
-      <div className={`container ${styles.wrap}`}>
-        <div className="section-header">
-          <span className="section-badge">FAQ</span>
-          <h2 className="section-title">Questions, answered</h2>
-        </div>
+    <section className="relative py-24 max-lg:py-16 max-md:py-12" id="faq">
+      <div className="mx-auto w-full max-w-[820px] px-6 max-md:px-4">
+        <SectionHeader badge="FAQ" title="Questions, answered" />
 
-        <div className={styles.list} data-reveal="stagger">
+        <div className="flex flex-col border-t border-[rgba(255,255,255,0.07)]" data-reveal="stagger">
           {FAQ_ITEMS.map((item) => (
-            <details key={item.question} className={styles.item}>
-              <summary className={styles.question}>
+            <details key={item.question} className="group border-b border-[rgba(255,255,255,0.07)]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-1 py-[1.2rem] text-[1rem] font-semibold text-fg hover:text-white focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-hover [&::-webkit-details-marker]:hidden">
                 <span>{item.question}</span>
-                <ChevronDown size={16} className={styles.chevron} />
+                <ChevronDown
+                  size={16}
+                  className="shrink-0 text-fg-muted [transition:transform_0.2s_ease] group-open:[transform:rotate(180deg)] group-open:text-accent-hover"
+                />
               </summary>
-              <p className={styles.answer}>{item.answer}</p>
+              <p className="m-0 pt-0 pr-10 pb-[1.3rem] pl-1 text-[0.95rem] leading-[1.7] text-fg-secondary">{item.answer}</p>
             </details>
           ))}
         </div>

@@ -5,7 +5,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { PRODUCT } from "../config/product";
 import { Github } from "./Icons";
-import styles from "./Navbar.module.css";
+
+const KW = "font-medium text-[#c792ea]";
+const SUGGEST_TEXT = "font-sans text-[0.82rem] text-fg-secondary";
 
 interface Table {
   name: string;
@@ -161,26 +163,39 @@ export default function Navbar() {
   const editing = draft !== null;
 
   return (
-    <header className={`${styles.bar} ${scrolled ? styles.scrolled : ""}`} role="banner">
-      <nav className={styles.inner} aria-label="Main navigation">
-        <a href="/" className={styles.brand} aria-label={`${PRODUCT.name} home`}>
+    <header
+      className={`fixed top-0 right-0 left-0 z-[100] [transition:background_0.3s_ease,backdrop-filter_0.3s_ease] ${scrolled ? "bg-[rgba(9,9,11,0.78)] backdrop-blur-[14px] backdrop-saturate-150" : ""}`}
+      role="banner"
+    >
+      <nav
+        className="mx-auto flex h-[64px] max-w-[1200px] items-center gap-5 px-6 font-mono max-[560px]:gap-[0.6rem] max-[560px]:px-4"
+        aria-label="Main navigation"
+      >
+        <a
+          href="/"
+          className="inline-flex shrink-0 items-center gap-[0.6rem] text-[#e4e4e7] focus-visible:rounded-[8px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-hover"
+          aria-label={`${PRODUCT.name} home`}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="" width={30} height={30} className={styles.mark} />
-          <span className={styles.word}>
-            Post<em>Compass</em>
+          <img src="/logo.png" alt="" width={30} height={30} className="block h-[30px] w-[30px] shrink-0 rounded-[8px]" />
+          <span className="font-sans text-[1.08rem] font-bold tracking-[-0.035em] whitespace-nowrap text-white max-[560px]:hidden">
+            Post<em className="font-display text-[1.1em] font-medium tracking-[-0.01em] text-accent-hover italic">Compass</em>
           </span>
         </a>
 
-        <div className={styles.prompt} role="search">
-          <label className={styles.statement} htmlFor="nav-query">
-            <span className={styles.kw}>SELECT</span>
-            <span className={styles.star}>*</span>
-            <span className={styles.kw}>FROM</span>
-            <span className={styles.tokenWrap}>
+        <div className="relative flex min-w-0 items-center gap-3 max-[560px]:ml-2" role="search">
+          <label
+            className="group/stmt inline-flex h-[36px] cursor-text items-baseline gap-2 rounded-[9px] border border-transparent px-[0.8rem] text-[0.9rem] leading-[34px] text-[#d4d4d8] [transition:border-color_0.2s_ease,background_0.2s_ease] hover:border-[rgba(255,255,255,0.08)] focus-within:border-[rgba(52,211,153,0.45)]! focus-within:bg-[rgba(16,185,129,0.05)] max-[560px]:h-[32px] max-[560px]:gap-[0.35rem] max-[560px]:px-2 max-[560px]:text-[0.75rem] max-[560px]:leading-[30px]"
+            htmlFor="nav-query"
+          >
+            <span className={KW}>SELECT</span>
+            <span className="text-fg-secondary max-[560px]:hidden">*</span>
+            <span className={KW}>FROM</span>
+            <span className="relative inline-flex items-center">
               <input
                 id="nav-query"
                 ref={inputRef}
-                className={styles.token}
+                className="min-w-[2ch] border-none bg-transparent p-0 font-semibold text-accent-hover caret-transparent outline-none placeholder:font-normal placeholder:text-fg-faint"
                 value={editing ? draft! : shown}
                 placeholder={editing ? "table" : "section"}
                 style={{ width: `${Math.max(1, (editing ? draft! : shown).length || (editing ? 5 : 7))}ch` }}
@@ -201,44 +216,60 @@ export default function Navbar() {
                 }}
                 onKeyDown={onInputKey}
               />
-              <span className={styles.caret} aria-hidden="true" />
+              <span
+                className="ml-px h-[16px] w-[8px] animate-[caret-blink_1.05s_steps(1)_infinite] rounded-[1px] bg-accent-hover motion-reduce:animate-none motion-reduce:transition-none max-[560px]:h-[13px] max-[560px]:w-[6px]"
+                aria-hidden="true"
+              />
             </span>
-            <svg className={styles.chevron} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              className="-ml-[0.15rem] self-center text-fg-muted [transition:transform_0.2s_ease,color_0.2s_ease] group-hover/stmt:text-fg-secondary group-focus-within/stmt:[transform:rotate(180deg)] group-focus-within/stmt:text-accent-hover!"
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m6 9 6 6 6-6" />
             </svg>
-            <span className={styles.semi}>;</span>
+            <span className="-ml-[0.35rem] text-fg-muted">;</span>
           </label>
 
-          {!editing && !result && <kbd className={styles.hintKey}>/</kbd>}
+          {!editing && !result && (
+            <kbd className="inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-[5px] border border-[rgba(255,255,255,0.12)] px-[5px] font-mono text-[0.7rem] text-fg-muted max-[1080px]:hidden">
+              /
+            </kbd>
+          )}
 
           {result && (
-            <span className={`${styles.result} ${result.kind === "error" ? styles.resultError : ""}`} role="status">
+            <span
+              className={`absolute top-[calc(100%_+_8px)] left-0 flex w-max max-w-[min(560px,calc(100vw_-_2rem))] animate-[nav-result-in_0.25s_ease] flex-col gap-[0.2rem] rounded-[10px] border px-[0.8rem] py-[0.55rem] text-[0.78rem] shadow-[0_16px_40px_rgba(0,0,0,0.5)] ${result.kind === "error" ? "border-[rgba(248,113,113,0.35)] bg-[#161010] text-[#f87171]" : "border-[rgba(52,211,153,0.3)] bg-[#0f1412] text-accent-hover"}`}
+              role="status"
+            >
               {result.text}
-              {result.kind === "error" && <span className={styles.resultHint}>HINT: {result.hint}</span>}
+              {result.kind === "error" && <span className="text-fg-secondary">HINT: {result.hint}</span>}
             </span>
           )}
 
           {editing && (
-            <ul id="nav-suggest" className={styles.suggest} role="listbox">
+            <ul
+              id="nav-suggest"
+              className="absolute top-[calc(100%_+_8px)] left-0 m-0 min-w-[360px] animate-[nav-result-in_0.18s_ease] list-none rounded-[12px] border border-[rgba(255,255,255,0.1)] bg-surface p-[6px] shadow-[0_24px_60px_rgba(0,0,0,0.6)] max-[560px]:fixed max-[560px]:top-[60px] max-[560px]:right-4 max-[560px]:left-4 max-[560px]:min-w-0"
+              role="listbox"
+            >
               {matches.length === 0 ? (
-                <li className={styles.suggestEmpty}>No such table. Press Enter to see what psql says.</li>
+                <li className={`p-[0.7rem] ${SUGGEST_TEXT}`}>No such table. Press Enter to see what psql says.</li>
               ) : (
                 matches.map(({ t, i }, k) => (
                   <li key={t.name} role="option" aria-selected={k === highlight}>
                     <button
                       type="button"
-                      className={`${styles.suggestItem} ${k === highlight ? styles.suggestOn : ""}`}
+                      className={`flex w-full cursor-pointer items-baseline gap-[0.9rem] rounded-[8px] border-none px-[0.7rem] py-[0.55rem] text-left ${k === highlight ? "bg-[rgba(255,255,255,0.06)]" : "bg-transparent"}`}
                       onMouseDown={(e) => e.preventDefault()}
                       onMouseEnter={() => setHighlight(k)}
                       onClick={() => run(i)}
                     >
-                      <span className={styles.suggestName}>{t.name}</span>
-                      <span className={styles.suggestAbout}>{t.about}</span>
+                      <span className="min-w-[110px] text-[0.875rem] font-semibold text-accent-hover">{t.name}</span>
+                      <span className={SUGGEST_TEXT}>{t.about}</span>
                     </button>
                   </li>
                 ))
               )}
-              <li className={styles.suggestFoot}>
+              <li className="mt-[4px] flex items-center gap-[0.35rem] border-t border-[rgba(255,255,255,0.06)] px-[0.7rem] pt-2 pb-[0.2rem] font-sans text-[0.72rem] text-fg-muted [&_kbd]:rounded-[4px] [&_kbd]:border [&_kbd]:border-[rgba(255,255,255,0.12)] [&_kbd]:px-[4px] [&_kbd]:font-mono [&_kbd]:text-[0.68rem]">
                 <kbd>↑</kbd>
                 <kbd>↓</kbd> pick <kbd>Tab</kbd> complete <kbd>↵</kbd> run
               </li>
@@ -247,10 +278,10 @@ export default function Navbar() {
         </div>
 
 
-        <div className={styles.actions}>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <a
             href={PRODUCT.github}
-            className={styles.github}
+            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[8px] text-[#8b8b94] [transition:color_0.15s_ease,background_0.15s_ease] hover:bg-[rgba(255,255,255,0.06)] hover:text-white focus-visible:bg-[rgba(255,255,255,0.06)] focus-visible:text-white focus-visible:outline-none max-[560px]:hidden"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="PostCompass on GitHub"
@@ -258,8 +289,12 @@ export default function Navbar() {
           >
             <Github size={16} />
           </a>
-          <a href="/download" className={styles.cta} title="Download PostCompass">
-            <span className={styles.ctaSlash}>\</span>download
+          <a
+            href="/download"
+            className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-[#03130c] shadow-[inset_0_0_0_1px_rgba(110,231,183,0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6ee7b7] active:[transform:scale(0.97)] max-[560px]:h-[32px] max-[560px]:px-[0.7rem] max-[560px]:text-[0.75rem]"
+            title="Download PostCompass"
+          >
+            <span className="mr-px opacity-55">\</span>download
           </a>
         </div>
       </nav>

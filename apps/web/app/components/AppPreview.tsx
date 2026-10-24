@@ -14,7 +14,49 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import styles from "./AppPreview.module.css";
+
+/* ============================================================
+   Shared class strings (Tailwind). The replica's own palette lives in
+   CSS variables set on the root element (APP_VARS).
+   ============================================================ */
+const APP_VARS =
+  "[--line:rgba(255,255,255,0.075)] [--line-strong:rgba(255,255,255,0.12)] [--panel:#0b0b0c] [--raised:#141416] [--hover:rgba(255,255,255,0.045)] [--text:#ededef] [--muted:#8d8d95] [--faint:#5c5c64] [--green:#3ecf8e] [--green-soft:rgba(62,207,142,0.12)] [--blue:#60a5fa]";
+const KBD = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-(--line-strong) bg-[rgba(255,255,255,0.04)] font-mono text-[10px] text-(--muted)";
+const KBD_ON_GREEN = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-[rgba(5,46,28,0.3)] bg-[rgba(5,46,28,0.12)] font-mono text-[10px] text-[#0b3b26]";
+const DOCK_BTN = "inline-flex items-center justify-center w-8 h-8 rounded-[7px] text-(--muted) hover:bg-(--hover) hover:text-(--text)";
+const TABLE_ITEM = "flex items-center gap-[9px] w-full h-[30px] px-2 rounded-[7px] text-left hover:bg-(--hover)";
+const TABLE_ITEM_ON = "bg-[rgba(255,255,255,0.06)] text-(--text) shadow-[inset_2px_0_0_var(--green)]";
+const TABLE_ITEM_NAME = "flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[12px]";
+const PANE = "flex flex-col flex-1 min-h-0";
+const BAR = "flex items-center gap-2.5 h-[46px] px-3 border-b border-(--line) shrink-0";
+const PILL = "inline-flex items-center gap-1.5 h-6 pr-1 pl-[9px] rounded-[6px] border border-(--line-strong) bg-(--raised) text-(--muted) whitespace-nowrap";
+const PILL_OP = "font-mono text-(--faint)";
+const POPOVER = "ap-popover absolute z-20 rounded-[10px] border border-(--line-strong) bg-[#111113] shadow-[0_18px_50px_rgba(0,0,0,0.6)] animate-[ap-pop-in_0.14s_ease] text-(--text)";
+const POP_TITLE = "py-2.5 px-3 text-(--muted)";
+const POP_CODE = "font-mono text-(--text)";
+const GHOST_BTN = "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] text-(--text) hover:bg-(--hover)";
+const ICON_BTN = "inline-flex items-center justify-center w-7 h-7 rounded-[6px] text-(--muted) enabled:hover:bg-(--hover) enabled:hover:text-(--text) disabled:opacity-35 disabled:cursor-default";
+// Table editor grid cells
+const GRID_CELL = "border-b border-(--line) whitespace-nowrap overflow-hidden text-ellipsis";
+const GRID_TH = `${GRID_CELL} sticky top-0 z-[1] h-[36px] bg-[#0a0a0b] text-left font-normal`;
+const GRID_TD = `${GRID_CELL} h-[33px]`;
+const CHECK_COL = "border-r w-10 min-w-10 text-center p-0 [&>input]:accent-(--green) [&>input]:cursor-pointer";
+const FILL_COL = "w-auto";
+// SQL result grid / FK popover cells
+const RESULT_CELL = "h-[30px] px-[14px] border-b border-r border-(--line) text-left whitespace-nowrap";
+const FK_CELL = "py-[7px] px-3 border-t border-(--line) text-left whitespace-nowrap";
+const PK = "inline-flex text-[#f5c451]";
+const FK_ICON = "inline-flex text-(--blue)";
+const BADGE = "py-0.5 px-[7px] rounded-[5px] border font-mono text-[10.5px]";
+const BADGE_GREEN = `${BADGE} border-[rgba(62,207,142,0.4)] text-(--green)`;
+const BADGE_BLUE = `${BADGE} border-[rgba(96,165,250,0.35)] text-(--blue)`;
+const BADGE_MUTED = `${BADGE} border-(--line-strong) text-(--muted)`;
+const CHIP = "inline-flex items-center h-6 px-[9px] rounded-[6px] border border-(--line-strong) text-(--text)";
+const PLAN_NUM = "font-mono text-[11px] text-(--muted) text-right";
+const CHART_STRONG = "ml-1.5 text-(--text) font-mono font-medium";
+const STAT_TILE = "flex flex-col gap-[3px] py-[7px] px-[9px] rounded-[7px] bg-[rgba(255,255,255,0.04)]";
+const STAT_TILE_LABEL = "text-[10.5px] text-(--faint)";
+const STAT_TILE_VALUE = "font-mono font-medium";
 
 /* ============================================================
    Icons (lucide-style, inline so the preview has no emoji)
@@ -275,10 +317,10 @@ const SQL_FUNCS = new Set(["count", "sum", "avg", "round", "min", "max"]);
 function highlight(sql: string) {
   return sql.split(/(\s+|'[^']*'|[(),;*=<>]+)/).map((tok, i) => {
     const low = tok.toLowerCase();
-    if (SQL_KEYWORDS.has(low)) return <span key={i} className={styles.kw}>{tok}</span>;
-    if (SQL_FUNCS.has(low)) return <span key={i} className={styles.fn}>{tok}</span>;
-    if (tok.startsWith("'")) return <span key={i} className={styles.str}>{tok}</span>;
-    if (/^\d+$/.test(tok)) return <span key={i} className={styles.num}>{tok}</span>;
+    if (SQL_KEYWORDS.has(low)) return <span key={i} className="text-[#c792ea]">{tok}</span>;
+    if (SQL_FUNCS.has(low)) return <span key={i} className="text-[#82aaff]">{tok}</span>;
+    if (tok.startsWith("'")) return <span key={i} className="text-[#a5e075]">{tok}</span>;
+    if (/^\d+$/.test(tok)) return <span key={i} className="text-[#f78c6c]">{tok}</span>;
     return tok;
   });
 }
@@ -532,7 +574,7 @@ export default function AppPreview() {
   useEffect(() => {
     if (!popover || popover.kind === "filter") return;
     const onDown = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest(`.${styles.popover}`)) setPopover(null);
+      if (!(e.target as HTMLElement).closest(".ap-popover")) setPopover(null);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -546,7 +588,7 @@ export default function AppPreview() {
     if (editing && editing.id === row.id && editing.col === col.name) {
       return (
         <input
-          className={styles.cellInput}
+          className="w-full h-full px-3 bg-[#0f1512]"
           autoFocus
           value={editing.value}
           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
@@ -561,18 +603,18 @@ export default function AppPreview() {
         />
       );
     }
-    if (v === null || v === undefined) return <span className={styles.null}>NULL</span>;
-    if (typeof v === "boolean") return <span className={v ? styles.boolTrue : styles.boolFalse}>{v ? "true" : "false"}</span>;
+    if (v === null || v === undefined) return <span className="text-(--faint) italic">NULL</span>;
+    if (typeof v === "boolean") return <span className={v ? "text-(--green)" : "text-(--muted)"}>{v ? "true" : "false"}</span>;
     if (col.fk) {
       return (
-        <span className={styles.fkCell}>
+        <span className="flex items-center justify-between gap-2">
           <span>{String(v)}</span>
           <button
             type="button"
-            className={styles.fkBtn}
+            className="inline-flex items-center justify-center w-5 h-5 rounded-[5px] border border-(--line-strong) text-(--muted) hover:border-[rgba(62,207,142,0.6)] hover:text-(--green)"
             aria-label="View referencing record"
             onClick={(e) => {
-              const box = (e.currentTarget.closest(`.${styles.canvas}`) as HTMLElement).getBoundingClientRect();
+              const box = (e.currentTarget.closest(".ap-canvas") as HTMLElement).getBoundingClientRect();
               const b = e.currentTarget.getBoundingClientRect();
               setPopover({ kind: "fk", table: col.fk!, id: Number(v), x: (b.left - box.left) / scale - 300, y: (b.bottom - box.top) / scale + 6 });
             }}
@@ -596,10 +638,10 @@ export default function AppPreview() {
   const tabIcon = (t: Tab) => (t.kind === "table" ? I.table(13) : t.kind === "query" ? I.code(13) : I.diagram(13));
 
   return (
-    <div ref={outerRef} className={styles.outer} style={{ height: DESIGN_H * scale }}>
+    <div ref={outerRef} className="relative w-full" style={{ height: DESIGN_H * scale }}>
       <div
         ref={rootRef}
-        className={styles.app}
+        className={`${APP_VARS} absolute top-0 left-0 origin-top-left flex flex-col overflow-hidden bg-[#030303] text-(--text) font-sans text-[12.5px] text-left rounded-[10px] outline-none select-none [&_input]:outline-none`}
         style={{ width: DESIGN_W, height: DESIGN_H, transform: `scale(${scale})` }}
         tabIndex={0}
         onKeyDown={onRootKey}
@@ -607,135 +649,148 @@ export default function AppPreview() {
         role="application"
       >
         {/* Top bar */}
-        <div className={styles.topbar}>
-          <div className={styles.crumbs}>
-            <span className={styles.serverDot} />
-            <span className={styles.crumbStrong}>Acme Store</span>
-            <span className={styles.crumbSep}>›</span>
+        <div className="flex items-center justify-between h-[42px] pr-3 pl-4 border-b border-(--line) shrink-0">
+          <div className="flex items-center gap-2 text-(--muted)">
+            <span className="w-2 h-2 rounded-full bg-(--green) shadow-[0_0_0_3px_rgba(62,207,142,0.15)]" />
+            <span className="text-(--text) font-medium">Acme Store</span>
+            <span className="text-(--faint)">›</span>
             {I.db(13)}
-            <span className={styles.crumbMono}>acme_store</span>
-            <span className={styles.crumbChevron}>{I.chevron(11)}</span>
-            <span className={styles.crumbSep}>›</span>
-            <span className={styles.crumbMuted}>public</span>
+            <span className="text-(--text) font-mono">acme_store</span>
+            <span className="inline-flex text-(--faint)">{I.chevron(11)}</span>
+            <span className="text-(--faint)">›</span>
+            <span className="font-mono">public</span>
           </div>
-          <div className={styles.topActions}>
-            <button type="button" className={styles.connectBtn} onClick={() => flash("Connection string copied (sample)")}>
+          <div className="flex gap-2">
+            <button type="button" className="inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-[6px] border border-(--line-strong) font-medium hover:bg-(--hover)" onClick={() => flash("Connection string copied (sample)")}>
               {I.plug(13)} Connect
             </button>
           </div>
         </div>
 
-        <div className={styles.body}>
+        <div className="flex flex-1 min-h-0">
           {/* Dock */}
-          <div className={styles.dock}>
-            <button type="button" className={styles.dockBtn} aria-label="Home" onClick={() => flash("Home is part of the full app")}>{I.home(16)}</button>
-            <button type="button" className={styles.dockBtn} aria-label="Databases" onClick={() => flash("Databases is part of the full app")}>{I.db(16)}</button>
-            <button type="button" className={styles.dockBtn} aria-label="Search (Ctrl K)" title="Search (Ctrl K)" onClick={openPalette}>{I.search(16)}</button>
-            <span className={styles.dockSep} />
-            <button type="button" className={`${styles.dockBtn} ${styles.dockActive}`} aria-label="Acme Store"><span className={styles.dockServer}>{I.db(15)}</span></button>
-            <span className={styles.dockSpacer} />
-            <button type="button" className={styles.dockBtn} aria-label="Settings" onClick={() => flash("Settings is part of the full app")}>{I.gear(15)}</button>
+          <div className="flex flex-col items-center gap-1 w-12 py-2 border-r border-(--line) shrink-0">
+            <button type="button" className={DOCK_BTN} aria-label="Home" onClick={() => flash("Home is part of the full app")}>{I.home(16)}</button>
+            <button type="button" className={DOCK_BTN} aria-label="Databases" onClick={() => flash("Databases is part of the full app")}>{I.db(16)}</button>
+            <button type="button" className={DOCK_BTN} aria-label="Search (Ctrl K)" title="Search (Ctrl K)" onClick={openPalette}>{I.search(16)}</button>
+            <span className="w-[22px] h-px my-1 bg-(--line)" />
+            <button type="button" className={`${DOCK_BTN} bg-(--hover) shadow-[inset_2px_0_0_var(--green)]`} aria-label="Acme Store"><span className="inline-flex text-(--blue)">{I.db(15)}</span></button>
+            <span className="flex-1" />
+            <button type="button" className={DOCK_BTN} aria-label="Settings" onClick={() => flash("Settings is part of the full app")}>{I.gear(15)}</button>
           </div>
 
           {/* Sidebar */}
-          <div className={styles.sidebar}>
-            <div className={styles.segment}>
+          <div className="flex flex-col w-[212px] p-2.5 gap-2 border-r border-(--line) shrink-0 min-h-0">
+            <div className="grid grid-cols-3 p-[3px] rounded-[8px] border border-(--line) bg-(--panel)">
               {(["tables", "sql"] as const).map((s) => (
-                <button key={s} type="button" className={`${styles.segBtn} ${side === s ? styles.segActive : ""}`} onClick={() => setSide(s)}>
+                <button
+                  key={s}
+                  type="button"
+                  className={`h-6 rounded-[6px] text-[12px] ${side === s ? "bg-(--raised) text-(--text) font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-(--muted) hover:text-(--text)"}`}
+                  onClick={() => setSide(s)}
+                >
                   {s === "tables" ? "Tables" : "SQL"}
                 </button>
               ))}
-              <button type="button" className={styles.segBtn} onClick={() => flash("Functions, enums and policies live here in the full app")}>Database</button>
+              <button type="button" className="h-6 rounded-[6px] text-[12px] text-(--muted) hover:text-(--text)" onClick={() => flash("Functions, enums and policies live here in the full app")}>Database</button>
             </div>
 
             {side === "tables" ? (
               <>
-                <div className={styles.schemaSelect}>
-                  <span className={styles.schemaLabel}>schema</span>
-                  <span className={styles.schemaName}>public</span>
-                  <span className={styles.schemaChevron}>{I.chevron(12)}</span>
+                <div className="flex items-center gap-2 h-[30px] px-2.5 rounded-[7px] border border-(--line-strong)">
+                  <span className="text-(--muted)">schema</span>
+                  <span className="flex-1 font-mono font-semibold">public</span>
+                  <span className="inline-flex text-(--faint)">{I.chevron(12)}</span>
                 </div>
-                <div className={styles.searchRow}>
-                  <label className={styles.searchBox}>
+                <div className="flex gap-1.5">
+                  <label className="flex-1 flex items-center gap-[7px] h-[30px] px-[9px] rounded-[7px] border border-(--line-strong) text-(--faint) focus-within:border-[rgba(62,207,142,0.5)]">
                     {I.search(12)}
-                    <input placeholder="Search tables" value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} />
+                    <input className="w-full text-(--text) placeholder:text-(--faint)" placeholder="Search tables" value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} />
                   </label>
-                  <button type="button" className={styles.newTable} aria-label="New table" onClick={() => flash("The table designer is in the full app")}>{I.plus(14)}</button>
+                  <button type="button" className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px] bg-(--green) text-[#052e1c]" aria-label="New table" onClick={() => flash("The table designer is in the full app")}>{I.plus(14)}</button>
                 </div>
-                <div className={styles.tableList}>
+                <div className="flex flex-col gap-px overflow-auto">
                   {SIDEBAR_TABLES.filter((t) => t.includes(tableSearch.trim().toLowerCase())).map((t) => {
                     const isView = t === "category_revenue";
                     const count = isView ? "view" : String(data[t]!.rows.length);
                     const on = tableName === t && tab.kind === "table";
                     return (
-                      <button key={t} type="button" className={`${styles.tableItem} ${on ? styles.tableItemOn : ""}`} onClick={() => (isView ? flash("Views open read-only in the full app") : openTable(t))}>
-                        <span className={styles.tableItemIcon}>{isView ? I.view(13) : I.table(13)}</span>
-                        <span className={styles.tableItemName}>{t}</span>
-                        <span className={styles.tableItemCount}>{count}</span>
+                      <button key={t} type="button" className={`${TABLE_ITEM} ${on ? TABLE_ITEM_ON : "text-[#cfcfd4]"}`} onClick={() => (isView ? flash("Views open read-only in the full app") : openTable(t))}>
+                        <span className={`inline-flex ${on ? "text-(--green)" : "text-(--faint)"}`}>{isView ? I.view(13) : I.table(13)}</span>
+                        <span className={TABLE_ITEM_NAME}>{t}</span>
+                        <span className="font-mono text-[10.5px] text-(--faint)">{count}</span>
                       </button>
                     );
                   })}
                 </div>
               </>
             ) : (
-              <div className={styles.sqlSide}>
-                <button type="button" className={styles.newQuery} onClick={() => openKind("query")}>
-                  {I.plus(13)} New query <kbd>Ctrl T</kbd>
+              <div className="flex flex-col gap-px overflow-auto">
+                <button type="button" className="flex items-center gap-2 h-[30px] px-2 rounded-[7px] border border-(--line-strong)" onClick={() => openKind("query")}>
+                  {I.plus(13)} New query <kbd className={`${KBD} ml-auto`}>Ctrl T</kbd>
                 </button>
-                <div className={styles.sideLabel}>Saved</div>
-                {QUERIES.map((q) => (
-                  <button
-                    key={q.id}
-                    type="button"
-                    className={`${styles.tableItem} ${queryId === q.id && tab.kind === "query" ? styles.tableItemOn : ""}`}
-                    onClick={() => {
-                      setQueryId(q.id);
-                      setResultTab("results");
-                      openKind("query");
-                    }}
-                  >
-                    <span className={styles.tableItemIcon}>{I.code(13)}</span>
-                    <span className={styles.tableItemName} style={{ fontFamily: "var(--font-sans)" }}>{q.name}</span>
-                  </button>
-                ))}
+                <div className="mt-2.5 mb-1 ml-2 text-[10.5px] font-semibold tracking-[0.06em] uppercase text-(--faint)">Saved</div>
+                {QUERIES.map((q) => {
+                  const on = queryId === q.id && tab.kind === "query";
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      className={`${TABLE_ITEM} ${on ? TABLE_ITEM_ON : "text-[#cfcfd4]"}`}
+                      onClick={() => {
+                        setQueryId(q.id);
+                        setResultTab("results");
+                        openKind("query");
+                      }}
+                    >
+                      <span className={`inline-flex ${on ? "text-(--green)" : "text-(--faint)"}`}>{I.code(13)}</span>
+                      <span className={TABLE_ITEM_NAME} style={{ fontFamily: "var(--font-sans)" }}>{q.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Canvas */}
-          <div className={styles.canvas}>
-            <div className={styles.tabs}>
+          <div className="ap-canvas relative flex flex-col flex-1 min-w-0">
+            <div className="flex items-stretch h-[38px] border-b border-(--line) shrink-0 pl-1">
               {tabs.map((t, i) => (
-                <button key={i} type="button" className={`${styles.tab} ${i === active ? styles.tabOn : ""}`} onClick={() => { setActive(i); setPopover(null); }}>
-                  <span className={styles.tabIcon}>{tabIcon(t)}</span>
+                <button
+                  key={i}
+                  type="button"
+                  className={`relative inline-flex items-center gap-2 px-4 font-mono text-[12px] ${i === active ? "text-(--text) after:content-[''] after:absolute after:left-2 after:right-2 after:top-0 after:h-[2px] after:rounded-[0_0_2px_2px] after:bg-(--green)" : "text-(--muted) hover:text-(--text)"}`}
+                  onClick={() => { setActive(i); setPopover(null); }}
+                >
+                  <span className={`inline-flex ${i === active ? "text-(--green)" : ""}`}>{tabIcon(t)}</span>
                   {tabLabel(t)}
                 </button>
               ))}
-              <button type="button" className={styles.tabAdd} aria-label="New query" onClick={() => openKind("query")}>{I.plus(13)}</button>
+              <button type="button" className="inline-flex items-center px-3 text-(--faint) hover:text-(--text)" aria-label="New query" onClick={() => openKind("query")}>{I.plus(13)}</button>
             </div>
 
             {/* ---------------- Table editor ---------------- */}
             {tab.kind === "table" && table && (
-              <div className={styles.editor}>
-                <div className={styles.toolbar}>
-                  <div className={styles.filterBar} onClick={() => setPopover({ kind: "filter" })}>
+              <div className={PANE}>
+                <div className={BAR}>
+                  <div className="relative flex-1 flex items-center gap-2 h-[30px] px-1 text-(--faint) cursor-text" onClick={() => setPopover({ kind: "filter" })}>
                     {I.search(13)}
                     {filter && (
-                      <span className={styles.pill}>
+                      <span className={PILL}>
                         <span>{filter.column}</span>
-                        <span className={styles.pillOp}>=</span>
-                        <strong>{filter.value}</strong>
-                        <button type="button" aria-label={`Remove ${filter.column} filter`} onClick={(e) => { e.stopPropagation(); setFilter(null); }}>{I.x(11)}</button>
+                        <span className={PILL_OP}>=</span>
+                        <strong className="text-(--text) font-semibold">{filter.value}</strong>
+                        <button type="button" className="inline-flex p-[3px] rounded-[4px] text-(--faint) hover:text-(--text) hover:bg-(--hover)" aria-label={`Remove ${filter.column} filter`} onClick={(e) => { e.stopPropagation(); setFilter(null); }}>{I.x(11)}</button>
                       </span>
                     )}
                     {filterStage.column && (
-                      <span className={styles.pill}>
+                      <span className={PILL}>
                         <span>{filterStage.column}</span>
-                        <span className={styles.pillOp}>=</span>
+                        <span className={PILL_OP}>=</span>
                       </span>
                     )}
                     <input
-                      className={styles.filterInput}
+                      className="flex-1 min-w-20 text-(--text) placeholder:text-(--faint)"
                       placeholder={filter || filterStage.column ? "" : filterColumns.length ? `Filter… try "${filterColumns[0]!.name}"` : "Search or filter..."}
                       value={filterStage.text}
                       onFocus={() => setPopover({ kind: "filter" })}
@@ -747,47 +802,47 @@ export default function AppPreview() {
                       }}
                     />
                     {popover?.kind === "filter" && filterMatches.length > 0 && (
-                      <div className={`${styles.popover} ${styles.filterMenu}`} onMouseDown={(e) => e.preventDefault()}>
+                      <div className={`${POPOVER} top-[34px] left-5 min-w-[220px] p-1`} onMouseDown={(e) => e.preventDefault()}>
                         {filterMatches.map((o) => (
-                          <button key={o} type="button" className={styles.menuItem} onClick={(e) => { e.stopPropagation(); chooseFilter(o); }}>
+                          <button key={o} type="button" className="flex justify-between gap-4 w-full py-[7px] px-2.5 rounded-[6px] text-left hover:bg-(--hover)" onClick={(e) => { e.stopPropagation(); chooseFilter(o); }}>
                             <span>{o}</span>
-                            {!filterStage.column && <span className={styles.menuHint}>{table.columns.find((c) => c.name === o)?.type}</span>}
+                            {!filterStage.column && <span className="font-mono text-[11px] text-(--faint)">{table.columns.find((c) => c.name === o)?.type}</span>}
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-                  <div className={styles.toolbarRight}>
-                    {toast && <span className={styles.toast}>{I.check(12)} {toast}</span>}
-                    <button type="button" className={styles.ghostBtn} onClick={() => flash("Multi-column sort is in the full app")}>{I.sort(13)} Sort</button>
-                    <button type="button" className={styles.insertBtn} onClick={() => flash("Insert row, paste rows and CSV import are in the full app")}>{I.plus(13)} Insert {I.down(12)}</button>
-                    <button type="button" className={styles.iconBtn} aria-label="Undo" disabled={!undo.length} onClick={doUndo}>{I.undo(14)}</button>
-                    <button type="button" className={styles.iconBtn} aria-label="Redo" disabled={!redo.length} onClick={doRedo}>{I.redo(14)}</button>
+                  <div className="flex items-center gap-1.5">
+                    {toast && <span className="inline-flex items-center gap-1.5 mr-1.5 py-1 px-[9px] rounded-[6px] bg-(--green-soft) text-(--green) text-[11.5px] whitespace-nowrap animate-[ap-toast-in_0.2s_ease]">{I.check(12)} {toast}</span>}
+                    <button type="button" className={GHOST_BTN} onClick={() => flash("Multi-column sort is in the full app")}>{I.sort(13)} Sort</button>
+                    <button type="button" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] bg-(--green) text-[#052e1c] font-semibold" onClick={() => flash("Insert row, paste rows and CSV import are in the full app")}>{I.plus(13)} Insert {I.down(12)}</button>
+                    <button type="button" className={ICON_BTN} aria-label="Undo" disabled={!undo.length} onClick={doUndo}>{I.undo(14)}</button>
+                    <button type="button" className={ICON_BTN} aria-label="Redo" disabled={!redo.length} onClick={doRedo}>{I.redo(14)}</button>
                   </div>
                 </div>
 
                 {view === "data" ? (
-                  <div className={styles.grid}>
-                    <table>
+                  <div className="flex-1 min-h-0 overflow-auto [scrollbar-width:thin] [scrollbar-color:#2a2a2e_transparent]">
+                    <table className="border-separate border-spacing-0 min-w-full table-fixed">
                       <thead>
                         <tr>
-                          <th className={styles.checkCol}>
+                          <th className={`${GRID_TH} ${CHECK_COL}`}>
                             <input type="checkbox" aria-label="Select all rows" checked={selected.length > 0 && selected.length === visibleRows.length} onChange={(e) => setSelected(e.target.checked ? visibleRows.map((r) => Number(r.id)) : [])} />
                           </th>
                           {table.columns.map((c) => (
-                            <th key={c.name} style={{ width: c.width, minWidth: c.width }}>
-                              <span className={styles.th}>
-                                {c.pk && <span className={styles.pk}>{I.key(12)}</span>}
-                                {c.fk && <span className={styles.fkIcon}>{I.link(12)}</span>}
-                                <span className={styles.thName}>{c.name}</span>
-                                <span className={styles.thType}>{c.type}</span>
+                            <th key={c.name} className={`${GRID_TH} border-r px-3`} style={{ width: c.width, minWidth: c.width }}>
+                              <span className="flex items-center gap-1.5">
+                                {c.pk && <span className={PK}>{I.key(12)}</span>}
+                                {c.fk && <span className={FK_ICON}>{I.link(12)}</span>}
+                                <span className="font-semibold text-(--text)">{c.name}</span>
+                                <span className="overflow-hidden text-ellipsis font-mono text-[11px] text-(--faint)">{c.type}</span>
                                 {c.stats && (
                                   <button
                                     type="button"
-                                    className={styles.statsBtn}
+                                    className="inline-flex ml-auto p-[3px] rounded-[4px] text-(--faint) hover:text-(--green) hover:bg-(--hover)"
                                     aria-label={`${c.name} stats`}
                                     onClick={(e) => {
-                                      const box = (e.currentTarget.closest(`.${styles.canvas}`) as HTMLElement).getBoundingClientRect();
+                                      const box = (e.currentTarget.closest(".ap-canvas") as HTMLElement).getBoundingClientRect();
                                       const b = e.currentTarget.getBoundingClientRect();
                                       setPopover({ kind: "stats", column: c.name, x: (b.left - box.left) / scale - 10, y: (b.bottom - box.top) / scale + 6 });
                                     }}
@@ -798,7 +853,7 @@ export default function AppPreview() {
                               </span>
                             </th>
                           ))}
-                          <th className={styles.fillCol} />
+                          <th className={`${GRID_TH} ${FILL_COL} px-3`} />
                         </tr>
                       </thead>
                       <tbody>
@@ -806,21 +861,24 @@ export default function AppPreview() {
                           const id = Number(row.id);
                           const sel = selected.includes(id);
                           return (
-                            <tr key={id} className={sel ? styles.rowSel : ""}>
-                              <td className={styles.checkCol}>
+                            <tr key={id} className={sel ? "[&>td]:bg-[rgba(62,207,142,0.06)]" : "hover:[&>td]:bg-[rgba(255,255,255,0.025)]"}>
+                              <td className={`${GRID_TD} ${CHECK_COL}`}>
                                 <input type="checkbox" aria-label={`Select row ${id}`} checked={sel} onChange={() => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))} />
                               </td>
-                              {table.columns.map((c) => (
-                                <td
-                                  key={c.name}
-                                  className={`${c.pk ? styles.pkCell : ""} ${editing?.id === id && editing.col === c.name ? styles.cellEditing : ""}`}
-                                  onDoubleClick={() => !c.pk && !c.fk && setEditing({ id, col: c.name, value: String(row[c.name] ?? "") })}
-                                  title={c.pk || c.fk ? undefined : "Double-click to edit"}
-                                >
-                                  {renderCell(row, c)}
-                                </td>
-                              ))}
-                              <td className={styles.fillCol} />
+                              {table.columns.map((c) => {
+                                const isEditing = editing?.id === id && editing.col === c.name;
+                                return (
+                                  <td
+                                    key={c.name}
+                                    className={`${GRID_TD} border-r ${c.pk ? "text-(--muted)" : "cursor-cell"} ${isEditing ? "p-0 shadow-[inset_0_0_0_2px_var(--green)]" : "px-3"}`}
+                                    onDoubleClick={() => !c.pk && !c.fk && setEditing({ id, col: c.name, value: String(row[c.name] ?? "") })}
+                                    title={c.pk || c.fk ? undefined : "Double-click to edit"}
+                                  >
+                                    {renderCell(row, c)}
+                                  </td>
+                                );
+                              })}
+                              <td className={`${GRID_TD} ${FILL_COL} px-3 cursor-cell`} />
                             </tr>
                           );
                         })}
@@ -828,35 +886,35 @@ export default function AppPreview() {
                     </table>
                   </div>
                 ) : (
-                  <div className={styles.structure}>
-                    <div className={styles.structHead}>
+                  <div className="flex-1 overflow-auto py-4 px-5">
+                    <div className="flex items-center gap-2 mb-2.5 font-semibold">
                       <span>Columns</span>
-                      <span className={styles.structCount}>{table.columns.length}</span>
+                      <span className="font-mono text-(--faint)">{table.columns.length}</span>
                     </div>
                     {table.columns.map((c) => (
-                      <div key={c.name} className={styles.structRow}>
-                        <span className={styles.structName}>
-                          {c.pk ? <span className={styles.pk}>{I.key(12)}</span> : c.fk ? <span className={styles.fkIcon}>{I.link(12)}</span> : <span className={styles.structDot} />}
+                      <div key={c.name} className="grid grid-cols-[220px_160px_1fr] items-center h-[38px] px-3 border-x border-b border-(--line) last:rounded-b-[8px]">
+                        <span className="flex items-center gap-2 font-mono">
+                          {c.pk ? <span className={PK}>{I.key(12)}</span> : c.fk ? <span className={FK_ICON}>{I.link(12)}</span> : <span className="w-3" />}
                           {c.name}
                         </span>
-                        <span className={styles.structType}>{c.type}</span>
-                        <span className={styles.structMeta}>
-                          {c.pk ? <span className={styles.badge}>PRIMARY KEY</span> : null}
-                          {c.fk ? <span className={styles.badgeBlue}>→ {c.fk}.id</span> : null}
-                          {c.nullable ? <span className={styles.badgeMuted}>nullable</span> : !c.pk ? <span className={styles.badgeMuted}>not null</span> : null}
+                        <span className="font-mono text-(--muted)">{c.type}</span>
+                        <span className="flex gap-1.5">
+                          {c.pk ? <span className={BADGE_GREEN}>PRIMARY KEY</span> : null}
+                          {c.fk ? <span className={BADGE_BLUE}>→ {c.fk}.id</span> : null}
+                          {c.nullable ? <span className={BADGE_MUTED}>nullable</span> : !c.pk ? <span className={BADGE_MUTED}>not null</span> : null}
                         </span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className={styles.footer}>
-                  <span className={styles.page}>‹ Page <span className={styles.pageBox}>1</span> of 1 ›</span>
-                  <span className={styles.footChip}>100 rows</span>
-                  <span className={styles.records}>{visibleRows.length.toLocaleString("en-US")} records{selected.length ? ` · ${selected.length} selected` : ""}</span>
-                  <span className={styles.viewSwitch}>
-                    <button type="button" className={view === "data" ? styles.viewOn : ""} onClick={() => setView("data")}>Data</button>
-                    <button type="button" className={view === "structure" ? styles.viewOn : ""} onClick={() => setView("structure")}>Structure</button>
+                <div className="flex items-center gap-3 h-10 px-3 border-t border-(--line) text-(--muted) shrink-0">
+                  <span className="inline-flex items-center gap-2">‹ Page <span className={CHIP}>1</span> of 1 ›</span>
+                  <span className={CHIP}>100 rows</span>
+                  <span className="font-mono text-[11.5px]">{visibleRows.length.toLocaleString("en-US")} records{selected.length ? ` · ${selected.length} selected` : ""}</span>
+                  <span className="flex ml-auto p-0.5 rounded-[7px] border border-(--line)">
+                    <button type="button" className={`h-6 px-2.5 rounded-[5px] ${view === "data" ? "bg-(--raised) text-(--text)" : "text-(--muted)"}`} onClick={() => setView("data")}>Data</button>
+                    <button type="button" className={`h-6 px-2.5 rounded-[5px] ${view === "structure" ? "bg-(--raised) text-(--text)" : "text-(--muted)"}`} onClick={() => setView("structure")}>Structure</button>
                   </span>
                 </div>
               </div>
@@ -864,69 +922,69 @@ export default function AppPreview() {
 
             {/* ---------------- SQL editor ---------------- */}
             {tab.kind === "query" && (
-              <div className={styles.sql}>
-                <div className={styles.sqlBar}>
-                  <span className={styles.dbPick}>{I.db(12)} acme_store {I.chevron(11)}</span>
-                  <span className={styles.queryPick}>
+              <div className={PANE}>
+                <div className={BAR}>
+                  <span className="inline-flex items-center gap-[7px] h-7 px-2.5 rounded-[7px] border border-(--line-strong) font-mono text-(--text) [&>svg:first-child]:text-(--green)">{I.db(12)} acme_store {I.chevron(11)}</span>
+                  <span className="flex gap-0.5 p-0.5 rounded-[8px] border border-(--line)">
                     {QUERIES.map((q) => (
-                      <button key={q.id} type="button" className={q.id === queryId ? styles.queryPickOn : ""} onClick={() => { setQueryId(q.id); setResultTab("results"); }}>
+                      <button key={q.id} type="button" className={`h-6 px-2.5 rounded-[6px] hover:text-(--text) ${q.id === queryId ? "bg-(--raised) text-(--text)" : "text-(--muted)"}`} onClick={() => { setQueryId(q.id); setResultTab("results"); }}>
                         {q.name}
                       </button>
                     ))}
                   </span>
-                  <button type="button" className={styles.runBtn} onClick={run} disabled={ran?.running}>
-                    {I.play(11)} {ran?.running ? "Running…" : "Run"} <kbd>Ctrl ↵</kbd>
+                  <button type="button" className="inline-flex items-center gap-[7px] h-7 ml-auto px-2.5 rounded-[7px] bg-(--green) text-[#052e1c] font-semibold disabled:opacity-70" onClick={run} disabled={ran?.running}>
+                    {I.play(11)} {ran?.running ? "Running…" : "Run"} <kbd className={KBD_ON_GREEN}>Ctrl ↵</kbd>
                   </button>
                 </div>
-                <pre className={styles.code}>
-                  <span className={styles.lines} aria-hidden="true">
+                <pre className="flex gap-4 m-0 py-3 px-[14px] h-[232px] overflow-auto border-b border-(--line) font-mono text-[12.5px] leading-[20px] text-[#e4e4e7] bg-[rgba(62,207,142,0.025)] select-text shrink-0">
+                  <span className="flex flex-col items-end min-w-[18px] text-(--faint) select-none" aria-hidden="true">
                     {query.sql.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}
                   </span>
-                  <code>{highlight(query.sql)}</code>
+                  <code className="font-[monospace]">{highlight(query.sql)}</code>
                 </pre>
-                <div className={styles.results}>
-                  <div className={styles.resultTabs}>
+                <div className={PANE}>
+                  <div className="flex items-center gap-1 h-10 px-2.5 border-b border-(--line) shrink-0">
                     {(["results", "explain", "chart"] as const).map((r) => (
-                      <button key={r} type="button" className={resultTab === r ? styles.resultTabOn : ""} onClick={() => setResultTab(r)}>
+                      <button key={r} type="button" className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-[6px] hover:text-(--text) ${resultTab === r ? "bg-(--raised) text-(--text)" : "text-(--muted)"}`} onClick={() => setResultTab(r)}>
                         {r === "results" ? I.table(12) : r === "explain" ? I.gauge(12) : I.bars(12)}
                         {r[0]!.toUpperCase() + r.slice(1)}
                       </button>
                     ))}
-                    {result && <span className={styles.resultMeta}>{result.rows.length} rows · {result.ms} ms</span>}
+                    {result && <span className="ml-auto font-mono text-[11px] text-(--faint)">{result.rows.length} rows · {result.ms} ms</span>}
                   </div>
                   {!result ? (
-                    <div className={styles.empty}>
-                      {ran?.running ? <span className={styles.spinner} /> : null}
-                      <span>{ran?.running ? "Running query…" : <>Press <kbd>Ctrl ↵</kbd> or <strong>Run</strong> to see results</>}</span>
+                    <div className="flex flex-1 items-center justify-center gap-2.5 text-(--muted)">
+                      {ran?.running ? <span className="w-[14px] h-[14px] rounded-full border-2 border-[rgba(62,207,142,0.25)] border-t-(--green) animate-[spin-360_0.7s_linear_infinite]" /> : null}
+                      <span>{ran?.running ? "Running query…" : <>Press <kbd className={KBD}>Ctrl ↵</kbd> or <strong>Run</strong> to see results</>}</span>
                     </div>
                   ) : resultTab === "results" ? (
-                    <div className={styles.resultGrid}>
-                      <table>
-                        <thead><tr>{result.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                        <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v}</td>)}</tr>)}</tbody>
+                    <div className="flex-1 overflow-auto">
+                      <table className="w-full border-collapse">
+                        <thead><tr>{result.columns.map((c) => <th key={c} className={`${RESULT_CELL} font-semibold bg-[#0a0a0b]`}>{c}</th>)}</tr></thead>
+                        <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j} className={RESULT_CELL}>{v}</td>)}</tr>)}</tbody>
                       </table>
                     </div>
                   ) : resultTab === "explain" ? (
-                    <div className={styles.plan}>
-                      <div className={styles.planHead}>
-                        <span className={styles.badge}>EXPLAIN ANALYZE</span>
+                    <div className="flex-1 overflow-auto pb-2">
+                      <div className="flex items-center gap-[14px] h-10 px-[14px] border-b border-(--line) text-(--muted)">
+                        <span className={BADGE_GREEN}>EXPLAIN ANALYZE</span>
                         <span>Planning {result.plan.planning} ms</span>
-                        <strong>Execution {result.plan.execution} ms</strong>
-                        <span className={styles.planNote}>Ran inside a transaction that was rolled back</span>
+                        <strong className="text-(--text) font-semibold">Execution {result.plan.execution} ms</strong>
+                        <span className="text-(--faint)">Ran inside a transaction that was rolled back</span>
                       </div>
                       {result.plan.nodes.map((n, i) => {
                         const max = Math.max(...result.plan.nodes.map((x) => x.ms));
                         return (
-                          <div key={i} className={`${styles.planRow} ${n.slowest ? styles.planSlow : ""}`}>
-                            <span className={styles.planOp} style={{ paddingLeft: n.depth * 16 }}>
-                              {n.depth > 0 && <span className={styles.planTree}>└</span>}
-                              <strong>{n.op}</strong>
-                              {n.detail && <span className={styles.planDetail}>{n.detail}</span>}
-                              {n.slowest && <span className={styles.slowBadge}>slowest step</span>}
+                          <div key={i} className={`grid grid-cols-[1fr_130px_90px_140px] items-center gap-3 h-[31px] px-[14px] ${n.slowest ? "bg-[rgba(245,196,81,0.06)]" : ""}`}>
+                            <span className="flex items-center gap-[7px] min-w-0 whitespace-nowrap" style={{ paddingLeft: n.depth * 16 }}>
+                              {n.depth > 0 && <span className="text-(--faint)">└</span>}
+                              <strong className={`font-semibold ${n.slowest ? "text-[#f5c451]" : ""}`}>{n.op}</strong>
+                              {n.detail && <span className="overflow-hidden text-ellipsis font-mono text-[11px] text-(--muted)">{n.detail}</span>}
+                              {n.slowest && <span className="py-px px-2 rounded-full border border-[rgba(245,196,81,0.5)] bg-[rgba(245,196,81,0.1)] text-[#f5c451] text-[11px]">slowest step</span>}
                             </span>
-                            <span className={styles.planBar}><span style={{ width: `${Math.max(3, (n.ms / max) * 100)}%` }} /></span>
-                            <span className={styles.planMs}>{n.ms} ms</span>
-                            <span className={styles.planRows}>{n.rows.toLocaleString("en-US")} rows</span>
+                            <span className="h-[5px] rounded-[3px] bg-[rgba(255,255,255,0.07)] overflow-hidden"><span className={`block h-full rounded-[3px] ${n.slowest ? "bg-[#f5c451]" : "bg-(--green)"}`} style={{ width: `${Math.max(3, (n.ms / max) * 100)}%` }} /></span>
+                            <span className={PLAN_NUM}>{n.ms} ms</span>
+                            <span className={PLAN_NUM}>{n.rows.toLocaleString("en-US")} rows</span>
                           </div>
                         );
                       })}
@@ -940,15 +998,15 @@ export default function AppPreview() {
 
             {/* ---------------- ER diagram ---------------- */}
             {tab.kind === "diagram" && (
-              <div className={styles.diagram}>
-                <div className={styles.diagramBar}>
-                  <span><strong>6 tables</strong> · 6 relations</span>
-                  <span className={styles.legend}>{I.key(12)} Primary key</span>
-                  <span className={styles.legendBlue}>{I.link(12)} Foreign key</span>
-                  <span className={styles.diagramHint}>Drag tables · hover to trace relations</span>
+              <div className={PANE}>
+                <div className="flex items-center gap-4 h-[42px] px-[14px] border-b border-(--line) text-(--muted) shrink-0">
+                  <span><strong className="text-(--text)">6 tables</strong> · 6 relations</span>
+                  <span className="inline-flex items-center gap-1.5 [&_svg]:text-[#f5c451]">{I.key(12)} Primary key</span>
+                  <span className="inline-flex items-center gap-1.5 [&_svg]:text-(--blue)">{I.link(12)} Foreign key</span>
+                  <span className="ml-auto text-(--faint)">Drag tables · hover to trace relations</span>
                 </div>
-                <div className={styles.diagramCanvas} onPointerMove={onNodeMove} onPointerUp={onNodeUp}>
-                  <svg className={styles.edges} width="100%" height="100%">
+                <div className="relative flex-1 overflow-hidden bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[length:18px_18px]" onPointerMove={onNodeMove} onPointerUp={onNodeUp}>
+                  <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
                     {edges.map((e) => {
                       const a = pos[e.from]!, b = pos[e.to]!;
                       const y1 = a.y + HEAD_H + e.fromCol * ROW_H + ROW_H / 2;
@@ -962,7 +1020,7 @@ export default function AppPreview() {
                         <path
                           key={e.id}
                           d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-                          className={`${styles.edge} ${on ? styles.edgeOn : ""} ${hoverNode && !on ? styles.edgeDim : ""}`}
+                          className={`fill-none stroke-[1.5] [transition:stroke_0.15s_ease,opacity_0.15s_ease] ${on ? "stroke-(--green) [stroke-dasharray:5_4] animate-[ap-dash_0.8s_linear_infinite]" : "stroke-[rgba(255,255,255,0.18)]"} ${hoverNode && !on ? "opacity-25" : ""}`}
                         />
                       );
                     })}
@@ -973,21 +1031,21 @@ export default function AppPreview() {
                     return (
                       <div
                         key={t}
-                        className={`${styles.node} ${hoverNode === t ? styles.nodeOn : ""} ${hoverNode && !related ? styles.nodeDim : ""}`}
+                        className={`absolute rounded-[9px] border bg-[#0c0c0e] cursor-grab active:cursor-grabbing touch-none [transition:border-color_0.15s_ease,opacity_0.15s_ease,box-shadow_0.15s_ease] ${hoverNode === t ? "border-[rgba(62,207,142,0.7)] shadow-[0_0_0_3px_rgba(62,207,142,0.12),0_10px_30px_rgba(0,0,0,0.5)]" : "border-(--line-strong) shadow-[0_10px_30px_rgba(0,0,0,0.45)]"} ${hoverNode && !related ? "opacity-35" : ""}`}
                         style={{ left: p.x, top: p.y, width: NODE_W }}
                         onPointerDown={(e) => onNodeDown(e, t)}
                         onPointerEnter={() => setHoverNode(t)}
                         onPointerLeave={() => setHoverNode(null)}
                         onDoubleClick={() => openTable(t)}
                       >
-                        <div className={styles.nodeHead}>{I.table(12)} {t}<span>{data[t]!.columns.length} cols</span></div>
+                        <div className="flex items-center gap-[7px] h-[30px] px-2.5 border-b border-(--line) font-mono font-semibold">{I.table(12)} {t}<span className="ml-auto font-normal text-[10.5px] text-(--faint)">{data[t]!.columns.length} cols</span></div>
                         {data[t]!.columns.map((c) => (
-                          <div key={c.name} className={styles.nodeRow}>
-                            <span className={styles.nodeCol}>
-                              {c.pk ? <span className={styles.pk}>{I.key(11)}</span> : c.fk ? <span className={styles.fkIcon}>{I.link(11)}</span> : <span className={styles.nodeGap} />}
+                          <div key={c.name} className="flex justify-between items-center h-[22px] px-2.5 font-mono text-[11px]">
+                            <span className="flex items-center gap-1.5">
+                              {c.pk ? <span className={PK}>{I.key(11)}</span> : c.fk ? <span className={FK_ICON}>{I.link(11)}</span> : <span className="w-[11px]" />}
                               {c.name}
                             </span>
-                            <span className={styles.nodeType}>{c.fk ? `→ ${c.fk}.id` : c.type}</span>
+                            <span className="text-(--faint) text-[10.5px]">{c.fk ? `→ ${c.fk}.id` : c.type}</span>
                           </div>
                         ))}
                       </div>
@@ -1004,14 +1062,14 @@ export default function AppPreview() {
               if (!row) return null;
               const cols = ref.columns.slice(0, 4);
               return (
-                <div className={`${styles.popover} ${styles.fkPop}`} style={{ left: Math.max(8, popover.x), top: popover.y }}>
-                  <div className={styles.popTitle}>Referencing record from <code>public.{ref.name}</code></div>
-                  <table>
-                    <thead><tr>{cols.map((c) => <th key={c.name}>{c.name}</th>)}</tr></thead>
-                    <tbody><tr>{cols.map((c) => <td key={c.name}>{String(row[c.name])}</td>)}</tr></tbody>
+                <div className={`${POPOVER} w-[440px]`} style={{ left: Math.max(8, popover.x), top: popover.y }}>
+                  <div className={POP_TITLE}>Referencing record from <code className={POP_CODE}>public.{ref.name}</code></div>
+                  <table className="w-full border-collapse">
+                    <thead><tr>{cols.map((c) => <th key={c.name} className={`${FK_CELL} font-semibold`}>{c.name}</th>)}</tr></thead>
+                    <tbody><tr>{cols.map((c) => <td key={c.name} className={FK_CELL}>{String(row[c.name])}</td>)}</tr></tbody>
                   </table>
-                  <div className={styles.popFoot}>
-                    <button type="button" className={styles.ghostBtn} onClick={() => openTable(ref.name)}>Open table {I.out(12)}</button>
+                  <div className="flex justify-end p-2 border-t border-(--line)">
+                    <button type="button" className={GHOST_BTN} onClick={() => openTable(ref.name)}>Open table {I.out(12)}</button>
                   </div>
                 </div>
               );
@@ -1020,24 +1078,24 @@ export default function AppPreview() {
             {popover?.kind === "stats" && (() => {
               const s = statsFor(popover.column);
               return (
-                <div className={`${styles.popover} ${styles.statsPop}`} style={{ left: Math.min(popover.x, 560), top: popover.y }}>
-                  <div className={styles.popTitle}><code>{popover.column}</code></div>
-                  <div className={styles.statTiles}>
-                    <div><span>Rows</span><strong>{s.total}</strong></div>
-                    <div><span>Distinct</span><strong>{s.distinct}</strong></div>
-                    <div><span>NULL</span><strong>0%</strong></div>
+                <div className={`${POPOVER} w-[300px] pb-2`} style={{ left: Math.min(popover.x, 560), top: popover.y }}>
+                  <div className={POP_TITLE}><code className={POP_CODE}>{popover.column}</code></div>
+                  <div className="grid grid-cols-3 gap-1.5 px-3 pb-2.5">
+                    <div className={STAT_TILE}><span className={STAT_TILE_LABEL}>Rows</span><strong className={STAT_TILE_VALUE}>{s.total}</strong></div>
+                    <div className={STAT_TILE}><span className={STAT_TILE_LABEL}>Distinct</span><strong className={STAT_TILE_VALUE}>{s.distinct}</strong></div>
+                    <div className={STAT_TILE}><span className={STAT_TILE_LABEL}>NULL</span><strong className={STAT_TILE_VALUE}>0%</strong></div>
                   </div>
-                  <div className={styles.statLabel}>Values</div>
+                  <div className="px-3 pb-1 text-[11px] text-(--faint)">Values</div>
                   {s.values.map(([v, n]) => (
                     <button
                       type="button"
                       key={v}
-                      className={styles.statRow}
+                      className="flex flex-col gap-[5px] w-full py-[5px] px-3 text-left hover:bg-(--hover)"
                       onClick={() => { setFilter({ column: popover.column, value: v }); setPopover(null); }}
                       title={`Filter by ${v}`}
                     >
-                      <span className={styles.statTop}><span>{v}</span><span>{n} · {((n / s.total) * 100).toFixed(1)}%</span></span>
-                      <span className={styles.statBar}><span style={{ width: `${(n / s.values[0]![1]) * 100}%` }} /></span>
+                      <span className="flex justify-between font-mono text-[11.5px]"><span>{v}</span><span className="text-(--faint)">{n} · {((n / s.total) * 100).toFixed(1)}%</span></span>
+                      <span className="h-1 rounded-[2px] bg-[rgba(255,255,255,0.06)]"><span className="block h-full rounded-[2px] bg-(--green)" style={{ width: `${(n / s.values[0]![1]) * 100}%` }} /></span>
                     </button>
                   ))}
                 </div>
@@ -1048,11 +1106,12 @@ export default function AppPreview() {
 
         {/* Command palette */}
         {palette.open && (
-          <div className={styles.paletteBackdrop} onMouseDown={() => setPalette((p) => ({ ...p, open: false }))}>
-            <div className={styles.palette} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
-              <div className={styles.paletteInput}>
+          <div className="absolute inset-0 z-30 flex justify-center pt-[70px] bg-[rgba(0,0,0,0.55)] backdrop-blur-[2px]" onMouseDown={() => setPalette((p) => ({ ...p, open: false }))}>
+            <div className="w-[560px] h-fit rounded-[12px] border border-(--line-strong) bg-[#111113] shadow-[0_30px_80px_rgba(0,0,0,0.7)] overflow-hidden animate-[ap-pop-in_0.14s_ease]" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
+              <div className="flex items-center gap-2.5 h-12 px-[14px] border-b border-(--line) text-(--muted)">
                 {I.search(15)}
                 <input
+                  className="flex-1 text-[14px] text-(--text)"
                   autoFocus
                   placeholder="Jump to a table, query or action…"
                   value={palette.text}
@@ -1063,19 +1122,19 @@ export default function AppPreview() {
                     if (e.key === "Enter") { e.preventDefault(); runPalette(palette.index); }
                   }}
                 />
-                <kbd>Esc</kbd>
+                <kbd className={KBD}>Esc</kbd>
               </div>
-              <div className={styles.paletteList}>
-                {paletteItems.length === 0 && <div className={styles.paletteEmpty}>No matches</div>}
+              <div className="max-h-[280px] overflow-auto p-1.5">
+                {paletteItems.length === 0 && <div className="p-4 text-(--faint) text-center">No matches</div>}
                 {paletteItems.map((item, i) => (
-                  <button key={item.label} type="button" className={`${styles.paletteItem} ${i === palette.index ? styles.paletteItemOn : ""}`} onMouseEnter={() => setPalette((p) => ({ ...p, index: i }))} onClick={() => runPalette(i)}>
-                    <span className={styles.paletteIcon}>{item.icon}</span>
+                  <button key={item.label} type="button" className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-[7px] text-left ${i === palette.index ? "bg-[rgba(255,255,255,0.06)]" : ""}`} onMouseEnter={() => setPalette((p) => ({ ...p, index: i }))} onClick={() => runPalette(i)}>
+                    <span className="inline-flex text-(--green)">{item.icon}</span>
                     <span>{item.label}</span>
-                    <span className={styles.paletteHint}>{item.hint}</span>
+                    <span className="ml-auto text-[11px] text-(--faint)">{item.hint}</span>
                   </button>
                 ))}
               </div>
-              <div className={styles.paletteFoot}><kbd>↑</kbd><kbd>↓</kbd> move <kbd>↵</kbd> run <span /> <kbd>Ctrl</kbd><kbd>K</kbd> toggle</div>
+              <div className="flex items-center gap-1.5 h-9 px-[14px] border-t border-(--line) text-(--faint) text-[11px]"><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd> move <kbd className={KBD}>↵</kbd> run <span className="flex-1" /> <kbd className={KBD}>Ctrl</kbd><kbd className={KBD}>K</kbd> toggle</div>
             </div>
           </div>
         )}
@@ -1088,17 +1147,17 @@ function BarChart({ labels, values, xName, metric }: { labels: string[]; values:
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(...values);
   return (
-    <div className={styles.chart}>
-      <div className={styles.chartHead}>
-        <span>X axis <strong>{xName}</strong></span>
-        <span>Y axis <strong>{metric}</strong></span>
-        <span className={styles.chartValue}>{hover !== null ? `${labels[hover]}: ${values[hover]!.toLocaleString("en-US")}` : "Hover a bar"}</span>
+    <div className="flex flex-col flex-1 min-h-0 pt-2.5 px-4 pb-3">
+      <div className="flex gap-[18px] text-(--muted)">
+        <span>X axis <strong className={CHART_STRONG}>{xName}</strong></span>
+        <span>Y axis <strong className={CHART_STRONG}>{metric}</strong></span>
+        <span className="ml-auto font-mono text-(--green)">{hover !== null ? `${labels[hover]}: ${values[hover]!.toLocaleString("en-US")}` : "Hover a bar"}</span>
       </div>
-      <div className={styles.bars}>
+      <div className="flex items-end gap-2.5 flex-1 min-h-0 pt-[14px]">
         {values.map((v, i) => (
-          <div key={i} className={styles.barCol} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-            <div className={`${styles.bar} ${hover === i ? styles.barOn : ""}`} style={{ height: `${(v / max) * 100}%` }} />
-            <span className={styles.barLabel}>{labels[i]}</span>
+          <div key={i} className="flex flex-col items-center justify-end flex-1 h-full gap-1.5 cursor-default" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+            <div className={`w-full rounded-t-[4px] [transition:background_0.15s_ease,height_0.4s_ease] ${hover === i ? "bg-(--green)" : "bg-[#22895e]"}`} style={{ height: `${(v / max) * 100}%` }} />
+            <span className="font-mono text-[10.5px] text-(--faint) whitespace-nowrap">{labels[i]}</span>
           </div>
         ))}
       </div>

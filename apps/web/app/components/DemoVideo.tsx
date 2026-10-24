@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { DEMO_VIDEO_URL } from "../config/product";
 import { X } from "./Icons";
-import styles from "./DemoVideo.module.css";
 
 // A phone held either way: narrow in portrait, short in landscape (same rule as the CSS)
 const PHONE = "(pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px)";
 const HIDE_CONTROLS_MS = 2500;
+
+// A button in the control bar
+const CTRL =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border-0 bg-transparent p-0 text-[#fafafa] cursor-pointer [transition:background_0.15s_ease,color_0.15s_ease] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#34d399] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent-hover";
 
 // iPhone Safari can't put an element in full screen, only a <video> through its own API
 type IOSVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
@@ -210,12 +213,14 @@ export default function DemoVideo() {
   };
 
   const progress = duration ? (time / duration) * 100 : 0;
+  // Controls show while paused or after any movement, and fade away during playback
+  const controlsOn = controlsShown || !playing;
 
   return (
     <>
       <button
         type="button"
-        className={styles.trigger}
+        className="group relative h-[2.9rem] w-[2.9rem] shrink-0 cursor-pointer rounded-full border-0 bg-transparent p-0 [transition:transform_0.2s_ease] hover:[transform:scale(1.06)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover active:[transform:scale(0.97)]"
         aria-label="Watch the demo"
         aria-haspopup="dialog"
         onPointerEnter={warmUp}
@@ -224,16 +229,28 @@ export default function DemoVideo() {
         onClick={openPlayer}
       >
         {/* A slowly spinning gradient ring around a dark core with the play icon */}
-        <span className={styles.ring} aria-hidden="true" />
-        <span className={styles.core} aria-hidden="true">
+        <span
+          className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_22px_rgba(16,185,129,0.22)] [transition:box-shadow_0.25s_ease] group-hover:shadow-[0_0_32px_rgba(16,185,129,0.45)] before:absolute before:inset-[-50%] before:animate-[spin-360_3.2s_linear_infinite] before:bg-[conic-gradient(from_0deg,#10b981,#38bdf8,transparent_38%,transparent_62%,#34d399,#10b981)] before:content-[''] motion-reduce:before:animate-none"
+          aria-hidden="true"
+        />
+        {/* The triangle is nudged right so it looks optically centred */}
+        <span
+          className="absolute inset-[1.5px] flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_50%_30%,#1c201e,#0a0c0b_70%)] text-[#fafafa] [transition:color_0.2s_ease] group-hover:text-[#34d399] [&_svg]:ml-[2px]"
+          aria-hidden="true"
+        >
           <PlayIcon size={15} />
         </span>
-        <span className={styles.tooltip} aria-hidden="true">See PostCompass in action</span>
+        <span
+          className="pointer-events-none absolute bottom-[calc(100%_+_10px)] left-1/2 rounded-[6px] border border-solid border-line bg-elevated px-[0.6rem] py-[0.35rem] text-[0.75rem] font-medium whitespace-nowrap text-fg opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.5)] [transform:translate(-50%,4px)] [transition:opacity_0.15s_ease,transform_0.15s_ease] group-hover:opacity-100 group-hover:[transform:translate(-50%,0)] group-focus-visible:opacity-100 group-focus-visible:[transform:translate(-50%,0)]"
+          aria-hidden="true"
+        >
+          See PostCompass in action
+        </span>
       </button>
 
       <dialog
         ref={dialogRef}
-        className={styles.dialog}
+        className="dv-dialog m-auto max-h-none w-[min(1100px,calc(100vw_-_1.25rem))] max-w-none overflow-hidden rounded-[14px] border border-solid border-line bg-surface p-0 text-fg shadow-[0_40px_120px_-20px_rgba(0,0,0,0.9)] backdrop:bg-[rgba(0,0,0,0.75)] backdrop:backdrop-blur-[6px] open:animate-[dv-dialog-in_0.22s_cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:open:animate-none"
         aria-label="PostCompass demo video"
         onClose={close}
         // A click on the dialog itself (not its content) is a click on the backdrop
@@ -241,18 +258,18 @@ export default function DemoVideo() {
           if (e.target === e.currentTarget) close();
         }}
       >
-        <div className={styles.dialogHead}>
+        <div className="dv-dialog-head flex items-center justify-between gap-4 border-b border-solid border-line py-[0.65rem] pr-3 pl-4 text-[0.875rem] font-semibold">
           <span>PostCompass demo</span>
         </div>
         <div
           ref={playerRef}
-          className={`${styles.player} ${controlsShown || !playing ? styles.controlsOn : ""}`}
+          className={`dv-player group/player relative aspect-video bg-black outline-none [&:fullscreen]:aspect-auto [&:fullscreen]:h-full [&:fullscreen]:w-full ${controlsOn ? "cursor-default" : ""}`}
           onPointerMove={showControls}
           onKeyDown={onKeyDown}
         >
           <video
             ref={videoRef}
-            className={styles.video}
+            className={`absolute inset-0 h-full w-full bg-black object-contain ${controlsOn ? "cursor-pointer" : "cursor-none"}`}
             src={DEMO_VIDEO_URL}
             // Nothing downloads until the visitor shows intent, then it buffers ahead
             preload={warm ? "auto" : "none"}
@@ -277,29 +294,47 @@ export default function DemoVideo() {
             }}
           />
 
-          {buffering && <span className={styles.spinner} role="status" aria-label="Loading video" />}
+          {buffering && (
+            <span
+              className="absolute top-1/2 left-1/2 z-[2] -mt-[17px] -ml-[17px] h-[34px] w-[34px] animate-[spin-360_0.8s_linear_infinite] rounded-full border-[3px] border-solid border-[rgba(255,255,255,0.12)] border-t-[#34d399]"
+              role="status"
+              aria-label="Loading video"
+            />
+          )}
 
           {!playing && !buffering && (
-            <button type="button" className={styles.bigPlay} aria-label="Play" onClick={togglePlay}>
+            <button
+              type="button"
+              className="absolute top-1/2 left-1/2 z-[2] -mt-[36px] -ml-[36px] inline-flex h-[72px] w-[72px] cursor-pointer items-center justify-center rounded-full border-0 bg-accent p-0 pl-[4px] text-[#03130c] shadow-[0_10px_40px_rgba(16,185,129,0.45)] [transition:transform_0.2s_ease,background_0.2s_ease] hover:bg-accent-hover hover:[transform:scale(1.06)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#6ee7b7]"
+              aria-label="Play"
+              onClick={togglePlay}
+            >
               <PlayIcon size={26} />
             </button>
           )}
 
-          <button type="button" className={styles.playerClose} aria-label="Close video" onClick={close}>
+          <button
+            type="button"
+            className={`dv-player-close absolute top-[10px] right-[10px] z-[3] inline-flex h-[40px] w-[40px] cursor-pointer items-center justify-center rounded-full border border-solid border-[rgba(255,255,255,0.16)] bg-[rgba(9,9,11,0.7)] p-0 text-[#fafafa] backdrop-blur-[8px] [transition:opacity_0.25s_ease,background_0.15s_ease,color_0.15s_ease] group-focus-within/player:opacity-100 hover:bg-[#18181b] hover:text-[#34d399] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-hover ${controlsOn ? "opacity-100" : "opacity-0"}`}
+            aria-label="Close video"
+            onClick={close}
+          >
             <X size={18} />
           </button>
 
           {/* One control bar along the bottom */}
-          <div className={styles.controls}>
-            <button type="button" className={styles.ctrl} aria-label={playing ? "Pause" : "Play"} onClick={togglePlay}>
+          <div
+            className={`dv-controls absolute right-0 bottom-0 left-0 z-[3] flex items-center gap-[0.6rem] bg-[linear-gradient(to_top,rgba(0,0,0,0.8),transparent)] px-[0.9rem] pt-10 pb-[0.7rem] [transition:opacity_0.25s_ease,transform_0.25s_ease] group-focus-within/player:pointer-events-auto group-focus-within/player:opacity-100 group-focus-within/player:[transform:none] ${controlsOn ? "pointer-events-auto opacity-100 [transform:none]" : "pointer-events-none opacity-0 [transform:translateY(6px)]"}`}
+          >
+            <button type="button" className={CTRL} aria-label={playing ? "Pause" : "Play"} onClick={togglePlay}>
               {playing ? <PauseIcon /> : <PlayIcon />}
             </button>
-            <span className={styles.time}>
-              {formatTime(time)} <span className={styles.timeTotal}>/ {formatTime(duration)}</span>
+            <span className="dv-time shrink-0 font-mono text-[0.78rem] text-[#fafafa] tabular-nums">
+              {formatTime(time)} <span className="text-[#a1a1aa]">/ {formatTime(duration)}</span>
             </span>
             <input
               type="range"
-              className={styles.timeline}
+              className="dv-timeline mx-1 my-0 h-[18px] min-w-0 flex-1 cursor-pointer appearance-none bg-transparent focus-visible:outline-none"
               min={0}
               max={duration || 0}
               step={0.1}
@@ -309,12 +344,12 @@ export default function DemoVideo() {
               style={{ ["--progress" as string]: `${progress}%`, ["--buffered" as string]: `${buffered}%` }}
               onChange={(e) => seek(Number(e.target.value))}
             />
-            <button type="button" className={styles.ctrl} aria-label={muted ? "Unmute" : "Mute"} onClick={toggleMute}>
+            <button type="button" className={CTRL} aria-label={muted ? "Unmute" : "Mute"} onClick={toggleMute}>
               <VolumeIcon muted={muted} />
             </button>
             <button
               type="button"
-              className={styles.ctrl}
+              className={CTRL}
               aria-label={fullscreen ? "Exit full screen" : "Full screen"}
               onClick={toggleFullscreen}
             >

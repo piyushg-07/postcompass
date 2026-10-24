@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import './Hyperspeed.css';
 
 const TRAVEL = 400;
 const MAX_CARS = 160;
@@ -1099,7 +1098,7 @@ const Hyperspeed: React.FC<HyperspeedProps> = ({
     };
   }, []);
 
-  return <div ref={containerRef} className={`hyperspeed${className ? ` ${className}` : ''}`} style={style} />;
+  return <div ref={containerRef} className={`absolute inset-0 overflow-hidden [touch-action:pan-y] [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none] select-none [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full${className ? ` ${className}` : ''}`} style={style} />;
 };
 
 export default Hyperspeed;
