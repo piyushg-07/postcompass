@@ -3,8 +3,7 @@
    A dark-first, developer-focused design language.
    ============================================================ */
 
-/* --- Google Fonts --- */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=Geist:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* --- Fonts: Geist, Fraunces and JetBrains Mono are self-hosted by next/font (see layout.tsx) --- */
 
 /* ============================================================
    Design Tokens
@@ -53,9 +52,9 @@
   --shadow-accent: 0 0 40px rgba(16, 185, 129, 0.15);
 
   /* ---- Typography ---- */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-mono: 'JetBrains Mono', 'GeistMono', 'Fira Code', 'SF Mono', monospace;
+  --font-sans: var(--font-sans-loaded), 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-display-loaded), 'Fraunces', Georgia, serif;
+  --font-mono: var(--font-mono-loaded), 'JetBrains Mono', 'GeistMono', 'Fira Code', 'SF Mono', monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -125,6 +124,20 @@ html {
   scroll-padding-top: calc(var(--nav-height) + 40px);
   overflow-x: clip;
   max-width: 100vw;
+}
+
+/* Scroll reveal (ScrollReveal.tsx): content glides up as it comes into view */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+}
+
+.reveal.revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0s),
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0s);
 }
 
 @media (prefers-reduced-motion: reduce) {

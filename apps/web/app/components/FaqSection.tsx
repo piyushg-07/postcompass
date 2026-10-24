@@ -11,7 +11,7 @@ export default function FaqSection() {
           <h2 className="section-title">Questions, answered</h2>
         </div>
 
-        <div className={styles.list}>
+        <div className={styles.list} data-reveal="stagger">
           {FAQ_ITEMS.map((item) => (
             <details key={item.question} className={styles.item}>
               <summary className={styles.question}>

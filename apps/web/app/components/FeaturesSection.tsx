@@ -136,7 +136,7 @@ const MORE = [
 ];
 
 const STICKY_TOP = 96; // px below the fixed navbar
-const STEP_VH = 62; // scroll distance per feature while pinned
+const STEP_VH = 72; // scroll distance per feature while pinned
 
 export default function FeaturesSection() {
   const [active, setActive] = useState(0);
@@ -328,7 +328,7 @@ export default function FeaturesSection() {
           </div>
         </div>
 
-        <div className={styles.more}>
+        <div className={styles.more} data-reveal="stagger">
           {MORE.map((m) => {
             const Icon = m.icon;
             return (

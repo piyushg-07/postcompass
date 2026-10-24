@@ -182,7 +182,7 @@
 .expand {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .itemActive .expand {
@@ -299,15 +299,17 @@
   object-fit: cover;
   object-position: top left;
   opacity: 0;
-  transform: scale(1.03) translateY(8px);
-  filter: blur(4px);
-  transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.5s ease;
+  transform: scale(1.015);
+  /* The outgoing shot fades out only after the incoming one is mostly in, so there's no dark dip between them */
+  transition: opacity 0.35s ease 0.3s, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
 }
 
 .shotActive {
+  z-index: 1;
   opacity: 1;
   transform: none;
-  filter: none;
+  transition: opacity 0.45s ease, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Details below the screenshot are only for small screens */

@@ -33,7 +33,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           </p>
         </div>
 
-        <div className={styles.grid}>
+        <div className={styles.grid} data-reveal="stagger">
           {downloads.platforms.map((d) => {
             const Icon = ICONS[d.platform];
             const isDetected = detected === d.platform;
@@ -84,7 +84,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           })}
         </div>
 
-        <div className={styles.notes}>
+        <div className={styles.notes} data-reveal>
           <p>
             <strong>Not code-signed yet.</strong> On first launch:
           </p>

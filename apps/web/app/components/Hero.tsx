@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
-import Hyperspeed from "./Hyperspeed";
+// three.js is large: load it separately so it doesn't hold up the page or the headline animation
+const Hyperspeed = dynamic(() => import("./Hyperspeed"), { ssr: false });
 import AppPreview from "./AppPreview";
 import DemoVideo from "./DemoVideo";
 import styles from "./Hero.module.css";
@@ -31,6 +33,17 @@ export default function Hero({ version }: { version: string }) {
   }, []);
 
   const OsIcon = OS_ICON[os];
+
+  // Start the light trails once the headline has animated in (or the browser is idle), then fade them in
+  const [backdropReady, setBackdropReady] = useState(false);
+  useEffect(() => {
+    const start = () => setBackdropReady(true);
+    const timer = window.setTimeout(() => {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 600 });
+      else start();
+    }, 1300);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const [queryIndex, setQueryIndex] = useState(0);
   const [hasCycled, setHasCycled] = useState(false);
@@ -82,7 +95,7 @@ export default function Hero({ version }: { version: string }) {
   return (
     <section className={styles.hero} id="hero">
       <div className={styles.hyperspeedBackdrop}>
-        <Hyperspeed
+        {backdropReady && <Hyperspeed
           curve="winding"
           curvature={0.8}
           speed={1.2}
@@ -107,7 +120,7 @@ export default function Hero({ version }: { version: string }) {
           headColors={["#06b6d4", "#0284c7", "#38bdf8"]}
           poleColors={["#10b981"]}
           interactive
-        />
+        />}
       </div>
 
       <div className={styles.gridBackground} />
