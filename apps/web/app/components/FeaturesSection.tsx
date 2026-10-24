@@ -38,12 +38,10 @@ const SHOWCASE: Showcase[] = [
     icon: Server,
     label: "Local PostgreSQL",
     title: "PostgreSQL in one click",
-    description:
-      "Pick a version and PostCompass downloads, verifies and starts a private PostgreSQL server for you. No installer wizard, no admin rights, no Docker.",
+    description: "Pick a version. PostCompass downloads, verifies and starts it.",
     points: [
       "PostgreSQL 14 to 18, side by side",
-      "Official binaries, checksum-verified",
-      "Passwords kept in your system keychain",
+      "No admin rights, no Docker",
     ],
     image: "/screens/create-server.webp",
     alt: "A new local PostgreSQL 18 server finishing setup",
@@ -53,12 +51,10 @@ const SHOWCASE: Showcase[] = [
     icon: Table,
     label: "Table editor",
     title: "A table editor you already know",
-    description:
-      "A Supabase-style grid where edits save instantly. Filter, sort, page through and export your data without writing SQL.",
+    description: "Edit like a spreadsheet. Every change saves instantly.",
     points: [
-      "Filter pills with suggestions for enum values",
-      "Undo and redo for every edit",
-      "Paste rows from a spreadsheet or import CSV",
+      "Filters, sorting and undo",
+      "Paste from Excel or import CSV",
     ],
     image: "/screens/table-editor.webp",
     alt: "The orders table filtered to refunded orders",
@@ -68,12 +64,10 @@ const SHOWCASE: Showcase[] = [
     icon: ArrowRightLeft,
     label: "Foreign keys",
     title: "Follow your foreign keys",
-    description:
-      "Peek at the referenced record right from the cell, then jump to its table. Column headers show distinct values, NULLs and the most common values.",
+    description: "Peek at any linked record, then jump straight to its table.",
     points: [
-      "Inline preview of the linked record",
+      "Inline record preview",
       "Column stats in one click",
-      "Freeze, hide and reorder columns",
     ],
     image: "/screens/foreign-key-peek.webp",
     alt: "Previewing the customer referenced by an order",
@@ -83,12 +77,10 @@ const SHOWCASE: Showcase[] = [
     icon: Code,
     label: "SQL editor",
     title: "SQL that knows your schema",
-    description:
-      "Autocomplete for your tables and columns, multiple result sets, and a safety check before anything destructive runs.",
+    description: "Autocomplete for your tables, with a safety net built in.",
     points: [
-      "Ctrl+Enter runs the statement under the cursor",
-      "Warns before DROP, TRUNCATE or UPDATE without WHERE",
-      "History, saved queries and templates",
+      "Ctrl+Enter runs the current statement",
+      "Warns before risky queries run",
     ],
     image: "/screens/sql-editor.webp",
     alt: "A revenue-by-category query and its results",
@@ -98,12 +90,10 @@ const SHOWCASE: Showcase[] = [
     icon: Activity,
     label: "Visual EXPLAIN",
     title: "See why a query is slow",
-    description:
-      "EXPLAIN ANALYZE as a readable tree with timing bars. It runs inside a transaction that's rolled back, so it's safe even on writes.",
+    description: "EXPLAIN ANALYZE as a clear tree, with the slowest step flagged.",
     points: [
-      "The slowest step is flagged for you",
-      "Estimated vs actual rows side by side",
-      "Chart any result as bars or lines",
+      "Safe on writes, always rolled back",
+      "Chart any result",
     ],
     image: "/screens/explain-plan.webp",
     alt: "An EXPLAIN ANALYZE plan with the slowest step highlighted",
@@ -113,12 +103,10 @@ const SHOWCASE: Showcase[] = [
     icon: Layers,
     label: "ER diagram",
     title: "Your schema, mapped",
-    description:
-      "An interactive diagram with column-to-column relationships. Hover a table to light up everything it's connected to.",
+    description: "Hover a table to light up everything it connects to.",
     points: [
-      "Drag tables around, positions are remembered",
-      "Auto-arrange, minimap and jump to table",
-      "Double-click a table to open it",
+      "Drag, auto-arrange and minimap",
+      "Double-click to open a table",
     ],
     image: "/screens/er-diagram.webp",
     alt: "ER diagram highlighting the relationships of the orders table",
@@ -128,12 +116,10 @@ const SHOWCASE: Showcase[] = [
     icon: Cloud,
     label: "Cloud connections",
     title: "Every cloud, one place",
-    description:
-      "Connect to AWS RDS, Supabase, Neon, Cloud SQL, Azure and more with provider presets, and test the connection before you save it.",
+    description: "RDS, Supabase, Neon, Cloud SQL and more, with presets.",
     points: [
-      "Encryption up to full certificate verification",
-      "Local and cloud databases side by side",
-      "Credentials never written to disk in plain text",
+      "Test before you save",
+      "Passwords stay in your OS keychain",
     ],
     image: "/screens/cloud-providers.webp",
     alt: "Choosing a cloud provider for a new connection",
@@ -141,12 +127,12 @@ const SHOWCASE: Showcase[] = [
 ];
 
 const MORE = [
-  { icon: Search, title: "Command palette", text: "Press Ctrl+K to jump to any table, query or action." },
-  { icon: Database, title: "Backup and restore", text: "pg_dump and pg_restore built in, as compressed or plain SQL." },
-  { icon: Columns, title: "Schema designer", text: "Tables, indexes, constraints and triggers, with a SQL preview." },
-  { icon: Shield, title: "Row Level Security", text: "Turn on RLS and write policies from ready-made templates." },
-  { icon: Terminal, title: "Connect snippets", text: "Connection strings and code for Prisma, Drizzle, Node, Python and Go." },
-  { icon: Lock, title: "Private by default", text: "No account, no telemetry. Local servers only listen on 127.0.0.1." },
+  { icon: Search, title: "Command palette", text: "Ctrl+K to jump anywhere." },
+  { icon: Database, title: "Backup and restore", text: "pg_dump and pg_restore built in." },
+  { icon: Columns, title: "Schema designer", text: "Tables, indexes and triggers, visually." },
+  { icon: Shield, title: "Row Level Security", text: "Policies from ready-made templates." },
+  { icon: Terminal, title: "Connect snippets", text: "Prisma, Drizzle, Node, Python and Go." },
+  { icon: Lock, title: "Private by default", text: "No account. No telemetry." },
 ];
 
 const STICKY_TOP = 96; // px below the fixed navbar
@@ -233,7 +219,7 @@ export default function FeaturesSection() {
           <span className="section-badge">Features</span>
           <h2 className="section-title">Everything you reach for, in one app</h2>
           <p className="section-description">
-            From a fresh local database to a production query plan. Every screen below is the real app.
+            Every screen below is the real app.
           </p>
         </div>
 
