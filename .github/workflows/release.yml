@@ -1,0 +1,133 @@
+# Builds PostCompass for Windows, macOS and Linux and attaches the installers to a GitHub Release.
+#
+# Runs only when commits are pushed to the `release` branch.
+#
+# How to release:
+#   1. Bump "version" in apps/desktop/src-tauri/tauri.conf.json (e.g. 0.2.0) and commit.
+#   2. Push that commit to the release branch:
+#        git push origin HEAD:release
+#   3. Wait for this workflow to finish (Actions tab). It creates the tag v0.2.0 and a draft
+#      release "PostCompass v0.2.0"; open Releases, edit the notes if you like, and Publish.
+#
+# Each release needs a new version number: pushing again with the same version updates the
+# draft for that version instead of creating a new one.
+
+name: Release
+
+on:
+  push:
+    branches:
+      - release
+
+# Creating a release and uploading files needs write access to the repository contents
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      # One platform failing shouldn't cancel the others
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: ""
+          - name: macOS (Apple Silicon)
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - name: macOS (Intel)
+            platform: macos-latest
+            args: "--target x86_64-apple-darwin"
+          - name: Linux
+            platform: ubuntu-22.04
+            args: ""
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install Linux system libraries
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          # WebKitGTK for the window, plus D-Bus for the system keychain (keyring crate)
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev pkg-config
+
+      - name: Set up pnpm
+        # Uses the version pinned in package.json ("packageManager")
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both Mac architectures are built on the same Apple Silicon runner
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust builds
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ${{ matrix.args }}
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and upload to the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          args: ${{ matrix.args }} --ignore-version-mismatches
+          # __VERSION__ is replaced with the version from tauri.conf.json
+          tagName: v__VERSION__
+          releaseName: PostCompass v__VERSION__
+          # Before publishing, replace the "Highlights" bullets in the draft with what's new in this version.
+          releaseBody: |
+            **PostCompass v__VERSION__** is here. A fast, modern desktop app for PostgreSQL: run local databases in one click, connect to the cloud, and browse, edit and query your data in one place.
+
+            ## ✨ Highlights
+
+            - **One-click local PostgreSQL 18.** Installed and run for you, no admin rights needed
+            - **Cloud connections.** AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and any PostgreSQL, with passwords in your system keychain
+            - **Table editor.** Inline editing, filters, sorting and foreign-key navigation
+            - **SQL editor.** Autocomplete, query history and visual `EXPLAIN ANALYZE`
+            - **ER diagram, command palette (`Ctrl+K`), backup and restore**
+
+            ## 📦 Download
+
+            | Platform | Installer |
+            |---|---|
+            | **Windows** 10 / 11 (x64) | [**PostCompass___VERSION___x64-setup.exe**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64-setup.exe) · [`.msi`](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64_en-US.msi) |
+            | **macOS** Apple Silicon (M1–M4) | [**PostCompass___VERSION___aarch64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___aarch64.dmg) |
+            | **macOS** Intel | [**PostCompass___VERSION___x64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64.dmg) |
+            | **Linux** (any distro) | [**.AppImage**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.AppImage) |
+            | **Linux** Ubuntu / Debian | [**.deb**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.deb) |
+            | **Linux** Fedora / RHEL | [**.rpm**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass-__VERSION__-1.x86_64.rpm) |
+
+            ## 🛡️ First launch
+
+            PostCompass isn't code-signed yet, so your system may show a warning the first time:
+
+            - **Windows:** the installer shows *Unknown publisher*. On the SmartScreen prompt, click **More info → Run anyway**.
+            - **macOS:** drag PostCompass to Applications and open it. When macOS says it can't verify the app, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+            - **macOS, if it says the app "is damaged":** run `xattr -cr /Applications/PostCompass.app` in Terminal, then open it again.
+            - **Linux (AppImage):** run `chmod +x PostCompass_*.AppImage`, then open it.
+
+            ## 💬 Feedback
+
+            Found a bug or have an idea? [Open an issue](https://github.com/piyushg-07/postcompass/issues/new). If PostCompass is useful to you, a ⭐ on the repo helps a lot.
+
+          # Stays a draft until you review and publish it
+          releaseDraft: true
+          prerelease: false
