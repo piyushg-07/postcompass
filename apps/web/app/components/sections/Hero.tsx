@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import dynamic from "next/dynamic";
-import { WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
+import type HyperspeedComponent from "@/components/hero/Hyperspeed";
+import { WindowsIcon, AppleIcon, LinuxIcon } from "@/components/ui/Icons";
+import AppPreview from "@/components/hero/AppPreview";
+import DemoVideo from "@/components/hero/DemoVideo";
+
 // three.js is large: load it separately so it doesn't hold up the page or the headline animation
-const Hyperspeed = dynamic(() => import("./Hyperspeed"), { ssr: false });
-import AppPreview from "./AppPreview";
-import DemoVideo from "./DemoVideo";
+const Hyperspeed = dynamic<ComponentProps<typeof HyperspeedComponent>>(
+  () => import("@/components/hero/Hyperspeed"),
+  { ssr: false }
+);
 
 type Os = "windows" | "macos" | "linux";
 
@@ -130,7 +135,9 @@ export default function Hero({ version }: { version: string }) {
 
       <div className="pointer-events-none relative z-[5] mx-auto flex w-full max-w-[1200px] flex-col items-center px-6 pt-[5.25rem] text-center before:pointer-events-none before:absolute before:top-[6.5rem] before:left-1/2 before:z-[-1] before:h-[30rem] before:w-[min(900px,100%)] before:-translate-x-1/2 before:bg-[radial-gradient(ellipse_at_50%_45%,rgba(5,6,6,0.62)_0%,rgba(5,6,6,0.38)_42%,transparent_72%)] before:content-[''] max-md:px-4 max-[640px]:pt-[3.25rem] [&>*]:pointer-events-auto">
         {/* The page opens by "running" a query; the headline is its result */}
-        <h1 className="sr-only">Your PostgreSQL, charted.</h1>
+        <h1 className="sr-only">
+          PostCompass — Fast, Modern Open-Source Desktop GUI &amp; Database Client for PostgreSQL
+        </h1>
         <div
           className="flex w-[min(1000px,100%)] flex-col items-center"
           style={timing}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { DEMO_VIDEO_URL } from "../config/product";
-import { X } from "./Icons";
+import { DEMO_VIDEO_URL } from "@/config/product";
+import { X } from "@/components/ui/Icons";
 
 // A phone held either way: narrow in portrait, short in landscape (same rule as the CSS)
 const PHONE = "(pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px)";

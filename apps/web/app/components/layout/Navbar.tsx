@@ -3,8 +3,8 @@
 // The navbar is a live psql prompt: sections are tables, navigating runs a query.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { PRODUCT } from "../config/product";
-import { Github } from "./Icons";
+import { PRODUCT } from "@/config/product";
+import { Github } from "@/components/ui/Icons";
 
 const KW = "font-medium text-[#c792ea]";
 const SUGGEST_TEXT = "font-sans text-[0.82rem] text-fg-secondary";

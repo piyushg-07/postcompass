@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RELEASES_URL, detectPlatform, type Platform, type PlatformDownloads } from "../config/product";
-import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "./Icons";
-import SectionHeader from "./SectionHeader";
+import { RELEASES_URL, detectPlatform, type Platform, type PlatformDownloads, type ReleaseAsset } from "@/config/product";
+import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "@/components/ui/Icons";
+import SectionHeader from "@/components/ui/SectionHeader";
 
-const ICONS = { windows: WindowsIcon, macos: AppleIcon, linux: LinuxIcon };
+const ICONS: Record<Platform, React.ComponentType<{ size?: number; className?: string }>> = {
+  windows: WindowsIcon,
+  macos: AppleIcon,
+  linux: LinuxIcon,
+};
 
 const SIZE = "ml-auto font-mono text-[0.75rem]";
 const ASSET =
@@ -99,7 +103,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                   >
                     {rest.length === 1 ? "Also available" : "Other formats"}
                   </li>
-                  {rest.map((a) => (
+                  {rest.map((a: ReleaseAsset) => (
                     <li key={a.url}>
                       <a href={a.url} className={ASSET}>
                         <span className="font-medium">{a.label}</span>

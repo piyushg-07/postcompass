@@ -1,12 +1,12 @@
-import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import FeaturesSection from "./components/FeaturesSection";
-import HowItWorks from "./components/HowItWorks";
-import DownloadSection from "./components/DownloadSection";
-import FaqSection from "./components/FaqSection";
-import Footer from "./components/Footer";
-import { getDownloads } from "./config/product";
-import { getLatestRelease } from "./config/release";
+import Navbar from "@/components/layout/Navbar";
+import Hero from "@/components/sections/Hero";
+import FeaturesSection from "@/components/sections/FeaturesSection";
+import HowItWorks from "@/components/sections/HowItWorks";
+import DownloadSection from "@/components/sections/DownloadSection";
+import FaqSection from "@/components/sections/FaqSection";
+import Footer from "@/components/layout/Footer";
+import { getDownloads } from "@/config/product";
+import { getLatestRelease } from "@/lib/release";
 
 export default async function Home() {
   const downloads = getDownloads(await getLatestRelease());

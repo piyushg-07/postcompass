@@ -1,6 +1,6 @@
-import { FAQ_ITEMS } from "../config/product";
-import { ChevronDown } from "./Icons";
-import SectionHeader from "./SectionHeader";
+import { FAQ_ITEMS } from "@/config/product";
+import { ChevronDown } from "@/components/ui/Icons";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 export default function FaqSection() {
   return (

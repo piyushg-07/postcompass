@@ -1,6 +1,6 @@
 // Server-only: looks up the latest published GitHub release so the site picks up new versions by itself.
 
-import { PRODUCT, type Release } from "./product";
+import { PRODUCT, type Release } from "@/config/product";
 
 const REPO = new URL(PRODUCT.github).pathname.slice(1); // "owner/repo"
 const RECHECK_SECONDS = 3600;

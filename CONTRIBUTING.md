@@ -136,7 +136,6 @@ postcompass/
 │   │   │   ├── features/       #   backup, explorer, home, onboarding, palette, servers, settings
 │   │   │   └── lib/            #   bindings.ts (generated), IPC and SQL helpers
 │   │   └── src-tauri/          # Rust: commands/, state, keychain, window setup, tauri.conf.json
-│   ├── server/                 # Small Hono API (experimental)
 │   └── web/                    # Next.js website (placeholder)
 ├── crates/
 │   ├── pc-core/                # Shared traits and types (DatabaseDriver, LocalRuntime, errors)
@@ -146,7 +145,7 @@ postcompass/
 │   ├── ui/                     # Shared design system (tokens + components)
 │   ├── eslint-config/
 │   └── typescript-config/
-├── docs/                       # PLAN.md, POSTGRES_GUIDE.md, assets/ (screenshots, banner)
+├── docs/assets/                # README banner, screenshots and demo video
 └── .github/                    # Release workflow, issue and PR templates
 ```
 

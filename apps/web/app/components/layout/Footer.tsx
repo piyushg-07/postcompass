@@ -1,6 +1,6 @@
-import { PRODUCT, RELEASES_URL, getDownloads } from "../config/product";
-import { getLatestRelease } from "../config/release";
-import { Github } from "./Icons";
+import { PRODUCT, RELEASES_URL, getDownloads } from "@/config/product";
+import { getLatestRelease } from "@/lib/release";
+import { Github } from "@/components/ui/Icons";
 
 const COLUMNS = [
   {

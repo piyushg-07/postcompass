@@ -17,8 +17,8 @@ import {
   Lock,
   Check,
   ChevronRight,
-} from "./Icons";
-import SectionHeader from "./SectionHeader";
+} from "@/components/ui/Icons";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 type IconType = React.FC<{ size?: number; className?: string }>;
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { WindowsIcon, AppleIcon, LinuxIcon, Check } from "./Icons";
-import SectionHeader from "./SectionHeader";
+import { WindowsIcon, AppleIcon, LinuxIcon, Check } from "@/components/ui/Icons";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 const STEPS = [
   { title: "Download the app", text: "Windows, macOS or Linux. No account needed." },
