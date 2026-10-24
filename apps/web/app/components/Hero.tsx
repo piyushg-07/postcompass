@@ -5,6 +5,7 @@ import { PRODUCT } from "../config/product";
 import { WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
 import Hyperspeed from "./Hyperspeed";
 import AppPreview from "./AppPreview";
+import DemoVideo from "./DemoVideo";
 import styles from "./Hero.module.css";
 
 type Os = "windows" | "macos" | "linux";
@@ -158,10 +159,16 @@ export default function Hero() {
         </p>
 
         <div className={styles.ctas}>
-          <a href="#download" className={styles.primaryBtn} suppressHydrationWarning>
+          <a
+            href="#download"
+            className={styles.primaryBtn}
+            aria-label={`Download for ${OS_LABEL[os]}`}
+            suppressHydrationWarning
+          >
             <OsIcon size={15} />
-            <span>Download for {OS_LABEL[os]}</span>
+            <span>Download</span>
           </a>
+          <DemoVideo />
         </div>
 
         <p className={styles.meta}>

@@ -180,8 +180,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  height: 3.1rem;
-  padding: 0 1.75rem;
+  height: 2.9rem;
+  padding: 0 1.4rem;
   border-radius: 10px;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -297,10 +297,11 @@
 
   .ctas {
     width: 100%;
+    flex-wrap: nowrap;
   }
 
   .primaryBtn {
-    width: 100%;
+    flex: 1;
     justify-content: center;
   }
 
