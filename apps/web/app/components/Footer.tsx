@@ -1,96 +1,75 @@
-import { PRODUCT } from "../config/product";
-import { Compass, Github } from "./Icons";
+import { PRODUCT, RELEASES_URL, getDownloads } from "../config/product";
+import { getLatestRelease } from "../config/release";
+import { Github } from "./Icons";
 import styles from "./Footer.module.css";
 
-export default function Footer() {
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { label: "Features", href: "/#features" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Download", href: "/download" },
+      { label: "FAQ", href: "/#faq" },
+    ],
+  },
+  {
+    title: "Project",
+    links: [
+      { label: "GitHub", href: PRODUCT.github, external: true },
+      { label: "Releases", href: RELEASES_URL, external: true },
+      { label: "Contributing", href: `${PRODUCT.github}/blob/main/CONTRIBUTING.md`, external: true },
+      { label: "Report an issue", href: `${PRODUCT.github}/issues/new/choose`, external: true },
+    ],
+  },
+];
+
+export default async function Footer() {
+  const { version } = getDownloads(await getLatestRelease());
   return (
     <footer className={styles.footer}>
       <div className="container">
-        <div className={styles.footerInner}>
-          <div className={styles.topRow}>
-            {/* Brand info */}
-            <div className={styles.brandCol}>
-              <div className={styles.brandLogo}>
-                <div className={styles.logoIconWrapper}>
-                  <Compass size={18} />
-                </div>
-                <span className={styles.brandName}>
-                  {PRODUCT.name}
-                </span>
-              </div>
-              <p className={styles.brandDesc}>
-                {PRODUCT.tagline} Built natively for engineers who demand velocity, offline control, and zero cloud lock-in.
-              </p>
-              <div className={styles.brandMeta}>
-                <span className={styles.pulseDot} />
-                <span>v{PRODUCT.version} · Open Source under MIT</span>
-              </div>
-            </div>
-
-            {/* Links navigation columns */}
-            <div className={styles.navColumns}>
-              <div>
-                <h4 className={styles.navColTitle}>
-                  Product
-                </h4>
-                <ul className={styles.navList}>
-                  <li><a href="#features" className={styles.navLink}>Features</a></li>
-                  <li><a href="#demo" className={styles.navLink}>Interactive Demo</a></li>
-                  <li><a href="#comparison" className={styles.navLink}>Compare vs Others</a></li>
-                  <li><a href="#download" className={styles.navLink}>Downloads</a></li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className={styles.navColTitle}>
-                  Resources
-                </h4>
-                <ul className={styles.navList}>
-                  <li>
-                    <a href={PRODUCT.github} target="_blank" rel="noopener noreferrer" className={styles.navLink}>
-                      GitHub Repository
-                    </a>
-                  </li>
-                  <li>
-                    <a href={`${PRODUCT.github}/releases`} target="_blank" rel="noopener noreferrer" className={styles.navLink}>
-                      Release Notes
-                    </a>
-                  </li>
-                  <li><a href="#how-it-works" className={styles.navLink}>Quickstart Guide</a></li>
-                  <li><a href="#faq" className={styles.navLink}>FAQ</a></li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className={styles.navColTitle}>
-                  Community
-                </h4>
-                <ul className={styles.navList}>
-                  <li>
-                    <a href={`${PRODUCT.github}/issues`} target="_blank" rel="noopener noreferrer" className={styles.navLink}>
-                      Report an Issue
-                    </a>
-                  </li>
-                  <li>
-                    <a href={`${PRODUCT.github}/discussions`} target="_blank" rel="noopener noreferrer" className={styles.navLink}>
-                      Discussions
-                    </a>
-                  </li>
-                  <li>
-                    <a href={PRODUCT.github} target="_blank" rel="noopener noreferrer" className={styles.starLink}>
-                      <Github size={14} /> Star on GitHub
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
+        <div className={styles.top}>
+          <div className={styles.brand}>
+            <a href="/" className={styles.logo}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="" width={28} height={28} />
+              <span>
+                Post<em>Compass</em>
+              </span>
+            </a>
+            <p className={styles.tagline}>{PRODUCT.tagline}. Free and open source.</p>
+            <a href={PRODUCT.github} target="_blank" rel="noopener noreferrer" className={styles.github}>
+              <Github size={15} />
+              <span>Star on GitHub</span>
+            </a>
           </div>
 
-          {/* Bottom bar */}
-          <div className={styles.bottomBar}>
-            <p>© {new Date().getFullYear()} {PRODUCT.name}. Free and open-source software under the MIT License.</p>
-            <p>Engineered with speed and precision for PostgreSQL developers worldwide.</p>
+          <div className={styles.columns}>
+            {COLUMNS.map((col) => (
+              <div key={col.title}>
+                <h3 className={styles.colTitle}>{col.title}</h3>
+                <ul className={styles.links}>
+                  {col.links.map((l) => (
+                    <li key={l.label}>
+                      <a
+                        href={l.href}
+                        {...("external" in l ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                        className={styles.link}
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
+        </div>
+
+        <div className={styles.bottom}>
+          <span>© 2026 Piyush Gupta · Released under the {PRODUCT.license} license</span>
+          <span>v{version}</span>
         </div>
       </div>
     </footer>

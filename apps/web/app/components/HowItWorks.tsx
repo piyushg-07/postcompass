@@ -1,138 +1,137 @@
 "use client";
 
-import { useState } from "react";
-import { HOW_IT_WORKS_STEPS } from "../config/product";
-import { Check, Copy, Terminal, Server, Table, Zap, Sparkles } from "./Icons";
+import { useEffect, useRef, useState } from "react";
+import { WindowsIcon, AppleIcon, LinuxIcon, Check } from "./Icons";
 import styles from "./HowItWorks.module.css";
 
-const STEP_EXTRAS: Record<number, { badge: string; tags?: string[] }> = {
-  1: { badge: "Zero Setup" },
-  2: { badge: "Local & Cloud DB" },
-  3: { badge: "Spreadsheet Speed", tags: ["Inline editing", "Optimistic auto-save", "Visual JSONB tree"] },
-  4: { badge: "SQL & Plan Analyzer", tags: ["Visual EXPLAIN tree", "Schema ERD", "CSV & Parquet export"] },
-};
+const STEPS = [
+  { title: "Download the app", text: "Windows, macOS or Linux. No account needed." },
+  { title: "Create or connect", text: "A local PostgreSQL in a minute, or your cloud database." },
+  { title: "Explore your data", text: "Filter, edit and query. Press Ctrl K to jump anywhere." },
+];
+
+/* ---- The small visual at the top of each card ---- */
+
+function DownloadVisual() {
+  const files = [
+    { Icon: WindowsIcon, name: "setup.exe" },
+    { Icon: AppleIcon, name: ".dmg" },
+    { Icon: LinuxIcon, name: ".AppImage" },
+  ];
+  return (
+    <div className={styles.osList}>
+      {files.map(({ Icon, name }, i) => (
+        <div key={name} className={styles.os} style={{ ["--d" as string]: `${i * 0.12}s` }}>
+          <Icon size={18} />
+          <span>{name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InstallVisual() {
+  return (
+    <div className={styles.install}>
+      <div className={styles.installHead}>
+        <span>PostgreSQL 18</span>
+        <span className={styles.installState}>
+          <span className={styles.stateBusy}>Installing…</span>
+          <span className={styles.stateDone}>Ready</span>
+        </span>
+      </div>
+      <div className={styles.bar}>
+        <span className={styles.barFill} />
+      </div>
+      <div className={styles.running}>
+        <span className={styles.runningDot} />
+        <span>running</span>
+        <span className={styles.port}>127.0.0.1:5432</span>
+      </div>
+    </div>
+  );
+}
+
+function TableVisual() {
+  const rows = [
+    ["1042", "Ava Chen", "$129"],
+    ["1043", "Liam Ortiz", "$48"],
+    ["1044", "Noah Patel", "$310"],
+  ];
+  return (
+    <div className={styles.table}>
+      <span className={styles.filter}>
+        status <b>=</b> paid
+      </span>
+      <div className={styles.rows}>
+        {rows.map((r, i) => (
+          <div key={r[0]} className={`${styles.row} ${i === 1 ? styles.rowActive : ""}`} style={{ ["--d" as string]: `${i * 0.1}s` }}>
+            {r.map((c) => (
+              <span key={c}>{c}</span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const VISUALS = [DownloadVisual, InstallVisual, TableVisual];
 
 export default function HowItWorks() {
+  // The cards animate once, the first time the section scrolls into view
+  const listRef = useRef<HTMLOListElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.35 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section className="section" id="how-it-works">
       <div className="container">
         <div className="section-header">
-          <span className="section-badge">How It Works</span>
-          <h2 className="section-title">
-            From install to insight in minutes
-          </h2>
-          <p className="section-description">
-            PostCompass is designed to get you productive immediately. No
-            configuration ceremony, no lengthy setup — connect and start
-            working.
-          </p>
+          <span className="section-badge">How it works</span>
+          <h2 className="section-title">From download to your first query in minutes</h2>
+          <p className="section-description">No Docker, no config files, nothing to babysit.</p>
         </div>
 
-        <div className={styles.steps}>
-          {HOW_IT_WORKS_STEPS.map((step, index) => {
-            const extra = STEP_EXTRAS[step.step];
+        <ol ref={listRef} className={`${styles.steps} ${shown ? styles.shown : ""}`}>
+          {/* An <ol> may only hold <li>s, so the connecting line is a presentational one */}
+          <li className={styles.line} role="presentation" aria-hidden="true">
+            <span className={styles.lineFill} />
+          </li>
+          {STEPS.map((s, i) => {
+            const Visual = VISUALS[i]!;
             return (
-              <div key={step.step} className={styles.step}>
-                <div className={styles.stepIndicator}>
-                  <span className={styles.stepNumber}>{step.step}</span>
-                  {index < HOW_IT_WORKS_STEPS.length - 1 && (
-                    <div className={styles.stepLine} />
-                  )}
+              <li key={s.title} className={styles.step} style={{ ["--s" as string]: `${i * 0.35}s` }}>
+                <div className={styles.visual} aria-hidden="true">
+                  <Visual />
                 </div>
-                <div className={styles.stepContent}>
-                  <div className={styles.stepHeader}>
-                    <h3 className={styles.stepTitle}>{step.title}</h3>
-                    {extra?.badge && (
-                      <span className={styles.stepBadge}>{extra.badge}</span>
-                    )}
-                  </div>
-                  <p className={styles.stepDesc}>{step.description}</p>
-                  
-                  {step.code ? (
-                    <CodeBlock
-                      code={step.code}
-                      title={step.step === 1 ? "CLI INSTALL" : "POSTGRESQL CONNECTION URI"}
-                      icon={step.step === 1 ? Terminal : Server}
-                    />
-                  ) : extra?.tags ? (
-                    <div className={styles.stepFeatureList}>
-                      {extra.tags.map((tag) => (
-                        <span key={tag} className={styles.stepFeatureTag}>
-                          <Check size={13} style={{ color: "var(--accent)" }} />
-                          <span>{tag}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                <div className={styles.body}>
+                  <span className={styles.number}>
+                    <Check size={12} className={styles.numberCheck} />
+                    0{i + 1}
+                  </span>
+                  <h3 className={styles.title}>{s.title}</h3>
+                  <p className={styles.text}>{s.text}</p>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
     </section>
-  );
-}
-
-function CodeBlock({
-  code,
-  title,
-  icon: HeaderIcon,
-}: {
-  code: string;
-  title: string;
-  icon: React.FC<{ size?: number; style?: React.CSSProperties }>;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div className={styles.codeContainer}>
-      <div className={styles.codeBar}>
-        <div className={styles.codeTitle}>
-          <HeaderIcon size={13} style={{ color: "var(--accent)" }} />
-          <span>{title}</span>
-        </div>
-        <button
-          className={`${styles.codeCopyBtn} ${copied ? styles.codeCopied : ""}`}
-          onClick={handleCopy}
-          aria-label="Copy code snippet"
-        >
-          {copied ? (
-            <>
-              <Check size={12} />
-              <span>Copied!</span>
-            </>
-          ) : (
-            <>
-              <Copy size={12} />
-              <span>Copy</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      <pre className={styles.codeScroll}>
-        <code>
-          {code.split("\n").map((line, i) => (
-            <div key={i}>
-              {line.startsWith("#") ? (
-                <span className="code-comment">{line}</span>
-              ) : line.includes("://") ? (
-                <span className="code-string">{line}</span>
-              ) : (
-                <span>{line}</span>
-              )}
-            </div>
-          ))}
-        </code>
-      </pre>
-    </div>
   );
 }

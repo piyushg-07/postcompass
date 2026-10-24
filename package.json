@@ -2,7 +2,11 @@
   "name": "postcompass",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --filter=desktop",
+    "build": "turbo run build",
+    "dev": "turbo run dev --filter=web --filter=server --filter=@repo/ui",
+    "dev:web": "turbo run dev --filter=web --filter=server --filter=@repo/ui",
+    "dev:desktop": "turbo run dev --filter=desktop",
+    "dev:server": "turbo run dev --filter=server",
     "dev:all": "turbo run dev",
     "build": "turbo run build",
     "build:app": "pnpm --filter desktop build:app",

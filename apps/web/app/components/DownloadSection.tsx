@@ -1,171 +1,106 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  PRODUCT,
-  DOWNLOADS,
-  type Platform,
-  type DownloadOption,
-} from "../config/product";
-import {
-  WindowsIcon,
-  AppleIcon,
-  LinuxIcon,
-  Download,
-  ExternalLink,
-} from "./Icons";
+import { RELEASES_URL, detectPlatform, type Platform, type PlatformDownloads } from "../config/product";
+import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "./Icons";
 import styles from "./DownloadSection.module.css";
 
-function detectPlatform(): Platform {
-  if (typeof window === "undefined") return "windows";
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes("mac")) return "macos";
-  if (ua.includes("linux")) return "linux";
-  return "windows";
+const ICONS = { windows: WindowsIcon, macos: AppleIcon, linux: LinuxIcon };
+interface Props {
+  asPage?: boolean;
+  downloads: { version: string; platforms: PlatformDownloads[] };
 }
 
-const platformIcons: Record<Platform, React.FC<{ size?: number; className?: string }>> = {
-  windows: WindowsIcon,
-  macos: AppleIcon,
-  linux: LinuxIcon,
-};
-
-export default function DownloadSection() {
-  const [activePlatform, setActivePlatform] = useState<Platform>("windows");
+export default function DownloadSection({ asPage = false, downloads }: Props) {
+  // Every card gets this many "other format" rows (empty ones are invisible) so all cards are the same height
+  const extraRows = Math.max(...downloads.platforms.map((d) => d.assets.length - 1));
+  const [detected, setDetected] = useState<Platform | null>(null);
 
   useEffect(() => {
-    setActivePlatform(detectPlatform());
+    setDetected(detectPlatform(navigator.userAgent));
   }, []);
 
-  const sorted = [...DOWNLOADS].sort((a, b) => {
-    if (a.platform === activePlatform) return -1;
-    if (b.platform === activePlatform) return 1;
-    return 0;
-  });
+  const Heading = asPage ? "h1" : "h2";
 
   return (
-    <section className="section" id="download">
+    <section className={`section ${asPage ? styles.page : ""}`} id="download">
       <div className="container">
         <div className="section-header">
-          <span className="section-badge">Downloads</span>
-          <h2 className="section-title">
-            Download PostCompass
-          </h2>
+          <span className="section-badge">Download · v{downloads.version}</span>
+          <Heading className="section-title">Get PostCompass</Heading>
           <p className="section-description">
-            Available as a native desktop application for all major operating
-            systems. No browser, no Docker, no cloud signup.
+            Free and open source. Pick the installer for your system.
           </p>
         </div>
 
-        {/* Platform tabs */}
-        <div className={styles.tabs} role="tablist">
-          {DOWNLOADS.map((dl) => {
-            const Icon = platformIcons[dl.platform];
+        <div className={styles.grid} data-reveal="stagger">
+          {downloads.platforms.map((d) => {
+            const Icon = ICONS[d.platform];
+            const isDetected = detected === d.platform;
+            const [primary, ...rest] = d.assets;
             return (
-              <button
-                key={dl.platform}
-                className={`${styles.tab} ${activePlatform === dl.platform ? styles.active : ""}`}
-                onClick={() => setActivePlatform(dl.platform)}
-                role="tab"
-                aria-selected={activePlatform === dl.platform}
-                aria-controls={`panel-${dl.platform}`}
-              >
-                <Icon size={18} />
-                {dl.label}
-                {activePlatform === dl.platform && (
-                  <span className={styles.recommended}>Detected</span>
+              <div key={d.platform} className={`${styles.card} ${isDetected ? styles.cardDetected : ""}`}>
+                <div className={styles.cardHead}>
+                  <span className={styles.osIcon}>
+                    <Icon size={20} />
+                  </span>
+                  <div>
+                    <h3 className={styles.osName}>{d.name}</h3>
+                    <p className={styles.osReq}>{d.requirement}</p>
+                  </div>
+                  {isDetected && <span className={styles.detected}>Your system</span>}
+                </div>
+
+                {primary && (
+                  <a href={primary.url} className={`${styles.primary} ${isDetected ? styles.primaryHot : ""}`}>
+                    <Download size={15} />
+                    <span>{primary.label}</span>
+                    {primary.size && <span className={styles.size}>{primary.size}</span>}
+                  </a>
                 )}
-              </button>
+
+                <ul className={styles.assets}>
+                  <li className={styles.assetsTitle} aria-hidden="true">
+                    {rest.length === 1 ? "Also available" : "Other formats"}
+                  </li>
+                  {rest.map((a) => (
+                    <li key={a.url}>
+                      <a href={a.url} className={styles.asset}>
+                        <span className={styles.assetLabel}>{a.label}</span>
+                        <span className={styles.assetNote}>{a.note}</span>
+                        {a.size && <span className={styles.size}>{a.size}</span>}
+                        <Download size={13} className={styles.assetIcon} />
+                      </a>
+                    </li>
+                  ))}
+                  {Array.from({ length: extraRows - rest.length }, (_, i) => (
+                    <li key={`spacer-${i}`} className={styles.assetSpacer} aria-hidden="true">
+                      <span className={styles.asset}>&nbsp;</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             );
           })}
         </div>
 
-        {/* Download cards */}
-        <div className={styles.cards}>
-          {sorted.map((dl) => (
-            <DownloadCard
-              key={dl.platform}
-              download={dl}
-              isActive={dl.platform === activePlatform}
-            />
-          ))}
-        </div>
-
-        {/* Release info */}
-        <div className={styles.releaseInfo}>
-          <div className={styles.releaseRow}>
-            <span className={styles.releaseLabel}>Version</span>
-            <span className={styles.releaseValue}>
-              v{PRODUCT.version}
-            </span>
-          </div>
-          <span className={styles.releaseSep}>·</span>
-          <div className={styles.releaseRow}>
-            <span className={styles.releaseLabel}>License</span>
-            <span className={styles.releaseValue}>{PRODUCT.license}</span>
-          </div>
-          <span className={styles.releaseSep}>·</span>
-          <a href={`${PRODUCT.github}/releases`} className={styles.allReleases} target="_blank" rel="noopener noreferrer">
-            All releases <ExternalLink size={12} />
+        <div className={styles.notes} data-reveal>
+          <p>
+            <strong>Not code-signed yet.</strong> On first launch:
+          </p>
+          <span className={styles.tip}>
+            <WindowsIcon size={13} />
+            Click <em>More info</em>, then <em>Run anyway</em>
+          </span>
+          <span className={styles.tip}>
+            <AppleIcon size={13} />
+            In <em>Privacy &amp; Security</em>, click <em>Open Anyway</em>
+          </span>
+          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className={styles.allReleases}>
+            All releases
           </a>
         </div>
       </div>
     </section>
-  );
-}
-
-function DownloadCard({
-  download,
-  isActive,
-}: {
-  download: DownloadOption;
-  isActive: boolean;
-}) {
-  const Icon = platformIcons[download.platform];
-
-  return (
-    <div
-      className={`${styles.card} ${isActive ? styles.cardActive : ""}`}
-      id={`panel-${download.platform}`}
-      role="tabpanel"
-    >
-      <div className={styles.cardHeader}>
-        <Icon size={32} className={styles.cardIcon} />
-        <div>
-          <h3 className={styles.cardTitle}>{download.label}</h3>
-          <p className={styles.cardArch}>{download.primary.arch}</p>
-        </div>
-      </div>
-
-      <div className={styles.cardActions}>
-        <a
-          href={download.primary.url}
-          className="btn btn-primary"
-          style={{ width: "100%" }}
-        >
-          <Download size={16} />
-          {download.primary.label}
-          <span className={styles.format}>{download.primary.format}</span>
-        </a>
-
-        {download.secondary && (
-          <a
-            href={download.secondary.url}
-            className="btn btn-secondary"
-            style={{ width: "100%" }}
-          >
-            <Download size={14} />
-            {download.secondary.label}
-            <span className={styles.format}>
-              {download.secondary.format}
-            </span>
-          </a>
-        )}
-      </div>
-
-      <p className={styles.cardNote}>
-        v{PRODUCT.version} · {download.primary.format} · {download.primary.arch}
-      </p>
-    </div>
   );
 }
