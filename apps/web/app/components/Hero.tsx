@@ -12,6 +12,15 @@ type Os = "windows" | "macos" | "linux";
 const OS_LABEL: Record<Os, string> = { windows: "Windows", macos: "macOS", linux: "Linux" };
 const OS_ICON = { windows: WindowsIcon, macos: AppleIcon, linux: LinuxIcon };
 
+// The headline is "returned" by a query; the hero cycles through a few, each with its own row
+const QUERIES = [
+  { column: "tagline", table: "postcompass", lead: ["Your", "PostgreSQL,"], accent: "charted.", ms: "0.4" },
+  { column: "setup", table: "local_db", lead: ["One", "click."], accent: "Zero setup.", ms: "0.3" },
+  { column: "clouds", table: "connections", lead: ["Every", "cloud,"], accent: "one place.", ms: "1.2" },
+  { column: "size", table: "installer", lead: ["3 MB.", "Fully"], accent: "native.", ms: "0.2" },
+];
+const QUERY_INTERVAL_MS = 4800;
+
 export default function Hero() {
   const [os, setOs] = useState<Os>("windows");
 
@@ -22,6 +31,26 @@ export default function Hero() {
   }, []);
 
   const OsIcon = OS_ICON[os];
+
+  const [queryIndex, setQueryIndex] = useState(0);
+  const [hasCycled, setHasCycled] = useState(false);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      setHasCycled(true);
+      setQueryIndex((i) => (i + 1) % QUERIES.length);
+    }, QUERY_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [paused, queryIndex]);
+
+  const query = QUERIES[queryIndex] ?? QUERIES[0]!;
+  const queryLength = `SELECT ${query.column} FROM ${query.table};`.length;
+  // The first run waits for the page to settle; later runs start right away
+  const timing = hasCycled
+    ? { ["--type-delay" as string]: "0s", ["--row-delay" as string]: "0.65s" }
+    : { ["--type-delay" as string]: "0.4s", ["--row-delay" as string]: "1.1s" };
 
   // The preview lies back in 3D and stands up as it scrolls into view
   const previewRef = useRef<HTMLDivElement>(null);
@@ -85,20 +114,43 @@ export default function Hero() {
 
       <div className={`container ${styles.content}`}>
         {/* The page opens by "running" a query; the headline is its result */}
-        <p className={styles.query} aria-hidden="true">
-          <span className={styles.queryPrompt}>=#</span>
-          <span className={styles.queryText}>
-            <span className={styles.qKw}>SELECT</span> tagline <span className={styles.qKw}>FROM</span> postcompass;
-          </span>
-          <span className={styles.queryCaret} />
-        </p>
-
-        <h1 className={styles.headline}>
-          <span className={styles.word} style={{ ["--i" as string]: 0 }}>Your</span>{" "}
-          <span className={styles.word} style={{ ["--i" as string]: 1 }}>PostgreSQL,</span>{" "}
-          <em className={`${styles.word} ${styles.headlineAccent}`} style={{ ["--i" as string]: 2 }}>charted.</em>
-        </h1>
-        <p className={styles.rowCount} aria-hidden="true">(1 row)</p>
+        <h1 className="visually-hidden">Your PostgreSQL, charted.</h1>
+        <div
+          className={styles.result}
+          style={timing}
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <p className={styles.queryLine} aria-hidden="true">
+            <span className={styles.queryPrompt}>=#</span>
+            <span key={queryIndex} className={styles.queryText} style={{ ["--len" as string]: queryLength }}>
+              <span className={styles.qKw}>SELECT</span> {query.column} <span className={styles.qKw}>FROM</span> {query.table};
+            </span>
+            <span className={styles.queryCaret} />
+          </p>
+          <div className={styles.resultCell} aria-hidden="true">
+            {QUERIES.map((q, i) => (
+              <p
+                key={i === queryIndex ? `on-${queryIndex}` : i}
+                className={`${styles.headline} ${i === queryIndex ? "" : styles.headlineHidden}`}
+              >
+                {q.lead.map((word, w) => (
+                  <span key={w}>
+                    <span className={styles.word} style={{ ["--i" as string]: w }}>{word}</span>{" "}
+                  </span>
+                ))}
+                <em className={`${styles.word} ${styles.headlineAccent}`} style={{ ["--i" as string]: q.lead.length }}>
+                  {q.accent}
+                </em>
+              </p>
+            ))}
+          </div>
+          <div className={styles.resultFoot}>
+            <span key={queryIndex} className={styles.resultFootText} aria-hidden="true">
+              (1 row) · {query.ms} ms
+            </span>
+          </div>
+        </div>
 
         <p className={styles.subhead}>
           Run PostgreSQL locally in one click, connect to any cloud, and browse, edit and
