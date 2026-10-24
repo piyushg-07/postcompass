@@ -371,10 +371,27 @@
     display: none;
   }
 
+  .prompt {
+    margin-left: 0.5rem;
+  }
+
   .statement {
-    padding: 0 0.55rem;
-    gap: 0.4rem;
-    font-size: 0.82rem;
+    height: 32px;
+    padding: 0 0.5rem;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    line-height: 30px;
+  }
+
+  .caret {
+    width: 6px;
+    height: 13px;
+  }
+
+  .cta {
+    height: 32px;
+    padding: 0 0.7rem;
+    font-size: 0.75rem;
   }
 
   .star {

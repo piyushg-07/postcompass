@@ -99,7 +99,7 @@
 
 /* ---- Modal ---- */
 .dialog {
-  width: min(1100px, calc(100vw - 2rem));
+  width: min(1100px, calc(100vw - 1.25rem));
   max-width: none;
   max-height: none;
   margin: auto;
@@ -199,6 +199,27 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Phones: the modal fills the screen so Drive's player has room for its controls */
+@media (max-width: 640px) {
+  .dialog {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .player {
+    flex: 1;
+    aspect-ratio: auto;
   }
 }
 

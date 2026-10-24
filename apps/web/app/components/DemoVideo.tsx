@@ -99,7 +99,7 @@ export default function DemoVideo() {
             <iframe
               src={DEMO_VIDEO_EMBED_URL}
               title="PostCompass demo video"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
               allowFullScreen
               onLoad={() => setLoaded(true)}
               className={loaded ? "" : styles.playerLoading}

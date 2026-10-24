@@ -16,7 +16,8 @@ export const RELEASES_URL = `${PRODUCT.github}/releases`;
 export const LATEST_RELEASE_URL = `${PRODUCT.github}/releases/latest`;
 
 // The demo video lives on Google Drive; /preview is Drive's embeddable player
-export const DEMO_VIDEO_EMBED_URL = "https://drive.google.com/file/d/1Jdj9k6L8SMpCTW82rI-g6frQwZZrUuWB/preview";
+const DEMO_VIDEO_ID = "1Jdj9k6L8SMpCTW82rI-g6frQwZZrUuWB";
+export const DEMO_VIDEO_EMBED_URL = `https://drive.google.com/file/d/${DEMO_VIDEO_ID}/preview`;
 
 export type Platform = "windows" | "macos" | "linux";
 
