@@ -79,36 +79,31 @@ export const FAQ_ITEMS = [
   {
     question: "Is PostCompass really free?",
     answer:
-      "Yes. PostCompass is open source under the MIT license. There's no paid tier, no account and no sign-up.",
+      "Yes. It's open source under the MIT license, with no paid tier, no account and no sign-up.",
   },
   {
     question: "Do I need to install PostgreSQL or Docker first?",
     answer:
-      "No. New local database downloads the official PostgreSQL binaries for your platform, verifies their SHA-256 checksum and runs the server as your user, with no admin rights needed. If you already have PostgreSQL, connect to it like any other server.",
+      "No. PostCompass downloads the official PostgreSQL binaries, verifies them and runs the server for you, with no admin rights needed.",
   },
   {
-    question: "Which PostgreSQL versions and providers work?",
+    question: "What can I connect to?",
     answer:
-      "Local servers can run PostgreSQL 14, 15, 16, 17 or 18. Remote connections work with any PostgreSQL, with presets for AWS RDS and Aurora, Google Cloud SQL, Azure, Supabase, Neon, Cloudflare Hyperdrive, Railway and Render.",
+      "Local PostgreSQL 14 to 18, servers already on your machine, and any remote PostgreSQL, with presets for AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and more.",
   },
   {
-    question: "Where are my passwords stored?",
+    question: "Is it safe to use on a production database?",
     answer:
-      "In your operating system's keychain: Windows Credential Manager, macOS Keychain or the Linux Secret Service. They're never written to PostCompass's own files.",
+      "Yes. The SQL editor warns before destructive queries, EXPLAIN ANALYZE is always rolled back, and connections can require TLS with certificate verification.",
   },
   {
-    question: "Does PostCompass collect any data?",
+    question: "Is my data private?",
     answer:
-      "No. There's no telemetry and no account. The app talks only to your own databases; the one request it makes by itself is downloading PostgreSQL binaries when you create a local server.",
+      "Yes. There's no telemetry, passwords live in your system keychain, and local servers only listen on 127.0.0.1.",
   },
   {
     question: "Why does my system warn me when I install it?",
     answer:
-      "The installers aren't code-signed yet. On Windows choose More info, then Run anyway. On macOS, open System Settings, go to Privacy & Security and click Open Anyway the first time.",
-  },
-  {
-    question: "Where do I report a bug or ask for a feature?",
-    answer:
-      "Open an issue or start a discussion on GitHub. Contributions are welcome too; the contributing guide covers setup and architecture.",
+      "The installers aren't code-signed yet. On Windows choose More info, then Run anyway. On macOS, open Privacy & Security in System Settings and click Open Anyway.",
   },
 ] as const;
