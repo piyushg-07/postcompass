@@ -104,7 +104,7 @@ export const FAQ_ITEMS = [
   {
     question: "Why does my system warn me when I install it?",
     answer:
-      "The installers aren't code-signed yet. On Windows choose More info, then Run anyway. On macOS, right-click the app and choose Open the first time.",
+      "The installers aren't code-signed yet. On Windows choose More info, then Run anyway. On macOS, open System Settings, go to Privacy & Security and click Open Anyway the first time.",
   },
   {
     question: "Where do I report a bug or ask for a feature?",

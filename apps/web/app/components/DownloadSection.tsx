@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { DOWNLOADS, PRODUCT, RELEASES_URL, assetUrl, detectPlatform, type Platform } from "../config/product";
-import { WindowsIcon, AppleIcon, LinuxIcon, Download, ArrowUpRight } from "./Icons";
+import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "./Icons";
 import styles from "./DownloadSection.module.css";
 
 const ICONS = { windows: WindowsIcon, macos: AppleIcon, linux: LinuxIcon };
+// Every card gets this many "other format" rows (empty ones are invisible) so all cards are the same height
+const EXTRA_ROWS = Math.max(...DOWNLOADS.map((d) => d.assets.length - 1));
 
 export default function DownloadSection({ asPage = false }: { asPage?: boolean }) {
   const [detected, setDetected] = useState<Platform | null>(null);
@@ -54,6 +56,9 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
                 )}
 
                 <ul className={styles.assets}>
+                  <li className={styles.assetsTitle} aria-hidden="true">
+                    {rest.length === 1 ? "Also available" : "Other formats"}
+                  </li>
                   {rest.map((a) => (
                     <li key={a.file}>
                       <a href={assetUrl(a.file)} className={styles.asset}>
@@ -64,6 +69,11 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
                       </a>
                     </li>
                   ))}
+                  {Array.from({ length: EXTRA_ROWS - rest.length }, (_, i) => (
+                    <li key={`spacer-${i}`} className={styles.assetSpacer} aria-hidden="true">
+                      <span className={styles.asset}>&nbsp;</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             );
@@ -72,11 +82,18 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
 
         <div className={styles.notes}>
           <p>
-            <strong>Not code-signed yet.</strong> On Windows choose <em>More info → Run anyway</em>; on macOS right-click
-            the app and choose <em>Open</em> the first time.
+            <strong>Not code-signed yet.</strong> On first launch:
           </p>
+          <span className={styles.tip}>
+            <WindowsIcon size={13} />
+            Click <em>More info</em>, then <em>Run anyway</em>
+          </span>
+          <span className={styles.tip}>
+            <AppleIcon size={13} />
+            In <em>Privacy &amp; Security</em>, click <em>Open Anyway</em>
+          </span>
           <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className={styles.allReleases}>
-            All releases and release notes <ArrowUpRight size={14} />
+            All releases
           </a>
         </div>
       </div>
