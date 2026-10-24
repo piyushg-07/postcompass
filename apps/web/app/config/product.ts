@@ -5,6 +5,7 @@ export const PRODUCT = {
   tagline: "A fast, modern desktop app for PostgreSQL",
   description:
     "Spin up a local PostgreSQL database in one click, connect to any cloud, and browse, edit and query your data in one fast native app. Free and open source.",
+  // Fallback only: the site shows the latest GitHub release when it can reach GitHub (see release.ts)
   version: "0.1.0",
   license: "MIT",
   github: "https://github.com/piyushg-07/postcompass",
@@ -21,8 +22,8 @@ export type Platform = "windows" | "macos" | "linux";
 
 export interface ReleaseAsset {
   label: string;
-  file: string;
   note: string;
+  url: string;
   size?: string;
 }
 
@@ -33,18 +34,29 @@ export interface PlatformDownloads {
   assets: ReleaseAsset[];
 }
 
-const v = PRODUCT.version;
-export const assetUrl = (file: string) => `${PRODUCT.github}/releases/download/v${v}/${file}`;
+/** A published release as the site needs it: its version and its files by name. */
+export interface Release {
+  version: string;
+  assets: Record<string, { url: string; size: number }>;
+}
 
-// File names match what the release workflow (tauri-action) uploads for each version.
-export const DOWNLOADS: PlatformDownloads[] = [
+interface AssetTemplate {
+  label: string;
+  note: string;
+  /** File name for a version, matching what the release workflow (tauri-action) uploads */
+  file: (version: string) => string;
+  /** Size of the fallback version's file, shown when GitHub can't be reached */
+  size?: string;
+}
+
+const PLATFORMS: (Omit<PlatformDownloads, "assets"> & { assets: AssetTemplate[] })[] = [
   {
     platform: "windows",
     name: "Windows",
     requirement: "Windows 10 or 11, 64-bit",
     assets: [
-      { label: "Installer (.exe)", file: `PostCompass_${v}_x64-setup.exe`, note: "Recommended", size: "3.3 MB" },
-      { label: "MSI package", file: `PostCompass_${v}_x64_en-US.msi`, note: "For managed installs", size: "4.6 MB" },
+      { label: "Installer (.exe)", file: (v) => `PostCompass_${v}_x64-setup.exe`, note: "Recommended", size: "3.3 MB" },
+      { label: "MSI package", file: (v) => `PostCompass_${v}_x64_en-US.msi`, note: "For managed installs", size: "4.6 MB" },
     ],
   },
   {
@@ -52,8 +64,8 @@ export const DOWNLOADS: PlatformDownloads[] = [
     name: "macOS",
     requirement: "Apple Silicon and Intel",
     assets: [
-      { label: "Apple Silicon (.dmg)", file: `PostCompass_${v}_aarch64.dmg`, note: "M1 and newer", size: "4.2 MB" },
-      { label: "Intel (.dmg)", file: `PostCompass_${v}_x64.dmg`, note: "Intel Macs" },
+      { label: "Apple Silicon (.dmg)", file: (v) => `PostCompass_${v}_aarch64.dmg`, note: "M1 and newer", size: "4.2 MB" },
+      { label: "Intel (.dmg)", file: (v) => `PostCompass_${v}_x64.dmg`, note: "Intel Macs" },
     ],
   },
   {
@@ -61,12 +73,37 @@ export const DOWNLOADS: PlatformDownloads[] = [
     name: "Linux",
     requirement: "64-bit (x86_64)",
     assets: [
-      { label: "AppImage", file: `PostCompass_${v}_amd64.AppImage`, note: "Any distribution", size: "81 MB" },
-      { label: ".deb", file: `PostCompass_${v}_amd64.deb`, note: "Ubuntu, Debian", size: "4.8 MB" },
-      { label: ".rpm", file: `PostCompass-${v}-1.x86_64.rpm`, note: "Fedora, RHEL", size: "4.8 MB" },
+      { label: "AppImage", file: (v) => `PostCompass_${v}_amd64.AppImage`, note: "Any distribution", size: "81 MB" },
+      { label: ".deb", file: (v) => `PostCompass_${v}_amd64.deb`, note: "Ubuntu, Debian", size: "4.8 MB" },
+      { label: ".rpm", file: (v) => `PostCompass-${v}-1.x86_64.rpm`, note: "Fedora, RHEL", size: "4.8 MB" },
     ],
   },
 ];
+
+const formatSize = (bytes: number) => `${(bytes / 1048576).toFixed(bytes < 10 * 1048576 ? 1 : 0)} MB`;
+
+/**
+ * Download links for the latest release. With a release from GitHub, links and sizes come from its real files
+ * (any file a build didn't produce is left out); without one, they point at PRODUCT.version.
+ */
+export function getDownloads(release: Release | null): { version: string; platforms: PlatformDownloads[] } {
+  const version = release?.version ?? PRODUCT.version;
+  const platforms = PLATFORMS.map((p) => {
+    const assets: ReleaseAsset[] = [];
+    for (const a of p.assets) {
+      const file = a.file(version);
+      if (!release) {
+        assets.push({ label: a.label, note: a.note, url: `${PRODUCT.github}/releases/download/v${version}/${file}`, size: a.size });
+        continue;
+      }
+      const live = release.assets[file];
+      if (live) assets.push({ label: a.label, note: a.note, url: live.url, size: formatSize(live.size) });
+    }
+    if (!assets.length) assets.push({ label: "See all releases", note: "", url: LATEST_RELEASE_URL });
+    return { platform: p.platform, name: p.name, requirement: p.requirement, assets };
+  });
+  return { version, platforms };
+}
 
 export function detectPlatform(userAgent: string): Platform {
   const ua = userAgent.toLowerCase();

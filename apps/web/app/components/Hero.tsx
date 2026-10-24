@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PRODUCT } from "../config/product";
 import { WindowsIcon, AppleIcon, LinuxIcon } from "./Icons";
 import Hyperspeed from "./Hyperspeed";
 import AppPreview from "./AppPreview";
@@ -22,7 +21,7 @@ const QUERIES = [
 ];
 const QUERY_INTERVAL_MS = 4800;
 
-export default function Hero() {
+export default function Hero({ version }: { version: string }) {
   const [os, setOs] = useState<Os>("windows");
 
   useEffect(() => {
@@ -172,7 +171,7 @@ export default function Hero() {
         </div>
 
         <p className={styles.meta}>
-          <span>Free and open source · v{PRODUCT.version}</span>
+          <span>Free and open source · v{version}</span>
           <span className={styles.metaDot} aria-hidden="true" />
           <span>Windows, macOS and Linux</span>
         </p>

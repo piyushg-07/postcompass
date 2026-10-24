@@ -1,4 +1,5 @@
-import { PRODUCT, RELEASES_URL } from "../config/product";
+import { PRODUCT, RELEASES_URL, getDownloads } from "../config/product";
+import { getLatestRelease } from "../config/release";
 import { Github } from "./Icons";
 import styles from "./Footer.module.css";
 
@@ -23,7 +24,8 @@ const COLUMNS = [
   },
 ];
 
-export default function Footer() {
+export default async function Footer() {
+  const { version } = getDownloads(await getLatestRelease());
   return (
     <footer className={styles.footer}>
       <div className="container">
@@ -67,7 +69,7 @@ export default function Footer() {
 
         <div className={styles.bottom}>
           <span>© 2026 Piyush Gupta · Released under the {PRODUCT.license} license</span>
-          <span>v{PRODUCT.version}</span>
+          <span>v{version}</span>
         </div>
       </div>
     </footer>

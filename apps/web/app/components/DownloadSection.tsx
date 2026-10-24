@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DOWNLOADS, PRODUCT, RELEASES_URL, assetUrl, detectPlatform, type Platform } from "../config/product";
+import { RELEASES_URL, detectPlatform, type Platform, type PlatformDownloads } from "../config/product";
 import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "./Icons";
 import styles from "./DownloadSection.module.css";
 
 const ICONS = { windows: WindowsIcon, macos: AppleIcon, linux: LinuxIcon };
-// Every card gets this many "other format" rows (empty ones are invisible) so all cards are the same height
-const EXTRA_ROWS = Math.max(...DOWNLOADS.map((d) => d.assets.length - 1));
+interface Props {
+  asPage?: boolean;
+  downloads: { version: string; platforms: PlatformDownloads[] };
+}
 
-export default function DownloadSection({ asPage = false }: { asPage?: boolean }) {
+export default function DownloadSection({ asPage = false, downloads }: Props) {
+  // Every card gets this many "other format" rows (empty ones are invisible) so all cards are the same height
+  const extraRows = Math.max(...downloads.platforms.map((d) => d.assets.length - 1));
   const [detected, setDetected] = useState<Platform | null>(null);
 
   useEffect(() => {
@@ -22,7 +26,7 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
     <section className={`section ${asPage ? styles.page : ""}`} id="download">
       <div className="container">
         <div className="section-header">
-          <span className="section-badge">Download · v{PRODUCT.version}</span>
+          <span className="section-badge">Download · v{downloads.version}</span>
           <Heading className="section-title">Get PostCompass</Heading>
           <p className="section-description">
             Free and open source. Pick the installer for your system.
@@ -30,7 +34,7 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
         </div>
 
         <div className={styles.grid}>
-          {DOWNLOADS.map((d) => {
+          {downloads.platforms.map((d) => {
             const Icon = ICONS[d.platform];
             const isDetected = detected === d.platform;
             const [primary, ...rest] = d.assets;
@@ -48,7 +52,7 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
                 </div>
 
                 {primary && (
-                  <a href={assetUrl(primary.file)} className={`${styles.primary} ${isDetected ? styles.primaryHot : ""}`}>
+                  <a href={primary.url} className={`${styles.primary} ${isDetected ? styles.primaryHot : ""}`}>
                     <Download size={15} />
                     <span>{primary.label}</span>
                     {primary.size && <span className={styles.size}>{primary.size}</span>}
@@ -60,8 +64,8 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
                     {rest.length === 1 ? "Also available" : "Other formats"}
                   </li>
                   {rest.map((a) => (
-                    <li key={a.file}>
-                      <a href={assetUrl(a.file)} className={styles.asset}>
+                    <li key={a.url}>
+                      <a href={a.url} className={styles.asset}>
                         <span className={styles.assetLabel}>{a.label}</span>
                         <span className={styles.assetNote}>{a.note}</span>
                         {a.size && <span className={styles.size}>{a.size}</span>}
@@ -69,7 +73,7 @@ export default function DownloadSection({ asPage = false }: { asPage?: boolean }
                       </a>
                     </li>
                   ))}
-                  {Array.from({ length: EXTRA_ROWS - rest.length }, (_, i) => (
+                  {Array.from({ length: extraRows - rest.length }, (_, i) => (
                     <li key={`spacer-${i}`} className={styles.assetSpacer} aria-hidden="true">
                       <span className={styles.asset}>&nbsp;</span>
                     </li>

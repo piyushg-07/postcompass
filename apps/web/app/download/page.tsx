@@ -3,18 +3,21 @@ import Navbar from "../components/Navbar";
 import DownloadSection from "../components/DownloadSection";
 import FaqSection from "../components/FaqSection";
 import Footer from "../components/Footer";
+import { getDownloads } from "../config/product";
+import { getLatestRelease } from "../config/release";
 
 export const metadata: Metadata = {
   title: "Download PostCompass",
   description: "Download PostCompass for Windows, macOS or Linux. Free and open source.",
 };
 
-export default function DownloadPage() {
+export default async function DownloadPage() {
+  const downloads = getDownloads(await getLatestRelease());
   return (
     <>
       <Navbar />
       <main id="main-content">
-        <DownloadSection asPage />
+        <DownloadSection asPage downloads={downloads} />
         <FaqSection />
       </main>
       <Footer />
