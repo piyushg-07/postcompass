@@ -173,9 +173,9 @@ Grab the latest installer from the **[Releases page](https://github.com/piyushg-
 | Platform | File |
 |---|---|
 | **Windows** 10 / 11 | `PostCompass_x.y.z_x64-setup.exe` (recommended), or the `.msi` for managed installs |
-| **macOS** Apple Silicon | `PostCompass_x.y.z_aarch64.dmg` |
+| **macOS** Apple Silicon | `PostCompass_x.y.z_aarch64.dmg` (M1, M2, M3, M4, M5 and newer) |
 | **macOS** Intel | `PostCompass_x.y.z_x64.dmg` |
-| **Linux** | `.AppImage` (any distro), `.deb` (Ubuntu / Debian) or `.rpm` (Fedora) |
+| **Linux** | `.AppImage` (any distro), `.deb` (Ubuntu / Debian) or `.rpm` (Fedora / RHEL) |
 
 > [!NOTE]
 > Installers aren't code-signed yet, so your system warns you the first time:
@@ -183,6 +183,20 @@ Grab the latest installer from the **[Releases page](https://github.com/piyushg-
 > - **Windows:** the installer shows *Unknown publisher*. On the SmartScreen prompt, click **More info → Run anyway**.
 > - **macOS:** drag PostCompass to Applications and open it. When macOS says it can't verify the app, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 > - **macOS, if it says the app "is damaged":** run `xattr -cr /Applications/PostCompass.app` in Terminal, then open it again.
+> - **Linux:**
+>   - **AppImage:** make executable and run:
+>     ```bash
+>     chmod +x PostCompass_*.AppImage && ./PostCompass_*.AppImage
+>     ```
+>     *(Note: On Ubuntu 22.04+, install FUSE if needed: `sudo apt install libfuse2`)*
+>   - **Debian / Ubuntu (`.deb`):**
+>     ```bash
+>     sudo apt install ./PostCompass_*_amd64.deb
+>     ```
+>   - **Fedora / RHEL (`.rpm`):**
+>     ```bash
+>     sudo dnf install ./PostCompass-*.x86_64.rpm
+>     ```
 
 **First run:** answer two quick questions, then click **New local database** (or **Add remote connection** if your database is in the cloud). Open it and press `Ctrl+K` anytime to jump anywhere.
 

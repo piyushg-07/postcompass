@@ -74,7 +74,7 @@ PostCompass is a desktop application engineered specifically for developers work
 | :--- | :--- | :--- | :--- |
 | **Windows** | `.exe` Installer | x86_64 (64-bit) | Standard graphical installer for Windows 10 & 11 |
 | **Windows** | `.msi` Package | x86_64 (64-bit) | Enterprise & headless/silent installation support |
-| **macOS** | `.dmg` | Apple Silicon (aarch64) | Optimized for M1, M2, M3, M4 Macs |
+| **macOS** | `.dmg` | Apple Silicon (aarch64) | Optimized for Apple Silicon (M1, M2, M3, M4, M5 and newer) |
 | **macOS** | `.dmg` | Intel (x86_64) | For Intel-based Macs |
 | **Linux** | `.AppImage` | x86_64 | Self-contained, runs on any Linux distribution |
 | **Linux** | `.deb` | x86_64 | For Debian, Ubuntu, Linux Mint, Pop!_OS |

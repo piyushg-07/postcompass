@@ -109,7 +109,7 @@ jobs:
             | Platform | Installer |
             |---|---|
             | **Windows** 10 / 11 (x64) | [**PostCompass___VERSION___x64-setup.exe**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64-setup.exe) · [`.msi`](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64_en-US.msi) |
-            | **macOS** Apple Silicon (M1–M4) | [**PostCompass___VERSION___aarch64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___aarch64.dmg) |
+            | **macOS** Apple Silicon (M1 or newer) | [**PostCompass___VERSION___aarch64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___aarch64.dmg) |
             | **macOS** Intel | [**PostCompass___VERSION___x64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64.dmg) |
             | **Linux** (any distro) | [**.AppImage**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.AppImage) |
             | **Linux** Ubuntu / Debian | [**.deb**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.deb) |
@@ -122,7 +122,9 @@ jobs:
             - **Windows:** the installer shows *Unknown publisher*. On the SmartScreen prompt, click **More info → Run anyway**.
             - **macOS:** drag PostCompass to Applications and open it. When macOS says it can't verify the app, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
             - **macOS, if it says the app "is damaged":** run `xattr -cr /Applications/PostCompass.app` in Terminal, then open it again.
-            - **Linux (AppImage):** run `chmod +x PostCompass_*.AppImage`, then open it.
+            - **Linux (AppImage):** run `chmod +x PostCompass_*.AppImage && ./PostCompass_*.AppImage` (on Ubuntu 22.04+, install `libfuse2` if needed).
+            - **Linux (.deb):** run `sudo apt install ./PostCompass_*_amd64.deb`.
+            - **Linux (.rpm):** run `sudo dnf install ./PostCompass-*.x86_64.rpm`.
 
             ## 💬 Feedback
 
