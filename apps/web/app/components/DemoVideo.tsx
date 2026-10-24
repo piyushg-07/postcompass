@@ -7,9 +7,14 @@ import styles from "./DemoVideo.module.css";
 
 // Hosts the Drive player loads from; connecting to them early saves the handshakes on click
 const PLAYER_ORIGINS = ["https://drive.google.com", "https://www.gstatic.com", "https://drive.usercontent.google.com"];
+const PHONE = "(max-width: 640px) and (pointer: coarse)";
+
+// Screen orientation locking isn't in every browser's typings yet
+type LockableOrientation = ScreenOrientation & { lock?: (o: "landscape") => Promise<void> };
 
 export default function DemoVideo() {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   // The player mounts as soon as the visitor shows intent (hover, focus or press) so it is
   // already loading by the time they click, and unmounts on close to stop playback.
@@ -43,11 +48,54 @@ export default function DemoVideo() {
   }, [open]);
 
   const warmUp = () => setWarm(true);
-  const close = () => {
+  const reset = () => {
     setOpen(false);
     setWarm(false);
     setLoaded(false);
   };
+  // Opening adds a history entry, so closing goes back through it; the popstate handler below then resets
+  const close = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    if ((history.state as { demoVideo?: boolean } | null)?.demoVideo) history.back();
+    else reset();
+  };
+
+  // On phones the player goes straight to real full screen (and landscape where allowed). Browsers that can't
+  // do this for an embedded player, like Safari on iPhone, still get the full-screen modal from the CSS.
+  const openPlayer = () => {
+    warmUp();
+    setOpen(true);
+    // The phone's Back button or gesture then closes the video instead of leaving the page.
+    // Next's own state is kept in the entry so its router treats going back as staying on this page.
+    history.pushState({ ...(history.state as object | null), demoVideo: true }, "");
+    const dialog = dialogRef.current;
+    const player = playerRef.current;
+    if (!dialog || !player || !window.matchMedia(PHONE).matches || !player.requestFullscreen) return;
+    if (!dialog.open) dialog.showModal(); // must be showing, inside this tap, before it can go full screen
+    player
+      .requestFullscreen()
+      .then(() => (screen.orientation as LockableOrientation | undefined)?.lock?.("landscape"))
+      .catch(() => {});
+  };
+
+  // Back closes the player, and leaving full screen on a phone closes it too, so there's no second step
+  useEffect(() => {
+    if (!open) return;
+    const onPop = () => {
+      if (!(history.state as { demoVideo?: boolean } | null)?.demoVideo) reset();
+    };
+    const onFullscreen = () => {
+      if (!document.fullscreenElement && window.matchMedia(PHONE).matches) close();
+    };
+    window.addEventListener("popstate", onPop);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+    };
+    // close and reset only call state setters and the history/fullscreen APIs, so they never go stale
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <>
@@ -59,10 +107,7 @@ export default function DemoVideo() {
         onPointerEnter={warmUp}
         onPointerDown={warmUp}
         onFocus={warmUp}
-        onClick={() => {
-          warmUp();
-          setOpen(true);
-        }}
+        onClick={openPlayer}
       >
         {/* A slowly spinning gradient ring around a dark core with the play icon */}
         <span className={styles.ring} aria-hidden="true" />
@@ -89,11 +134,8 @@ export default function DemoVideo() {
       >
         <div className={styles.dialogHead}>
           <span>PostCompass demo</span>
-          <button type="button" className={styles.close} aria-label="Close" onClick={close}>
-            <X size={16} />
-          </button>
         </div>
-        <div className={styles.player}>
+        <div className={styles.player} ref={playerRef}>
           {!loaded && <span className={styles.spinner} role="status" aria-label="Loading video" />}
           {warm && (
             <iframe
@@ -104,6 +146,13 @@ export default function DemoVideo() {
               onLoad={() => setLoaded(true)}
               className={loaded ? "" : styles.playerLoading}
             />
+          )}
+          {/* Our close button sits exactly over Drive's pop-out button, hiding it, so the video stays on the site.
+              It's inside the player, so it's still there in full screen. */}
+          {warm && (
+            <button type="button" className={styles.playerClose} aria-label="Close video" onClick={close}>
+              <X size={18} />
+            </button>
           )}
         </div>
       </dialog>
