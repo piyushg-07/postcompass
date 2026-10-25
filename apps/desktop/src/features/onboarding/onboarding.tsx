@@ -126,11 +126,11 @@ export function Onboarding() {
 
           {step === 2 && (
             <StepLayout title="How will you use PostCompass?" onBack={back} onNext={next}>
-              <RadioCardGroup value={answers.useCase} onValueChange={(v) => set("useCase", v as UseCase)}>
-                <RadioCard value="local_dev" title="Local development" description="Run PostgreSQL on this computer while building apps." icon={<HardDrive />} />
-                <RadioCard value="remote" title="Manage remote servers" description="Connect to databases in the cloud or on a server." icon={<Globe />} />
-                <RadioCard value="both" title="Both" description="Local databases and remote servers." icon={<Layers />} />
-                <RadioCard value="learning" title="Learning SQL" description="A safe place to practice." icon={<BookOpen />} />
+              <RadioCardGroup className="grid-cols-2" value={answers.useCase} onValueChange={(v) => set("useCase", v as UseCase)}>
+                <RadioCard value="local_dev" title="Local development" description="Postgres on this computer" icon={<HardDrive />} />
+                <RadioCard value="remote" title="Remote servers" description="Cloud or hosted databases" icon={<Globe />} />
+                <RadioCard value="both" title="Both" description="Local and remote" icon={<Layers />} />
+                <RadioCard value="learning" title="Learning SQL" description="A safe place to practice" icon={<BookOpen />} />
               </RadioCardGroup>
             </StepLayout>
           )}
