@@ -22,7 +22,7 @@ import type {
   ManagedServer,
 } from "../../lib/bindings";
 import { useAppState } from "../../app/app-state";
-import { formatMb, generatePassword } from "../../lib/format";
+import { formatMb, generatePassword, platformLabel } from "../../lib/format";
 import { commands, describeError, isCancelled, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 
@@ -401,7 +401,8 @@ function InstallForm({
   const nameTouched = useRef(Boolean(initial));
   const [advanced, setAdvanced] = useState(false);
   // "Local PostgreSQL 18", or "… (2)" when that name is already taken
-  const { state } = useAppState();
+  const { state, info } = useAppState();
+  const platform = platformLabel(info.os, info.arch);
   const defaultName = (version: string) => {
     const base = `Local PostgreSQL ${version.split(".")[0]}`;
     const taken = new Set(state.servers.map((x) => x.name));
@@ -504,13 +505,25 @@ function InstallForm({
         if (canSubmit) onSubmit({ ...values, installed });
       }}
     >
+      {/* No prebuilt binaries for this OS / chip, so there's nothing to pick */}
+      {versionsQuery.isSuccess && versions.length === 0 && (
+        <div className="flex items-start gap-2.5 rounded-card border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+          <p className="text-fg-muted">
+            <span className="font-medium text-fg">PostgreSQL can't be installed on {platform} yet.</span> Supported
+            systems are Windows (x64), macOS and Linux (x64 / ARM64). You can still connect to an existing server
+            with <span className="text-fg">Add remote connection</span>.
+          </p>
+        </div>
+      )}
+
       <Field
         label="Version"
         hint={
           installed
             ? "Already installed"
             : selected?.downloadMb
-              ? `${selected.downloadMb} MB download`
+              ? `${selected.downloadMb} MB download for ${platform}`
               : undefined
         }
       >

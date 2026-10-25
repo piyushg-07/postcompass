@@ -14,6 +14,8 @@ interface NavigationState {
   /** Remote connection add/edit dialog. `editingRemoteId` is null when adding. */
   remoteDialogOpen: boolean;
   editingRemoteId: string | null;
+  /** Prefilled fields for a new connection, e.g. a server found on this computer. */
+  remoteDraft: RemoteDraft | null;
 
   goTo: (section: Section) => void;
   /** Shows a connection in the explorer and keeps it in the sidebar. */
@@ -28,7 +30,15 @@ interface NavigationState {
   startInstall: () => void;
   setPaletteOpen: (open: boolean | ((open: boolean) => boolean)) => void;
   openRemoteDialog: (editId?: string | null) => void;
+  /** Opens the add-connection dialog with some fields already filled in. */
+  openRemoteDialogWith: (draft: RemoteDraft) => void;
   closeRemoteDialog: () => void;
+}
+
+export interface RemoteDraft {
+  name: string;
+  host: string;
+  port: number;
 }
 
 /** UI navigation state, readable from any component without prop drilling. */
@@ -42,6 +52,7 @@ export const useNavigation = create<NavigationState>()(
       paletteOpen: false,
       remoteDialogOpen: false,
       editingRemoteId: null,
+      remoteDraft: null,
 
       goTo: (section) => set({ section }),
       openServer: (serverId) =>
@@ -79,10 +90,18 @@ export const useNavigation = create<NavigationState>()(
         set({
           remoteDialogOpen: true,
           editingRemoteId: editId ?? null,
+          remoteDraft: null,
+          section: "databases",
+        }),
+      openRemoteDialogWith: (draft) =>
+        set({
+          remoteDialogOpen: true,
+          editingRemoteId: null,
+          remoteDraft: draft,
           section: "databases",
         }),
       closeRemoteDialog: () =>
-        set({ remoteDialogOpen: false, editingRemoteId: null }),
+        set({ remoteDialogOpen: false, editingRemoteId: null, remoteDraft: null }),
     }),
     {
       name: "postcompass-open-connections",

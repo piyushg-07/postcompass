@@ -298,6 +298,7 @@ export function RemoteConnectionDialog() {
   const { state, setState } = useAppState();
   const remoteDialogOpen = useNavigation((s) => s.remoteDialogOpen);
   const editingRemoteId = useNavigation((s) => s.editingRemoteId);
+  const remoteDraft = useNavigation((s) => s.remoteDraft);
   const closeRemoteDialog = useNavigation((s) => s.closeRemoteDialog);
 
   const existing = editingRemoteId
@@ -310,10 +311,16 @@ export function RemoteConnectionDialog() {
 
   useEffect(() => {
     if (remoteDialogOpen) {
-      setForm(existing ? fromExisting(existing) : empty());
+      setForm(
+        existing
+          ? fromExisting(existing)
+          : remoteDraft
+            ? { ...empty(PROVIDERS[PROVIDERS.length - 1]), ...remoteDraft, port: String(remoteDraft.port) }
+            : empty(),
+      );
       setTestResult(null);
     }
-  }, [remoteDialogOpen, editingRemoteId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [remoteDialogOpen, editingRemoteId, remoteDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));

@@ -5,6 +5,7 @@ import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
 import { PageHeader } from "../../app/page";
 import type { Profile, Role } from "../../lib/bindings";
+import { platformLabel } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -74,11 +75,7 @@ export function SettingsPage() {
             <span className="font-mono text-xs text-fg-muted">v{info.version}</span>
           </div>
         </div>
-        <InfoRow label="Platform">
-          <span className="font-mono">
-            {info.os} · {info.arch}
-          </span>
-        </InfoRow>
+        <InfoRow label="Platform">{platformLabel(info.os, info.arch)}</InfoRow>
         <InfoRow label="Supports">{info.supportedDatabases.map((db) => db.displayName).join(", ")}</InfoRow>
       </Section>
     </div>

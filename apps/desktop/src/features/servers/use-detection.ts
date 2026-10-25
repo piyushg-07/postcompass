@@ -1,38 +1,40 @@
 import { useQuery } from "@tanstack/react-query";
-import type { DetectionReport } from "../../lib/bindings";
+import type { DetectionReport, InstallSource, ManagedServer } from "../../lib/bindings";
 import { commands, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
 
-export type DetectionState =
-  | { status: "scanning" }
-  | { status: "done"; report: DetectionReport }
-  | { status: "error"; message: string };
+export const SOURCE_LABELS: Record<InstallSource, string> = {
+  system: "System",
+  homebrew: "Homebrew",
+  postgres_app: "Postgres.app",
+  docker: "Docker",
+  managed: "PostCompass",
+};
 
-/** Local PostgreSQL detection. Cached and shared between onboarding and the Servers page. */
+/** Scans this computer for PostgreSQL installed outside PostCompass. Read-only; rescan is explicit. */
 export function useDetection() {
   const query = useQuery({
     queryKey: queryKeys.detection("postgres"),
     queryFn: () => unwrap(commands.detectLocal("postgres")),
-    // Installs don't change on their own often; rescan is explicit
+    // Installs don't change on their own often
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
-
-  const state: DetectionState = query.isFetching
-    ? { status: "scanning" }
-    : query.error
-      ? { status: "error", message: query.error.message }
-      : query.data
-        ? { status: "done", report: query.data }
-        : { status: "scanning" };
-
-  return { state, rescan: () => void query.refetch() };
+  return {
+    report: query.data ?? null,
+    scanning: query.isFetching,
+    error: query.error,
+    rescan: () => void query.refetch(),
+  };
 }
 
-/** Found anything not managed by PostCompass. */
-export function foundExternal(report: DetectionReport) {
-  return (
-    report.installs.some((i) => i.source !== "managed") ||
-    report.servers.length > 0
-  );
+/** What the scan found that PostCompass doesn't already manage. */
+export function externalPostgres(report: DetectionReport, managed: ManagedServer[]) {
+  const managedPorts = new Set(managed.map((s) => s.port));
+  return {
+    /** Running servers you can connect to. */
+    servers: report.servers.filter((s) => !managedPorts.has(s.port)),
+    /** Installs on disk, running or not. */
+    installs: report.installs.filter((i) => i.source !== "managed"),
+  };
 }

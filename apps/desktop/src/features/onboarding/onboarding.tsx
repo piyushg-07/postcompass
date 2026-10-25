@@ -1,4 +1,4 @@
-import { Badge, Button, Input, RadioCard, RadioCardGroup, RadioChip, StatusBadge, Stepper, toast } from "@repo/ui";
+import { Badge, Button, Input, RadioCard, RadioCardGroup, RadioChip, Spinner, StatusBadge, Stepper, toast } from "@repo/ui";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,9 +18,11 @@ import { type ReactNode, useState } from "react";
 import appIcon from "../../../app-icon.svg";
 import postgresLogo from "../../assets/providers/postgresql.svg";
 import { useAppState } from "../../app/app-state";
+import { type RemoteDraft, useNavigation } from "../../app/navigation";
 import type { Experience, ManagedServer, Role, UseCase } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { InstallFlow } from "../servers/install-flow";
+import { externalPostgres, SOURCE_LABELS, useDetection } from "../servers/use-detection";
 import { useServerStatuses } from "../servers/use-server-statuses";
 
 const STEPS = ["Welcome", "About you", "Usage", "PostgreSQL", "Ready"];
@@ -59,6 +61,8 @@ export function Onboarding() {
     telemetry: false,
   });
   const [installed, setInstalled] = useState<ManagedServer | null>(null);
+  /** A PostgreSQL already on this computer the user chose to use; connected right after setup. */
+  const [existing, setExisting] = useState<RemoteDraft | null>(null);
   const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof Answers>(key: K, value: Answers[K]) => setAnswers((a) => ({ ...a, [key]: value }));
@@ -79,6 +83,8 @@ export function Onboarding() {
         }),
       );
       setState(state);
+      // Ask for its password straight away, in the add-connection dialog
+      if (existing) useNavigation.getState().openRemoteDialogWith(existing);
     } catch (e) {
       toast.error("Couldn't save your answers", { description: describeError(e).message });
       setSaving(false);
@@ -93,7 +99,7 @@ export function Onboarding() {
             <img src={appIcon} alt="" width={32} height={32} draggable={false} />
             <span className="flex items-baseline gap-px text-xl text-fg">
               <span className="font-brand font-bold tracking-tighter">Post</span>
-              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-0.5 font-serif text-[1.4rem] leading-none text-transparent italic">
+              <span className="bg-linear-to-r from-accent to-[#7ee7b8] bg-clip-text pr-0.5 font-serif text-[1.4rem] leading-none text-transparent italic">
                 Compass
               </span>
             </span>
@@ -151,9 +157,15 @@ export function Onboarding() {
           {step === 3 && (
             <PostgresStep
               installed={installed}
+              existing={existing}
               onInstalled={(server) => {
                 setInstalled(server);
+                setExisting(null);
                 void refresh();
+                next();
+              }}
+              onUseExisting={(server) => {
+                setExisting(server);
                 next();
               }}
               onBack={back}
@@ -165,6 +177,7 @@ export function Onboarding() {
             <ReadyStep
               answers={answers}
               server={installed ?? state.servers[0] ?? null}
+              existing={existing}
               saving={saving}
               onBack={back}
               onFinish={() => void finish()}
@@ -195,12 +208,16 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
 function PostgresStep({
   installed,
+  existing,
   onInstalled,
+  onUseExisting,
   onBack,
   onNext,
 }: {
   installed: ManagedServer | null;
+  existing: RemoteDraft | null;
   onInstalled: (server: ManagedServer) => void;
+  onUseExisting: (server: RemoteDraft) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -209,6 +226,9 @@ function PostgresStep({
   const ready = installed ?? state.servers[0] ?? null;
   const { statuses } = useServerStatuses(ready ? [ready.id] : []);
   const status = ready ? statuses[ready.id] : undefined;
+  const { report, scanning } = useDetection();
+  const found = report ? externalPostgres(report, state.servers) : null;
+  const [picked, setPicked] = useState<number | null>(existing?.port ?? null);
 
   if (installing) {
     return (
@@ -230,6 +250,71 @@ function PostgresStep({
     );
   }
 
+  // First scan still running: nothing to decide yet
+  if (!report && scanning) {
+    return (
+      <StepLayout title="Looking for PostgreSQL…" onBack={onBack}>
+        <ServerCard
+          title="Checking this computer"
+          detail="Looking for installed PostgreSQL and running servers."
+          aside={<Spinner className="size-4 text-fg-subtle" />}
+        />
+      </StepLayout>
+    );
+  }
+
+  // Already running on this computer: offer to use it
+  if (found && found.servers.length > 0) {
+    const selected = found.servers.find((s) => s.port === picked) ?? found.servers[0]!;
+    const describe = (server: (typeof found.servers)[number]) => {
+      const source = server.label ?? (server.source ? SOURCE_LABELS[server.source] : null);
+      return `${server.host}:${server.port}${source ? ` · ${source}` : ""}`;
+    };
+    return (
+      <StepLayout
+        title="PostgreSQL is already on this computer"
+        onBack={onBack}
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setInstalling(true)}>
+              Install a separate one
+            </Button>
+            <Button
+              variant="primary"
+              iconRight={<ArrowRight />}
+              onClick={() =>
+                onUseExisting({ name: `PostgreSQL on port ${selected.port}`, host: selected.host, port: selected.port })
+              }
+            >
+              Use this
+            </Button>
+          </>
+        }
+      >
+        {found.servers.length === 1 ? (
+          <ServerCard
+            title={`PostgreSQL on port ${selected.port}`}
+            detail={describe(selected)}
+            aside={<StatusBadge status="running" />}
+          />
+        ) : (
+          <RadioCardGroup value={String(selected.port)} onValueChange={(v) => setPicked(Number(v))}>
+            {found.servers.map((server) => (
+              <RadioCard
+                key={server.port}
+                value={String(server.port)}
+                title={`PostgreSQL on port ${server.port}`}
+                description={describe(server)}
+                icon={<img src={postgresLogo} alt="" draggable={false} />}
+              />
+            ))}
+          </RadioCardGroup>
+        )}
+      </StepLayout>
+    );
+  }
+
+  const stopped = found?.installs[0];
   return (
     <StepLayout
       title="Set up PostgreSQL"
@@ -246,6 +331,13 @@ function PostgresStep({
       }
     >
       <ServerCard title="PostgreSQL" detail="Runs privately on this computer. No admin rights or Docker." />
+      {/* Installed but not running, so there's nothing to connect to yet */}
+      {stopped && (
+        <p className="-mt-6 text-sm text-fg-muted">
+          We found PostgreSQL {stopped.version ?? ""} installed ({SOURCE_LABELS[stopped.source]}), but it isn't running.
+          Start it and connect later from Databases, or install one here.
+        </p>
+      )}
     </StepLayout>
   );
 }
@@ -334,9 +426,12 @@ function ReadyStep({
   saving,
   onBack,
   onFinish,
+  existing,
 }: {
   answers: Answers;
   server: ManagedServer | null;
+  /** Chosen PostgreSQL already on this computer; connected after setup. */
+  existing: RemoteDraft | null;
   saving: boolean;
   onBack: () => void;
   onFinish: () => void;
@@ -345,12 +440,12 @@ function ReadyStep({
   return (
     <div className="flex flex-col items-center gap-12 text-center">
       <div className="flex flex-col items-center gap-7">
-        <span className="flex size-20 items-center justify-center rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/20 to-accent/5 shadow-[0_0_64px] shadow-accent/20">
+        <span className="flex size-20 items-center justify-center rounded-2xl border border-accent/30 bg-linear-to-b from-accent/20 to-accent/5 shadow-[0_0_64px] shadow-accent/20">
           <Rocket className="size-9 text-accent" strokeWidth={1.75} />
         </span>
         <h1 className="flex flex-wrap items-baseline justify-center gap-x-2.5 text-4xl font-semibold tracking-tight">
           {name ? `${name}, you're ready to` : "You're ready to"}
-          <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[2.9rem] leading-none font-normal text-transparent italic">
+          <span className="bg-linear-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[2.9rem] leading-none font-normal text-transparent italic">
             explore
           </span>
         </h1>
@@ -360,7 +455,7 @@ function ReadyStep({
         <RecapTile
           icon={<img src={postgresLogo} alt="" className="size-4" draggable={false} />}
           label="PostgreSQL"
-          value={server ? "Ready" : "Not installed"}
+          value={server ? "Ready" : existing ? `Existing · port ${existing.port}` : "Not installed"}
         />
         <RecapTile icon={ROLES[answers.role].icon} label="Role" value={ROLES[answers.role].label} />
         <RecapTile icon={USE_CASES[answers.useCase].icon} label="Usage" value={USE_CASES[answers.useCase].label} />

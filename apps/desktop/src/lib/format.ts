@@ -20,6 +20,16 @@ export function formatCount(count: number | null | undefined) {
   }).format(count);
 }
 
+/** Rust's `std::env::consts` OS and arch → "Windows (x64)", "macOS (Apple Silicon)", … */
+export function platformLabel(os: string, arch: string) {
+  const name = { windows: "Windows", macos: "macOS", linux: "Linux" }[os] ?? os;
+  const chip =
+    os === "macos"
+      ? { aarch64: "Apple Silicon", x86_64: "Intel" }[arch]
+      : { x86_64: "x64", aarch64: "ARM64" }[arch];
+  return `${name} (${chip ?? arch})`;
+}
+
 export function formatMb(bytes: number) {
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
 }
