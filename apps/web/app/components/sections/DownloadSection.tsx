@@ -164,9 +164,62 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           })}
         </div>
 
+        <InstallCommand detected={detected} />
         <InstallGuide detected={detected} />
       </div>
     </section>
+  );
+}
+
+// ── One-command install ────────────────────────────────────────────────────────
+
+const SHELL_COMMAND = `curl -fsSL ${PRODUCT.website}/install.sh | sh`;
+const POWERSHELL_COMMAND = `irm ${PRODUCT.website}/install.ps1 | iex`;
+
+/** The terminal alternative to the installers: one line, latest version, no security prompts. */
+function InstallCommand({ detected }: { detected: Platform | null }) {
+  const [choice, setChoice] = useState<"windows" | "unix" | null>(null);
+  const shown = choice ?? (detected === "windows" ? "windows" : detected ? "unix" : "windows");
+  const options = [
+    { id: "windows", label: "Windows", Icon: WindowsIcon },
+    { id: "unix", label: "macOS & Linux", Icon: AppleIcon },
+  ] as const;
+
+  return (
+    <div className="mt-7 rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] px-6 py-5 max-md:px-4" data-reveal>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.95rem] font-semibold text-fg">Or install with one command</p>
+          <p className="mt-0.5 text-[0.85rem] text-fg-muted">
+            Always the latest version, with no security prompts. Paste it into{" "}
+            {shown === "windows" ? "PowerShell" : "Terminal"}.
+          </p>
+        </div>
+        <div role="tablist" aria-label="Operating system" className="flex w-fit gap-1 rounded-[10px] border border-[rgba(255,255,255,0.08)] p-1">
+          {options.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={shown === id}
+              onClick={() => setChoice(id)}
+              // The selected system is highlighted in the brand green, so it's clear which command is shown
+              className={`inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[0.85rem] font-medium [transition:background_0.15s_ease,color_0.15s_ease] ${
+                shown === id
+                  ? "bg-accent-muted text-accent-hover shadow-[inset_0_0_0_1px_rgba(52,211,153,0.4)]"
+                  : "text-fg-muted hover:text-fg"
+              }`}
+            >
+              <Icon size={13} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-4">
+        <CodeLine code={shown === "windows" ? POWERSHELL_COMMAND : SHELL_COMMAND} />
+      </div>
+    </div>
   );
 }
 
@@ -430,13 +483,33 @@ function Steps({ steps }: { steps: Step[] }) {
   );
 }
 
+/** Terminal-style colours for a shell command: programs green, flags purple, URLs blue, pipes dimmed. */
+function highlight(code: string) {
+  let program = true; // the first word, and the word after each "|", is the program being run
+  return code.split(" ").map((word, i) => {
+    let className = "text-fg";
+    if (word === "|") {
+      className = "text-fg-faint";
+      program = true;
+    } else if (program) {
+      className = "font-semibold text-accent-hover";
+      program = false;
+    } else if (word.startsWith("-")) className = "text-[#c792ea]";
+    else if (word.startsWith("http")) className = "text-[#7dd3fc]";
+    return (
+      <span key={i}>
+        {i > 0 && " "}
+        <span className={className}>{word}</span>
+      </span>
+    );
+  });
+}
+
 function CodeLine({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-2 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] py-1.5 pr-1.5 pl-3">
-      <code className="min-w-0 flex-1 overflow-x-auto font-mono text-[0.8rem] whitespace-nowrap text-fg">
-        {code}
-      </code>
+      <code className="min-w-0 flex-1 overflow-x-auto font-mono text-[0.8rem] whitespace-nowrap">{highlight(code)}</code>
       <button
         type="button"
         onClick={() => {

@@ -6,6 +6,7 @@ Key facts:
 
 - Price: free, no account, no paid tier. License: MIT.
 - Platforms: Windows 10/11 (x64), macOS (Apple Silicon and Intel), Linux x86_64 (AppImage, .deb, .rpm).
+- Install with one command: `curl -fsSL https://www.postcompass.cloud/install.sh | sh` (macOS, Linux) or `irm https://www.postcompass.cloud/install.ps1 | iex` (Windows PowerShell).
 - Local PostgreSQL: versions 14 to 18, official binaries verified by SHA-256, run as the current user, listening only on 127.0.0.1.
 - Detects PostgreSQL already installed or running on the computer and connects to it.
 - Cloud presets: AWS RDS / Aurora, Google Cloud SQL, Azure Database for PostgreSQL, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, Cloudflare Hyperdrive, or any PostgreSQL server. TLS modes: Off, Prefer, Require, Verify certificate.

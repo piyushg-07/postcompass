@@ -48,7 +48,19 @@ Run a local database in one click, connect to any cloud, and browse, edit and qu
 
 ## Download
 
-Get the latest installer from the **[Releases page](https://github.com/piyushg-07/postcompass/releases/latest)**.
+The quickest way is one command, which installs the latest version with no security prompts:
+
+```bash
+# macOS and Linux (Terminal)
+curl -fsSL https://www.postcompass.cloud/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://www.postcompass.cloud/install.ps1 | iex
+```
+
+Or get an installer from the **[Releases page](https://github.com/piyushg-07/postcompass/releases/latest)**.
 
 | Platform | File |
 | --- | --- |
