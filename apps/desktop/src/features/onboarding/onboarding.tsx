@@ -1,4 +1,4 @@
-import { Button, Field, Input, RadioCard, RadioCardGroup, Stepper, Switch, toast } from "@repo/ui";
+import { Button, Input, RadioCard, RadioCardGroup, RadioChip, Stepper, Switch, toast } from "@repo/ui";
 import {
   ArrowLeft,
   ArrowRight,
@@ -70,47 +70,54 @@ export function Onboarding() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full">
       {step > 0 && (
-        <header className="flex h-16 shrink-0 items-center justify-center border-b border-border px-8">
-          <Stepper steps={STEPS} current={step} />
-        </header>
+        <aside className="flex w-60 shrink-0 flex-col gap-10 border-r border-border bg-surface px-8 py-12">
+          <div className="flex items-center gap-2.5">
+            <img src={appIcon} alt="" width={32} height={32} draggable={false} />
+            <span className="flex items-baseline gap-px text-xl text-fg">
+              <span className="font-brand font-bold tracking-tighter">Post</span>
+              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-0.5 font-serif text-[1.4rem] leading-none text-transparent italic">
+                Compass
+              </span>
+            </span>
+          </div>
+          <Stepper steps={STEPS} current={step} orientation="vertical" />
+        </aside>
       )}
 
-      <div className="flex flex-1 justify-center overflow-y-auto px-8 py-14">
+      <div className="flex flex-1 justify-center overflow-y-auto px-12 py-14">
         <div className="my-auto flex w-full max-w-xl flex-col">
           {step === 0 && <WelcomeStep onNext={next} />}
 
           {step === 1 && (
-            <StepLayout title="Tell us about you" description="This helps PostCompass pick sensible defaults." onBack={back} onNext={next}>
-              <Field label="Your name (optional)">
-                {(p) => (
-                  <Input
-                    {...p}
-                    placeholder="What should we call you?"
-                    value={answers.name}
-                    onChange={(e) => set("name", e.target.value)}
-                    autoFocus
-                  />
-                )}
-              </Field>
+            <StepLayout title="A bit about you" onBack={back} onNext={next}>
+              <Group label="Your name" hint="Optional" htmlFor="onboarding-name">
+                <Input
+                  id="onboarding-name"
+                  placeholder="Your name"
+                  value={answers.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  autoFocus
+                />
+              </Group>
               <Group label="Your role">
-                <RadioCardGroup className="grid-cols-2" value={answers.role} onValueChange={(v) => set("role", v as Role)}>
-                  <RadioCard value="developer" title="Developer" icon={<Code2 />} />
-                  <RadioCard value="analyst" title="Data / Analyst" icon={<BarChart3 />} />
-                  <RadioCard value="dba" title="Database admin" icon={<ShieldCheck />} />
-                  <RadioCard value="student" title="Student" icon={<GraduationCap />} />
-                  <RadioCard value="other" title="Other" icon={<User />} />
+                <RadioCardGroup className="flex flex-wrap" value={answers.role} onValueChange={(v) => set("role", v as Role)}>
+                  <RadioChip value="developer" title="Developer" icon={<Code2 />} />
+                  <RadioChip value="analyst" title="Data / Analyst" icon={<BarChart3 />} />
+                  <RadioChip value="dba" title="Database admin" icon={<ShieldCheck />} />
+                  <RadioChip value="student" title="Student" icon={<GraduationCap />} />
+                  <RadioChip value="other" title="Other" icon={<User />} />
                 </RadioCardGroup>
               </Group>
-              <Group label="Experience with PostgreSQL">
+              <Group label="PostgreSQL experience">
                 <RadioCardGroup
                   className="grid-cols-3"
                   value={answers.experience}
                   onValueChange={(v) => set("experience", v as Experience)}
                 >
-                  <RadioCard value="new" title="New" description="Show me hints" />
-                  <RadioCard value="some" title="Some" description="I know the basics" />
+                  <RadioCard value="new" title="New" description="Show hints" />
+                  <RadioCard value="some" title="Some" description="Know the basics" />
                   <RadioCard value="expert" title="Expert" description="Keep it dense" />
                 </RadioCardGroup>
               </Group>
@@ -118,7 +125,7 @@ export function Onboarding() {
           )}
 
           {step === 2 && (
-            <StepLayout title="How will you use PostCompass?" description="You can do all of these later." onBack={back} onNext={next}>
+            <StepLayout title="How will you use PostCompass?" onBack={back} onNext={next}>
               <RadioCardGroup value={answers.useCase} onValueChange={(v) => set("useCase", v as UseCase)}>
                 <RadioCard value="local_dev" title="Local development" description="Run PostgreSQL on this computer while building apps." icon={<HardDrive />} />
                 <RadioCard value="remote" title="Manage remote servers" description="Connect to databases in the cloud or on a server." icon={<Globe />} />
@@ -283,14 +290,14 @@ function StepLayout({
   nextLoading?: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-10">
+    <section className="flex flex-col gap-12">
       <div className="flex flex-col gap-2.5">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">{title}</h1>
         {description && <p className="text-[15px] leading-relaxed text-fg-muted">{description}</p>}
       </div>
-      <div className="flex flex-col gap-8">{children}</div>
+      <div className="flex flex-col gap-11">{children}</div>
       {(onBack || onNext) && (
-        <div className="flex items-center justify-between border-t border-border pt-6">
+        <div className="flex items-center justify-between border-t border-border pt-8">
           {onBack ? (
             <Button variant="ghost" iconLeft={<ArrowLeft />} onClick={onBack}>
               Back
@@ -309,10 +316,13 @@ function StepLayout({
   );
 }
 
-function Group({ label, children }: { label: string; children: ReactNode }) {
+function Group({ label, hint, htmlFor, children }: { label: string; hint?: string; htmlFor?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3">
-      <span className="text-sm font-medium text-fg">{label}</span>
+    <div className="flex flex-col gap-4">
+      <label htmlFor={htmlFor} className="flex items-baseline gap-2 text-sm font-medium text-fg">
+        {label}
+        {hint && <span className="text-xs font-normal text-fg-subtle">{hint}</span>}
+      </label>
       {children}
     </div>
   );

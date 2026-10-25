@@ -1,8 +1,58 @@
 import { Check } from "lucide-react";
 import { cn } from "../lib/cn";
 
-/** Horizontal step indicator, e.g. for onboarding. `current` is 0-based. */
-export function Stepper({ steps, current, className }: { steps: string[]; current: number; className?: string }) {
+/** Step indicator, e.g. for onboarding. `current` is 0-based. */
+export function Stepper({
+  steps,
+  current,
+  orientation = "horizontal",
+  className,
+}: {
+  steps: string[];
+  current: number;
+  orientation?: "horizontal" | "vertical";
+  className?: string;
+}) {
+  if (orientation === "vertical") {
+    return (
+      <ol className={cn("flex flex-col", className)} aria-label={`Step ${current + 1} of ${steps.length}`}>
+        {steps.map((label, index) => {
+          const state = index < current ? "done" : index === current ? "current" : "upcoming";
+          return (
+            <li key={label} className="flex flex-col" aria-current={state === "current" ? "step" : undefined}>
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold transition-colors",
+                    state === "done" && "border-accent bg-accent text-accent-fg",
+                    state === "current" && "border-accent text-accent",
+                    state === "upcoming" && "border-border-strong text-fg-subtle",
+                  )}
+                >
+                  {state === "done" ? <Check className="size-3.5" strokeWidth={3} /> : index + 1}
+                </span>
+                <span
+                  className={cn(
+                    "text-sm transition-colors",
+                    state === "current" ? "font-medium text-fg" : state === "done" ? "text-fg-muted" : "text-fg-subtle",
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <span
+                  className={cn("my-1 ml-3 h-6 w-px", index < current ? "bg-accent/50" : "bg-border-strong")}
+                  aria-hidden
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
+
   return (
     <ol className={cn("flex items-center gap-3", className)} aria-label={`Step ${current + 1} of ${steps.length}`}>
       {steps.map((label, index) => {

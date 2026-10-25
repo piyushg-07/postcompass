@@ -37,6 +37,32 @@ export function RadioCardGroup({ className, ...props }: ComponentProps<typeof Ra
   return <RadioGroup.Root className={cn("grid gap-3", className)} {...props} />;
 }
 
+/** A compact selectable pill. Put several in a `RadioCardGroup` with `flex flex-wrap`. */
+export function RadioChip({
+  value,
+  title,
+  icon,
+  className,
+}: {
+  value: string;
+  title: ReactNode;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <RadioGroup.Item
+      value={value}
+      className={cn(
+        "inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm text-fg-muted transition-colors hover:border-border-strong hover:text-fg data-[state=checked]:border-accent/60 data-[state=checked]:bg-accent-muted data-[state=checked]:text-fg [&_svg]:size-4 data-[state=checked]:[&_svg]:text-accent",
+        className,
+      )}
+    >
+      {icon}
+      {title}
+    </RadioGroup.Item>
+  );
+}
+
 /** A large selectable card, used for onboarding choices. */
 export function RadioCard({
   value,
