@@ -1,7 +1,8 @@
 //! App state persisted as JSON in the app config folder: onboarding profile, managed servers, settings.
 //! Never contains secrets; passwords live in the OS keychain (see `secrets.rs`).
 
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 use pc_core::runtime::ManagedServer;
@@ -159,14 +160,23 @@ pub struct Store {
 
 impl Store {
     /// Loads state from disk. A corrupt file is kept as `state.json.corrupt` and replaced with defaults.
+    /// A file that exists but can't be read is moved aside too, so the first save can't overwrite it.
     pub fn load(path: PathBuf) -> Self {
-        let state = match std::fs::read_to_string(&path) {
-            Ok(text) => serde_json::from_str::<Stored>(&text).map(AppState::from).unwrap_or_else(|e| {
-                eprintln!("state file is invalid ({e}), starting fresh");
-                let _ = std::fs::rename(&path, path.with_extension("json.corrupt"));
+        let state = match read_retrying(&path) {
+            // Bytes, not a String: invalid UTF-8 is corruption, not a missing file
+            Ok(bytes) => serde_json::from_slice::<Stored>(&bytes)
+                .map(AppState::from)
+                .unwrap_or_else(|e| {
+                    eprintln!("state file is invalid ({e}), starting fresh");
+                    let _ = std::fs::rename(&path, path.with_extension("json.corrupt"));
+                    AppState::default()
+                }),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => AppState::default(),
+            Err(e) => {
+                eprintln!("state file could not be read ({e}), starting fresh");
+                let _ = std::fs::rename(&path, path.with_extension("json.unreadable"));
                 AppState::default()
-            }),
-            Err(_) => AppState::default(),
+            }
         };
         Self {
             path,
@@ -175,12 +185,12 @@ impl Store {
     }
 
     pub fn snapshot(&self) -> AppState {
-        self.state.read().expect("state lock poisoned").clone()
+        self.state.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Applies a change and writes it to disk atomically (temp file + rename).
     pub fn update<T>(&self, change: impl FnOnce(&mut AppState) -> T) -> CoreResult<T> {
-        let mut state = self.state.write().expect("state lock poisoned");
+        let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
         let mut next = state.clone();
         let result = change(&mut next);
         self.write(&next)?;
@@ -206,16 +216,39 @@ impl Store {
 
     fn write(&self, state: &AppState) -> CoreResult<()> {
         if let Some(dir) = self.path.parent() {
-            std::fs::create_dir_all(dir).map_err(|e| CoreError::io("could not create the config folder", e))?;
+            std::fs::create_dir_all(dir)
+                .map_err(|e| CoreError::io("could not create the config folder", e))?;
         }
         let persisted = Persisted {
             version: STATE_VERSION,
             state,
         };
-        let json = serde_json::to_vec_pretty(&persisted).map_err(|e| CoreError::Internal(e.to_string()))?;
+        let json = serde_json::to_vec_pretty(&persisted)
+            .map_err(|e| CoreError::Internal(e.to_string()))?;
         let tmp = self.path.with_extension("json.tmp");
-        std::fs::write(&tmp, json).map_err(|e| CoreError::io("could not save settings", e))?;
+        // Flushed before the rename, so a crash or power loss can't leave an empty state file behind
+        let mut file =
+            std::fs::File::create(&tmp).map_err(|e| CoreError::io("could not save settings", e))?;
+        file.write_all(&json)
+            .and_then(|()| file.sync_all())
+            .map_err(|e| CoreError::io("could not save settings", e))?;
+        drop(file);
         std::fs::rename(&tmp, &self.path).map_err(|e| CoreError::io("could not save settings", e))
+    }
+}
+
+/// Reads the state file, retrying briefly: on Windows, antivirus and OneDrive hold files open for
+/// a moment, and a failed read must not be mistaken for "no saved state".
+fn read_retrying(path: &Path) -> std::io::Result<Vec<u8>> {
+    let mut attempt = 0;
+    loop {
+        match std::fs::read(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound && attempt < 2 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            result => return result,
+        }
     }
 }
 
@@ -224,7 +257,8 @@ mod tests {
     use super::*;
 
     fn temp_path(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("postcompass-test-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("postcompass-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir.join("state.json")
     }
@@ -254,6 +288,15 @@ mod tests {
         std::fs::write(&path, "{ not json").unwrap();
         let store = Store::load(path.clone());
         assert!(store.snapshot().profile.is_none());
+        assert!(path.with_extension("json.corrupt").exists());
+    }
+
+    #[test]
+    fn non_utf8_file_is_set_aside_as_corrupt() {
+        let path = temp_path("non-utf8");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, [0xff, 0xfe, 0x00]).unwrap();
+        Store::load(path.clone());
         assert!(path.with_extension("json.corrupt").exists());
     }
 

@@ -29,34 +29,62 @@ impl Runtimes {
     }
 
     pub fn get(&self, kind: DatabaseKind) -> CoreResult<Arc<dyn LocalRuntime>> {
-        self.runtimes
-            .get(&kind)
-            .cloned()
-            .ok_or_else(|| CoreError::Unsupported(format!("{} cannot be installed locally yet", kind.display_name())))
+        self.runtimes.get(&kind).cloned().ok_or_else(|| {
+            CoreError::Unsupported(format!(
+                "{} cannot be installed locally yet",
+                kind.display_name()
+            ))
+        })
     }
 
     pub fn root_for(&self, kind: DatabaseKind) -> PathBuf {
         self.root.join(format!("{kind:?}").to_lowercase())
     }
 
-    /// Registers a new install. Fails if one is already running.
-    pub fn begin_install(&self) -> CoreResult<CancellationToken> {
-        let mut active = self.active_install.lock().expect("install lock poisoned");
+    /// Registers a new install. Fails if one is already running. The install ends when the guard is
+    /// dropped, so an install whose command is abandoned midway can't block every later one.
+    pub fn begin_install(&self) -> CoreResult<InstallGuard<'_>> {
+        let mut active = self
+            .active_install
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         if active.is_some() {
-            return Err(CoreError::InvalidInput("another install is already running".into()));
+            return Err(CoreError::InvalidInput(
+                "another install is already running".into(),
+            ));
         }
         let token = CancellationToken::new();
         *active = Some(token.clone());
-        Ok(token)
-    }
-
-    pub fn end_install(&self) {
-        *self.active_install.lock().expect("install lock poisoned") = None;
+        Ok(InstallGuard {
+            runtimes: self,
+            token,
+        })
     }
 
     pub fn cancel_install(&self) {
-        if let Some(token) = self.active_install.lock().expect("install lock poisoned").as_ref() {
+        if let Some(token) = self
+            .active_install
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
             token.cancel();
         }
+    }
+}
+
+/// The install in progress; see [`Runtimes::begin_install`].
+pub struct InstallGuard<'a> {
+    runtimes: &'a Runtimes,
+    pub token: CancellationToken,
+}
+
+impl Drop for InstallGuard<'_> {
+    fn drop(&mut self) {
+        *self
+            .runtimes
+            .active_install
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = None;
     }
 }

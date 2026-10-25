@@ -34,13 +34,14 @@ pub async fn install(request: InstallRequest, ctx: InstallContext) -> CoreResult
 
     let id = new_server_id();
     let server_dir = ctx.root_dir.join("servers").join(&id);
-    let custom_data = request.data_dir.as_ref().map(PathBuf::from);
-    let data_dir = custom_data.clone().unwrap_or_else(|| server_dir.join("data"));
+    let data_dir = custom_data_dir(&request).unwrap_or_else(|| server_dir.join("data"));
 
     let mut cleanup = Cleanup {
         server_dir: server_dir.clone(),
         data_dir: data_dir.clone(),
-        remove_data: true,
+        // Only once the checks prove the folder is missing or empty is anything in it ours to delete
+        remove_data: false,
+        recreate_data: data_dir.is_dir(),
         started: None,
     };
 
@@ -51,15 +52,44 @@ pub async fn install(request: InstallRequest, ctx: InstallContext) -> CoreResult
     result
 }
 
+/// The data folder the user chose, if any. A blank field means the default.
+fn custom_data_dir(request: &InstallRequest) -> Option<PathBuf> {
+    request
+        .data_dir
+        .as_deref()
+        .map(str::trim)
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from)
+}
+
 fn validate(request: &InstallRequest) -> CoreResult<()> {
     if !versions::is_known(&request.version) {
-        return Err(CoreError::InvalidInput(format!("unsupported version {}", request.version)));
+        return Err(CoreError::InvalidInput(format!(
+            "unsupported version {}",
+            request.version
+        )));
     }
     if request.port < 1024 {
-        return Err(CoreError::InvalidInput("choose a port of 1024 or higher".into()));
+        return Err(CoreError::InvalidInput(
+            "choose a port of 1024 or higher".into(),
+        ));
     }
     if request.password.len() < 8 {
-        return Err(CoreError::InvalidInput("password must be at least 8 characters".into()));
+        return Err(CoreError::InvalidInput(
+            "password must be at least 8 characters".into(),
+        ));
+    }
+    // initdb reads only the first line of the password file, so the server would get another password
+    if request.password.contains(['\n', '\r']) {
+        return Err(CoreError::InvalidInput(
+            "password can't contain line breaks".into(),
+        ));
+    }
+    // A relative folder would land wherever the app happened to be started from
+    if custom_data_dir(request).is_some_and(|dir| !dir.is_absolute()) {
+        return Err(CoreError::InvalidInput(
+            "choose a full path for the data folder".into(),
+        ));
     }
     if request.name.trim().is_empty() {
         return Err(CoreError::InvalidInput("server name is required".into()));
@@ -75,27 +105,31 @@ async fn run_steps(
     data_dir: &Path,
     cleanup: &mut Cleanup,
 ) -> CoreResult<ManagedServer> {
-    let triple = platform::target_triple()
-        .ok_or_else(|| CoreError::Unsupported("PostgreSQL install is not supported on this platform yet".into()))?;
+    let triple = platform::target_triple().ok_or_else(|| {
+        CoreError::Unsupported("PostgreSQL install is not supported on this platform yet".into())
+    })?;
 
     // 1. Check system
     ctx.step(InstallStep::CheckSystem, StepState::Active, None);
     let result = check_system(request, ctx, data_dir).await;
-    if let Err(e) = &result {
-        // The data folder was not created by us; never delete it during rollback
-        if matches!(e, CoreError::InvalidInput(_)) {
-            cleanup.remove_data = false;
-        }
-    }
     finish(ctx, InstallStep::CheckSystem, result, |_| None)?;
+    // The data folder is missing or empty, so whatever ends up in it from here on is ours
+    cleanup.remove_data = true;
 
     // 2–4. Download, verify, extract (skipped when these binaries are already installed)
     let bin_root = binaries_dir(&ctx.root_dir, &request.version);
     if bin_root.join(COMPLETE_MARKER).is_file() {
-        for step in [InstallStep::Download, InstallStep::Verify, InstallStep::Extract] {
+        for step in [
+            InstallStep::Download,
+            InstallStep::Verify,
+            InstallStep::Extract,
+        ] {
             ctx.step(step, StepState::Skipped, Some("Already installed".into()));
         }
-        ctx.log(format!("Using existing PostgreSQL {} binaries", request.version));
+        ctx.log(format!(
+            "Using existing PostgreSQL {} binaries",
+            request.version
+        ));
     } else {
         fetch_binaries(request, ctx, triple, &bin_root).await?;
     }
@@ -116,25 +150,41 @@ async fn run_steps(
         superuser: SUPERUSER.into(),
         bin_dir: bin_dir.to_string_lossy().into_owned(),
         data_dir: data_dir.to_string_lossy().into_owned(),
-        log_file: server_dir.join("postgres.log").to_string_lossy().into_owned(),
+        log_file: server_dir
+            .join("postgres.log")
+            .to_string_lossy()
+            .into_owned(),
         auto_start: request.auto_start,
         created_at: now_ms(),
     };
 
     // 6. Start
-    ctx.step(InstallStep::Start, StepState::Active, Some(format!("Port {}", request.port)));
+    ctx.step(
+        InstallStep::Start,
+        StepState::Active,
+        Some(format!("Port {}", request.port)),
+    );
     cleanup.started = Some(managed.clone());
     let result = server::start(&managed).await;
-    finish(ctx, InstallStep::Start, result, |_| Some(format!("Listening on 127.0.0.1:{}", request.port)))?;
+    finish(ctx, InstallStep::Start, result, |_| {
+        Some(format!("Listening on 127.0.0.1:{}", request.port))
+    })?;
 
     // 7. Connect
     ctx.step(InstallStep::Connect, StepState::Active, None);
     let result = server::query_version(&managed, &request.password).await;
-    let version = finish(ctx, InstallStep::Connect, result, |_| Some("Connected as postgres".into()))?;
+    let version = finish(ctx, InstallStep::Connect, result, |_| {
+        Some("Connected as postgres".into())
+    })?;
     ctx.log(version);
 
     // The first database, so there's somewhere to start besides `postgres`
-    if let Some(name) = request.database.as_deref().map(str::trim).filter(|n| !n.is_empty() && *n != "postgres") {
+    if let Some(name) = request
+        .database
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty() && *n != "postgres")
+    {
         ctx.log(format!("Creating database {name}"));
         // The server itself is fine either way, so a failure here doesn't undo the install
         if let Err(e) = server::create_database(&managed, &request.password, name).await {
@@ -163,12 +213,18 @@ fn finish<T>(
     result
 }
 
-async fn check_system(request: &InstallRequest, ctx: &InstallContext, data_dir: &Path) -> CoreResult<()> {
+async fn check_system(
+    request: &InstallRequest,
+    ctx: &InstallContext,
+    data_dir: &Path,
+) -> CoreResult<()> {
     tokio::fs::create_dir_all(&ctx.root_dir)
         .await
         .map_err(|e| CoreError::io("could not create the app data folder", e))?;
 
-    let available_mb = fs4::available_space(&ctx.root_dir).map(|b| b / 1_048_576).unwrap_or(u64::MAX);
+    let available_mb = fs4::available_space(&ctx.root_dir)
+        .map(|b| b / 1_048_576)
+        .unwrap_or(u64::MAX);
     ctx.log(format!("Free disk space: {available_mb} MB"));
     if available_mb < MIN_FREE_MB {
         return Err(CoreError::InsufficientDiskSpace {
@@ -182,7 +238,11 @@ async fn check_system(request: &InstallRequest, ctx: &InstallContext, data_dir: 
     }
     ctx.log(format!("Port {} is free", request.port));
 
-    if data_dir.exists() && std::fs::read_dir(data_dir).map(|mut d| d.next().is_some()).unwrap_or(true) {
+    if data_dir.exists()
+        && std::fs::read_dir(data_dir)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(true)
+    {
         return Err(CoreError::InvalidInput(format!(
             "the data folder {} is not empty",
             data_dir.display()
@@ -191,7 +251,12 @@ async fn check_system(request: &InstallRequest, ctx: &InstallContext, data_dir: 
     Ok(())
 }
 
-async fn fetch_binaries(request: &InstallRequest, ctx: &InstallContext, triple: &str, bin_root: &Path) -> CoreResult<()> {
+async fn fetch_binaries(
+    request: &InstallRequest,
+    ctx: &InstallContext,
+    triple: &str,
+    bin_root: &Path,
+) -> CoreResult<()> {
     let client = download::client()?;
     let downloads = ctx.root_dir.join("downloads");
     tokio::fs::create_dir_all(&downloads)
@@ -203,8 +268,11 @@ async fn fetch_binaries(request: &InstallRequest, ctx: &InstallContext, triple: 
     ctx.step(InstallStep::Download, StepState::Active, None);
     let result = async {
         let url = versions::archive_url(&request.version, triple);
-        let expected = versions::parse_checksum(&download::fetch_text(&client, &versions::checksum_url(&request.version, triple)).await?)
-            .ok_or_else(|| CoreError::Network("checksum file had no SHA-256 hash".into()))?;
+        let expected = versions::parse_checksum(
+            &download::fetch_text(&client, &versions::checksum_url(&request.version, triple))
+                .await?,
+        )
+        .ok_or_else(|| CoreError::Network("checksum file had no SHA-256 hash".into()))?;
         if archive.is_file() {
             ctx.log("Found a previous download, re-verifying it");
         } else {
@@ -228,7 +296,9 @@ async fn fetch_binaries(request: &InstallRequest, ctx: &InstallContext, triple: 
         Ok(())
     }
     .await;
-    finish(ctx, InstallStep::Verify, result, |_| Some("SHA-256 matches".into()))?;
+    finish(ctx, InstallStep::Verify, result, |_| {
+        Some("SHA-256 matches".into())
+    })?;
 
     // Extract
     ctx.step(InstallStep::Extract, StepState::Active, None);
@@ -242,13 +312,17 @@ async fn extract(archive: &Path, bin_root: &Path) -> CoreResult<()> {
     let archive = archive.to_path_buf();
     let bin_root = bin_root.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        let parent = bin_root.parent().ok_or_else(|| CoreError::Internal("invalid binaries folder".into()))?;
-        std::fs::create_dir_all(parent).map_err(|e| CoreError::io("could not create the binaries folder", e))?;
+        let parent = bin_root
+            .parent()
+            .ok_or_else(|| CoreError::Internal("invalid binaries folder".into()))?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| CoreError::io("could not create the binaries folder", e))?;
         let staging = parent.join(format!(".extract-{}", new_server_id()));
         let _ = std::fs::remove_dir_all(&bin_root);
 
         let result = (|| {
-            let file = std::fs::File::open(&archive).map_err(|e| CoreError::io("could not open the archive", e))?;
+            let file = std::fs::File::open(&archive)
+                .map_err(|e| CoreError::io("could not open the archive", e))?;
             tar::Archive::new(flate2::read::GzDecoder::new(file))
                 .unpack(&staging)
                 .map_err(|e| CoreError::io("could not extract the archive", e))?;
@@ -263,8 +337,10 @@ async fn extract(archive: &Path, bin_root: &Path) -> CoreResult<()> {
             if !top.join("bin").join(exe("pg_ctl")).is_file() {
                 return Err(CoreError::Internal("archive is missing pg_ctl".into()));
             }
-            std::fs::rename(&top, &bin_root).map_err(|e| CoreError::io("could not move the binaries into place", e))?;
-            std::fs::write(bin_root.join(COMPLETE_MARKER), b"").map_err(|e| CoreError::io("could not finalize the binaries", e))?;
+            std::fs::rename(&top, &bin_root)
+                .map_err(|e| CoreError::io("could not move the binaries into place", e))?;
+            std::fs::write(bin_root.join(COMPLETE_MARKER), b"")
+                .map_err(|e| CoreError::io("could not finalize the binaries", e))?;
             Ok(())
         })();
 
@@ -293,8 +369,21 @@ async fn initialize(
         let mut cmd = process::command(bin_dir.join(exe("initdb")));
         cmd.arg("-D")
             .arg(data_dir)
-            .args(["-U", SUPERUSER, "-A", "scram-sha-256", "-E", "UTF8", "--no-locale"])
-            .arg(format!("--pwfile={}", pwfile.display()));
+            .args([
+                "-U",
+                SUPERUSER,
+                "-A",
+                "scram-sha-256",
+                "-E",
+                "UTF8",
+                "--no-locale",
+            ])
+            .arg({
+                // Built as an OsString so a non-UTF-8 path survives (`display()` would mangle it)
+                let mut arg = std::ffi::OsString::from("--pwfile=");
+                arg.push(&pwfile);
+                arg
+            });
         process::run_logged(cmd, ctx).await
     }
     .await;
@@ -303,18 +392,24 @@ async fn initialize(
 
     // Bind to localhost only, on the chosen port
     let conf = data_dir.join("postgresql.conf");
-    let mut text = std::fs::read_to_string(&conf).map_err(|e| CoreError::io("could not read postgresql.conf", e))?;
+    let mut text = std::fs::read_to_string(&conf)
+        .map_err(|e| CoreError::io("could not read postgresql.conf", e))?;
     text.push_str(&format!(
         "\n# Added by PostCompass\nport = {}\nlisten_addresses = '127.0.0.1'\n",
         request.port
     ));
-    std::fs::write(&conf, text).map_err(|e| CoreError::io("could not update postgresql.conf", e))?;
-    ctx.log(format!("Configured to listen on 127.0.0.1:{}", request.port));
+    std::fs::write(&conf, text)
+        .map_err(|e| CoreError::io("could not update postgresql.conf", e))?;
+    ctx.log(format!(
+        "Configured to listen on 127.0.0.1:{}",
+        request.port
+    ));
     Ok(())
 }
 
 fn write_private(path: &Path, contents: &[u8]) -> CoreResult<()> {
-    std::fs::write(path, contents).map_err(|e| CoreError::io("could not write a temporary file", e))?;
+    std::fs::write(path, contents)
+        .map_err(|e| CoreError::io("could not write a temporary file", e))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -328,7 +423,10 @@ fn write_private(path: &Path, contents: &[u8]) -> CoreResult<()> {
 struct Cleanup {
     server_dir: PathBuf,
     data_dir: PathBuf,
+    /// Whether the data folder may be deleted: false until the checks show it held nothing of the user's.
     remove_data: bool,
+    /// The (empty) data folder existed before the install, so it is put back empty after a rollback.
+    recreate_data: bool,
     started: Option<ManagedServer>,
 }
 
@@ -342,6 +440,9 @@ impl Cleanup {
         tokio::time::sleep(Duration::from_millis(300)).await;
         if self.remove_data && !self.data_dir.starts_with(&self.server_dir) {
             let _ = tokio::fs::remove_dir_all(&self.data_dir).await;
+            if self.recreate_data {
+                let _ = tokio::fs::create_dir_all(&self.data_dir).await;
+            }
         }
         let _ = tokio::fs::remove_dir_all(&self.server_dir).await;
         ctx.log("Rolled back. Nothing was left behind except the cached download.");
@@ -349,11 +450,17 @@ impl Cleanup {
 }
 
 fn now_ms() -> f64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as f64).unwrap_or(0.0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as f64)
+        .unwrap_or(0.0)
 }
 
 /// Short, sortable, unique-enough id for local servers, e.g. `pg-lx3k9a2b-4f1c`.
 fn new_server_id() -> String {
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
     format!("pg-{:x}-{:04x}", nanos / 1_000_000, (nanos % 65_536) as u16)
 }

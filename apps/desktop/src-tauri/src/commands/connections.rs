@@ -3,7 +3,9 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use pc_core::driver::{ConnectionConfig, DatabaseInfo, DriverSession, SchemaInfo, TableInfo, TestResult};
+use pc_core::driver::{
+    ConnectionConfig, DatabaseInfo, DriverSession, SchemaInfo, TableInfo, TestResult,
+};
 use pc_core::{CoreError, DatabaseKind};
 use serde::Serialize;
 use specta::Type;
@@ -32,11 +34,12 @@ pub async fn open_server(
     id: String,
 ) -> Result<OpenedConnection, CoreError> {
     let server = store.server(&id)?;
+    let key = server.id.clone();
     let mut config = ConnectionConfig {
         host: server.host.clone(),
         port: server.port,
         user: server.superuser.clone(),
-        password: secrets::server_password(&server.id)?,
+        password: secrets::blocking(move || secrets::server_password(&key)).await?,
         database: "postgres".into(),
         ssl_mode: Default::default(), // local managed servers: prefer (try TLS, fall back)
         ca_cert: None,
@@ -68,7 +71,9 @@ pub async fn open_server(
         latency_ms: started.elapsed().as_millis().min(u32::MAX as u128) as u32,
         database: config.database.clone(),
     };
-    connections.insert(opened.connection_id.clone(), session).await;
+    connections
+        .insert(opened.connection_id.clone(), session)
+        .await;
     Ok(opened)
 }
 
@@ -85,7 +90,10 @@ pub async fn test_connection(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn close_connection(connections: State<'_, Connections>, connection_id: String) -> Result<(), CoreError> {
+pub async fn close_connection(
+    connections: State<'_, Connections>,
+    connection_id: String,
+) -> Result<(), CoreError> {
     connections.close(&connection_id).await;
     Ok(())
 }
@@ -106,7 +114,11 @@ pub async fn list_schemas(
     connection_id: String,
     database: String,
 ) -> Result<Vec<SchemaInfo>, CoreError> {
-    connections.get(&connection_id).await?.schemas(&database).await
+    connections
+        .get(&connection_id)
+        .await?
+        .schemas(&database)
+        .await
 }
 
 #[tauri::command]
@@ -117,5 +129,9 @@ pub async fn list_tables(
     database: String,
     schema: String,
 ) -> Result<Vec<TableInfo>, CoreError> {
-    connections.get(&connection_id).await?.tables(&database, &schema).await
+    connections
+        .get(&connection_id)
+        .await?
+        .tables(&database, &schema)
+        .await
 }

@@ -65,7 +65,10 @@ pub async fn read_text_file(path: String) -> Result<String, CoreError> {
         .map_err(|e| CoreError::io(format!("couldn't read {path}"), e))?;
     let text = String::from_utf8(bytes)
         .map_err(|_| CoreError::InvalidInput("the file isn't UTF-8 text".into()))?;
-    Ok(text.strip_prefix('\u{feff}').map(str::to_owned).unwrap_or(text))
+    Ok(text
+        .strip_prefix('\u{feff}')
+        .map(str::to_owned)
+        .unwrap_or(text))
 }
 
 /// Writes text to a file the user picked in a save dialog (data exports).

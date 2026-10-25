@@ -35,7 +35,11 @@ pub fn is_known(version: &str) -> bool {
 }
 
 pub fn major_of(version: &str) -> u32 {
-    version.split('.').next().and_then(|m| m.parse().ok()).unwrap_or(0)
+    version
+        .split('.')
+        .next()
+        .and_then(|m| m.parse().ok())
+        .unwrap_or(0)
 }
 
 /// Archive file name for this platform, e.g. `postgresql-18.6.0-x86_64-pc-windows-msvc.tar.gz`.

@@ -83,15 +83,26 @@ pub async fn execute_sql(
     let session = connections.get(&connection_id).await?;
     let max_rows = max_rows.unwrap_or(MAX_RESULT_ROWS).clamp(1, HARD_MAX_ROWS);
     let role = role.filter(|r| !r.is_empty());
-    let cancel = connections.begin_run(&run_id).await;
-    let result = session.execute(&database, &sql, max_rows, cancel, role.as_deref()).await;
-    connections.end_run(&run_id).await;
+    let run = connections.begin_run(&run_id).await;
+    let result = session
+        .execute(
+            &database,
+            &sql,
+            max_rows,
+            run.token.clone(),
+            role.as_deref(),
+        )
+        .await;
+    run.finish().await;
     result
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn cancel_sql(connections: State<'_, Connections>, run_id: String) -> Result<(), CoreError> {
+pub async fn cancel_sql(
+    connections: State<'_, Connections>,
+    run_id: String,
+) -> Result<(), CoreError> {
     connections.cancel_run(&run_id).await;
     Ok(())
 }
@@ -105,5 +116,9 @@ pub async fn explain_sql(
     sql: String,
     analyze: bool,
 ) -> Result<ExplainResult, CoreError> {
-    connections.get(&connection_id).await?.explain(&database, &sql, analyze).await
+    connections
+        .get(&connection_id)
+        .await?
+        .explain(&database, &sql, analyze)
+        .await
 }

@@ -1,6 +1,8 @@
 //! Running PostgreSQL tools as child processes.
 
+use std::collections::VecDeque;
 use std::ffi::OsStr;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 use std::process::{Output, Stdio};
 use std::time::Duration;
@@ -9,6 +11,11 @@ use pc_core::runtime::{CancellationToken, InstallContext};
 use pc_core::{CoreError, CoreResult};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+
+/// Output lines kept for the error message when a streamed command fails.
+const LAST_LINES: usize = 8;
+/// How much of a log file `tail_file` reads; server logs grow without bound.
+const TAIL_BYTES: u64 = 64 * 1024;
 
 /// A command that never opens a console window on Windows and is killed if dropped.
 pub fn command(program: impl AsRef<OsStr>) -> Command {
@@ -91,7 +98,7 @@ pub async fn run_streaming(
     }
     drop(tx);
 
-    let mut last_lines: Vec<String> = Vec::new();
+    let mut last_lines: VecDeque<String> = VecDeque::with_capacity(LAST_LINES);
     loop {
         tokio::select! {
             _ = cancel.cancelled() => {
@@ -101,10 +108,10 @@ pub async fn run_streaming(
             line = lines.recv() => match line {
                 Some(line) => {
                     log(line.clone());
-                    if last_lines.len() == 8 {
-                        last_lines.remove(0);
+                    if last_lines.len() == LAST_LINES {
+                        last_lines.pop_front();
                     }
-                    last_lines.push(line);
+                    last_lines.push_back(line);
                 }
                 None => break,
             },
@@ -123,7 +130,7 @@ pub async fn run_streaming(
             message: if last_lines.is_empty() {
                 format!("exited with {status}")
             } else {
-                last_lines.join("\n")
+                Vec::from(last_lines).join("\n")
             },
         })
     }
@@ -144,7 +151,11 @@ async fn forward_lines(
 fn first_meaningful(out: &Output) -> String {
     let stderr = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
-    let text = if stderr.trim().is_empty() { stdout } else { stderr };
+    let text = if stderr.trim().is_empty() {
+        stdout
+    } else {
+        stderr
+    };
     let text = text.trim();
     if text.is_empty() {
         format!("exited with {}", out.status)
@@ -153,12 +164,37 @@ fn first_meaningful(out: &Output) -> String {
     }
 }
 
-/// Last `n` lines of a text file, for surfacing server logs in error messages.
+/// Last `n` lines of a text file, for surfacing server logs in error messages. Reads only the end
+/// of the file, which can be large after a server has run for a long time.
 pub fn tail_file(path: &Path, n: usize) -> String {
-    std::fs::read_to_string(path)
+    let read_end = || -> std::io::Result<String> {
+        let mut file = std::fs::File::open(path)?;
+        let len = file.metadata()?.len();
+        file.seek(SeekFrom::Start(len.saturating_sub(TAIL_BYTES)))?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    };
+    read_end()
         .map(|text| {
             let lines: Vec<&str> = text.lines().collect();
             lines[lines.len().saturating_sub(n)..].join("\n")
         })
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tails_the_end_of_a_file() {
+        let path =
+            std::env::temp_dir().join(format!("postcompass-tail-{}.log", std::process::id()));
+        let text: String = (1..=10_000).map(|i| format!("line {i}\n")).collect();
+        std::fs::write(&path, text).unwrap();
+        assert_eq!(tail_file(&path, 2), "line 9999\nline 10000");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(tail_file(&path, 2), "");
+    }
 }

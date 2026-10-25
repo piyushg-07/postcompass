@@ -13,7 +13,9 @@ fn remote_entry(remote_id: &str) -> CoreResult<keyring::Entry> {
 }
 
 pub fn set_server_password(server_id: &str, password: &str) -> CoreResult<()> {
-    entry(server_id)?.set_password(password).map_err(secrets_error)
+    entry(server_id)?
+        .set_password(password)
+        .map_err(secrets_error)
 }
 
 pub fn server_password(server_id: &str) -> CoreResult<String> {
@@ -33,14 +35,20 @@ pub fn delete_server_password(server_id: &str) -> CoreResult<()> {
 // Remote connections
 
 pub fn set_remote_password(remote_id: &str, password: &str) -> CoreResult<()> {
-    remote_entry(remote_id)?.set_password(password).map_err(secrets_error)
+    remote_entry(remote_id)?
+        .set_password(password)
+        .map_err(secrets_error)
 }
 
 pub fn remote_password(remote_id: &str) -> CoreResult<String> {
-    remote_entry(remote_id)?.get_password().map_err(|e| match e {
-        keyring::Error::NoEntry => CoreError::NotFound("no saved password for this connection".into()),
-        other => secrets_error(other),
-    })
+    remote_entry(remote_id)?
+        .get_password()
+        .map_err(|e| match e {
+            keyring::Error::NoEntry => {
+                CoreError::NotFound("no saved password for this connection".into())
+            }
+            other => secrets_error(other),
+        })
 }
 
 pub fn delete_remote_password(remote_id: &str) -> CoreResult<()> {
@@ -48,6 +56,16 @@ pub fn delete_remote_password(remote_id: &str) -> CoreResult<()> {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(e) => Err(secrets_error(e)),
     }
+}
+
+/// Runs a keychain call off the async runtime: Secret Service (Linux) and the macOS Keychain can
+/// block for as long as an unlock prompt is open.
+pub async fn blocking<T: Send + 'static>(
+    call: impl FnOnce() -> CoreResult<T> + Send + 'static,
+) -> CoreResult<T> {
+    tokio::task::spawn_blocking(call)
+        .await
+        .map_err(|e| CoreError::Secrets(format!("keychain access failed: {e}")))?
 }
 
 fn secrets_error(e: keyring::Error) -> CoreError {

@@ -14,7 +14,8 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use pc_core::runtime::{
-    DetectionReport, InstallContext, InstallRequest, LocalRuntime, ManagedServer, RuntimeVersion, ServerStatus,
+    DetectionReport, InstallContext, InstallRequest, LocalRuntime, ManagedServer, RuntimeVersion,
+    ServerStatus,
 };
 use pc_core::{CoreResult, DatabaseKind};
 
@@ -38,7 +39,11 @@ impl LocalRuntime for PostgresRuntime {
         detect::detect(managed_root).await
     }
 
-    async fn install(&self, request: InstallRequest, ctx: InstallContext) -> CoreResult<ManagedServer> {
+    async fn install(
+        &self,
+        request: InstallRequest,
+        ctx: InstallContext,
+    ) -> CoreResult<ManagedServer> {
         install::install(request, ctx).await
     }
 

@@ -16,7 +16,9 @@ fn tool(server: &ManagedServer, name: &str) -> PathBuf {
 }
 
 pub async fn status(server: &ManagedServer) -> ServerStatus {
-    if !Path::new(&server.data_dir).join("PG_VERSION").is_file() || !tool(server, "pg_ctl").is_file() {
+    if !Path::new(&server.data_dir).join("PG_VERSION").is_file()
+        || !tool(server, "pg_ctl").is_file()
+    {
         return ServerStatus::Error;
     }
     let mut cmd = process::command(tool(server, "pg_ctl"));
@@ -90,7 +92,11 @@ pub async fn start(server: &ManagedServer) -> CoreResult<()> {
             let log = process::tail_file(Path::new(&server.log_file), 6);
             CoreError::ProcessFailed {
                 program,
-                message: if log.is_empty() { message } else { format!("{message}\n{log}") },
+                message: if log.is_empty() {
+                    message
+                } else {
+                    format!("{message}\n{log}")
+                },
             }
         }
         other => other,
@@ -121,22 +127,40 @@ async fn stop_with_mode(server: &ManagedServer, mode: &str) -> CoreResult<()> {
 /// Connects with `psql` and returns `SELECT version()`. Proves the server accepts the password.
 pub async fn query_version(server: &ManagedServer, password: &str) -> CoreResult<String> {
     let mut cmd = process::command(tool(server, "psql"));
-    cmd.args(["-h", &server.host, "-p", &server.port.to_string(), "-U", &server.superuser])
-        .args(["-d", "postgres", "-w", "-tAc", "select version()"])
-        .env("PGPASSWORD", password)
-        .env("PGCONNECT_TIMEOUT", "10");
+    cmd.args([
+        "-h",
+        &server.host,
+        "-p",
+        &server.port.to_string(),
+        "-U",
+        &server.superuser,
+    ])
+    .args(["-d", "postgres", "-w", "-tAc", "select version()"])
+    .env("PGPASSWORD", password)
+    .env("PGCONNECT_TIMEOUT", "10");
     process::run(cmd, Duration::from_secs(20)).await
 }
 
 /// `CREATE DATABASE "name"` as the superuser, through the bundled psql.
-pub async fn create_database(server: &ManagedServer, password: &str, name: &str) -> CoreResult<String> {
+pub async fn create_database(
+    server: &ManagedServer,
+    password: &str,
+    name: &str,
+) -> CoreResult<String> {
     let quoted = format!("\"{}\"", name.replace('"', "\"\""));
     let mut cmd = process::command(tool(server, "psql"));
-    cmd.args(["-h", &server.host, "-p", &server.port.to_string(), "-U", &server.superuser])
-        .args(["-d", "postgres", "-w", "-v", "ON_ERROR_STOP=1", "-c"])
-        .arg(format!("CREATE DATABASE {quoted}"))
-        .env("PGPASSWORD", password)
-        .env("PGCONNECT_TIMEOUT", "10");
+    cmd.args([
+        "-h",
+        &server.host,
+        "-p",
+        &server.port.to_string(),
+        "-U",
+        &server.superuser,
+    ])
+    .args(["-d", "postgres", "-w", "-v", "ON_ERROR_STOP=1", "-c"])
+    .arg(format!("CREATE DATABASE {quoted}"))
+    .env("PGPASSWORD", password)
+    .env("PGCONNECT_TIMEOUT", "10");
     process::run(cmd, Duration::from_secs(30)).await
 }
 
@@ -149,11 +173,23 @@ pub async fn uninstall(server: &ManagedServer, keep_data: bool) -> CoreResult<()
     tokio::time::sleep(Duration::from_millis(300)).await;
     let data_dir = Path::new(&server.data_dir);
     if data_dir.exists() {
+        // The paths come from the saved state; never delete a folder that isn't a PostgreSQL data
+        // directory (e.g. a hand-edited state file pointing at a home folder)
+        if !data_dir.join("PG_VERSION").is_file() {
+            return Err(CoreError::InvalidInput(format!(
+                "{} doesn't look like a PostgreSQL data folder, so it was not deleted",
+                data_dir.display()
+            )));
+        }
         tokio::fs::remove_dir_all(data_dir)
             .await
             .map_err(|e| CoreError::io("could not delete the data folder", e))?;
     }
+    // The log sits in `servers/<id>/`; only that per-server folder is removed, never another parent
     if let Some(server_dir) = Path::new(&server.log_file).parent()
+        && server_dir
+            .file_name()
+            .is_some_and(|name| name == server.id.as_str())
         && server_dir.exists()
     {
         tokio::fs::remove_dir_all(server_dir)

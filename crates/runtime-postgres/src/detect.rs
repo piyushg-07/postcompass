@@ -2,7 +2,7 @@
 //!
 //! Every check is time-boxed and runs concurrently; a failing check becomes a note, never an error.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -21,8 +21,12 @@ pub async fn detect(managed_root: Option<PathBuf>) -> DetectionReport {
     let started = Instant::now();
     let mut notes = Vec::new();
 
-    let (mut installs, servers, services, docker) =
-        tokio::join!(find_installs(managed_root.as_deref()), probe_ports(), list_services(), list_docker());
+    let (mut installs, servers, services, docker) = tokio::join!(
+        find_installs(managed_root.as_deref()),
+        probe_ports(),
+        list_services(),
+        list_docker()
+    );
 
     // Attach OS service info to installs, adding service-only installs we did not find on disk
     match services {
@@ -31,7 +35,8 @@ pub async fn detect(managed_root: Option<PathBuf>) -> DetectionReport {
     }
 
     // Label listening servers that come from Docker
-    let mut servers: BTreeMap<u16, ListeningServer> = servers.into_iter().map(|s| (s.port, s)).collect();
+    let mut servers: BTreeMap<u16, ListeningServer> =
+        servers.into_iter().map(|s| (s.port, s)).collect();
     match docker {
         Ok(containers) => {
             for (port, name) in containers {
@@ -59,16 +64,10 @@ pub async fn detect(managed_root: Option<PathBuf>) -> DetectionReport {
 /* ── Installs on disk ─────────────────────────────────────────────────── */
 
 async fn find_installs(managed_root: Option<&Path>) -> Vec<DetectedInstall> {
-    let mut dirs: Vec<PathBuf> = Vec::new();
-    for dir in candidate_bin_dirs() {
-        if !dir.join(exe("postgres")).is_file() {
-            continue;
-        }
-        let key = normalize(&dir);
-        if !dirs.iter().any(|d| normalize(d) == key) {
-            dirs.push(dir);
-        }
-    }
+    // Directory scans and canonicalize are blocking file system calls
+    let dirs = tokio::task::spawn_blocking(existing_bin_dirs)
+        .await
+        .unwrap_or_default();
 
     let tasks = dirs.into_iter().map(|dir| async move {
         let version = postgres_version(&dir).await;
@@ -87,8 +86,29 @@ async fn find_installs(managed_root: Option<&Path>) -> Vec<DetectedInstall> {
             service_running: None,
         })
         .collect();
-    installs.sort_by(|a, b| b.version.cmp(&a.version));
+    installs.sort_by_cached_key(|i| std::cmp::Reverse(version_key(i.version.as_deref())));
     installs
+}
+
+/// Candidate folders that hold a `postgres` binary, each install once.
+fn existing_bin_dirs() -> Vec<PathBuf> {
+    let mut seen = HashSet::new();
+    candidate_bin_dirs()
+        .into_iter()
+        .filter(|dir| dir.join(exe("postgres")).is_file() && seen.insert(normalize(dir)))
+        .collect()
+}
+
+/// Sort key comparing versions numerically, so `16.10` > `16.9` > `9.6`; unknown versions sort last.
+fn version_key(version: Option<&str>) -> Option<Vec<u32>> {
+    version.map(|v| {
+        v.split('.')
+            .map(|part| {
+                let digits: String = part.chars().take_while(char::is_ascii_digit).collect();
+                digits.parse().unwrap_or(0)
+            })
+            .collect()
+    })
 }
 
 /// PATH entries plus the usual install locations for each OS.
@@ -107,7 +127,11 @@ fn candidate_bin_dirs() -> Vec<PathBuf> {
             dirs.push(Path::new(&home).join(r"scoop\apps\postgresql\current\bin"));
         }
     } else if cfg!(target_os = "macos") {
-        dirs.extend(expand(Path::new("/Applications/Postgres.app/Contents/Versions"), "", "bin"));
+        dirs.extend(expand(
+            Path::new("/Applications/Postgres.app/Contents/Versions"),
+            "",
+            "bin",
+        ));
         for prefix in ["/opt/homebrew/opt", "/usr/local/opt"] {
             dirs.extend(expand(Path::new(prefix), "postgresql", "bin"));
         }
@@ -134,18 +158,29 @@ fn expand(parent: &Path, prefix: &str, suffix: &str) -> Vec<PathBuf> {
 
 fn normalize(path: &Path) -> String {
     let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let text = canonical.to_string_lossy().trim_end_matches(['/', '\\']).to_owned();
-    if cfg!(windows) { text.to_lowercase() } else { text }
+    let text = canonical
+        .to_string_lossy()
+        .trim_end_matches(['/', '\\'])
+        .to_owned();
+    if cfg!(windows) {
+        text.to_lowercase()
+    } else {
+        text
+    }
 }
 
 fn classify(dir: &Path, managed_root: Option<&Path>) -> InstallSource {
-    if managed_root.is_some_and(|root| normalize(dir).starts_with(&normalize(root))) {
+    // Compared as paths, so `runtimes2` doesn't count as inside `runtimes`
+    if managed_root.is_some_and(|root| Path::new(&normalize(dir)).starts_with(normalize(root))) {
         return InstallSource::Managed;
     }
     let text = dir.to_string_lossy();
     if text.contains("Postgres.app") {
         InstallSource::PostgresApp
-    } else if text.contains("homebrew") || text.contains("Cellar") || text.starts_with("/usr/local/opt") {
+    } else if text.contains("homebrew")
+        || text.contains("Cellar")
+        || text.starts_with("/usr/local/opt")
+    {
         InstallSource::Homebrew
     } else {
         InstallSource::System
@@ -164,13 +199,17 @@ pub(crate) fn parse_version(output: &str) -> Option<String> {
     output
         .split_whitespace()
         .find(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()))
-        .map(|t| t.trim_end_matches(|c: char| !c.is_ascii_alphanumeric()).to_owned())
+        .map(|t| {
+            t.trim_end_matches(|c: char| !c.is_ascii_alphanumeric())
+                .to_owned()
+        })
 }
 
 /* ── Listening servers ────────────────────────────────────────────────── */
 
 async fn probe_ports() -> Vec<ListeningServer> {
-    let probes = PROBE_PORTS.map(|port| async move { is_postgres("127.0.0.1", port).await.then_some(port) });
+    let probes =
+        PROBE_PORTS.map(|port| async move { is_postgres("127.0.0.1", port).await.then_some(port) });
     futures_util::future::join_all(probes)
         .await
         .into_iter()
@@ -245,7 +284,8 @@ async fn windows_services() -> Result<Vec<ServiceInfo>, String> {
     if out.is_empty() {
         return Ok(Vec::new());
     }
-    let value: serde_json::Value = serde_json::from_str(&out).map_err(|e| format!("Unexpected service list: {e}"))?;
+    let value: serde_json::Value =
+        serde_json::from_str(&out).map_err(|e| format!("Unexpected service list: {e}"))?;
     let items = match value {
         serde_json::Value::Array(items) => items,
         single => vec![single],
@@ -271,7 +311,9 @@ fn service_exe_dir(path_name: &str) -> Option<String> {
     } else {
         path_name.split(".exe").next()?
     };
-    Path::new(exe_path).parent().map(|p| p.to_string_lossy().into_owned())
+    Path::new(exe_path)
+        .parent()
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 /// Extracts the value after `-D`, quoted or not.
@@ -308,7 +350,14 @@ async fn brew_services() -> Result<Vec<ServiceInfo>, String> {
 
 async fn systemd_services() -> Result<Vec<ServiceInfo>, String> {
     let mut cmd = process::command("systemctl");
-    cmd.args(["list-units", "--type=service", "--all", "--no-legend", "--plain", "postgresql*"]);
+    cmd.args([
+        "list-units",
+        "--type=service",
+        "--all",
+        "--no-legend",
+        "--plain",
+        "postgresql*",
+    ]);
     let out = process::run(cmd, CMD_TIMEOUT)
         .await
         .map_err(|_| "systemd not available, skipped services".to_owned())?;
@@ -331,10 +380,12 @@ async fn systemd_services() -> Result<Vec<ServiceInfo>, String> {
 
 fn merge_services(installs: &mut Vec<DetectedInstall>, services: Vec<ServiceInfo>) {
     for service in services {
-        let by_dir = service
-            .bin_dir
-            .as_deref()
-            .and_then(|dir| installs.iter_mut().find(|i| normalize(Path::new(&i.bin_dir)) == normalize(Path::new(dir))));
+        let by_dir = service.bin_dir.as_deref().and_then(|dir| {
+            let key = normalize(Path::new(dir));
+            installs
+                .iter_mut()
+                .find(|i| normalize(Path::new(&i.bin_dir)) == key)
+        });
         // Without a path (brew/systemd), match on the major version in the service name
         let target = match by_dir {
             Some(install) => Some(install),
@@ -385,12 +436,18 @@ async fn list_docker() -> Result<Vec<(u16, String)>, String> {
         .lines()
         .filter_map(|line| {
             let mut cols = line.split('\t');
-            let (name, image, ports) = (cols.next()?, cols.next()?, cols.next().unwrap_or_default());
+            let (name, image, ports) =
+                (cols.next()?, cols.next()?, cols.next().unwrap_or_default());
             let image = image.to_lowercase();
             let looks_like_pg = ["postgres", "postgis", "timescale", "supabase/postgres"]
                 .iter()
                 .any(|needle| image.contains(needle));
-            looks_like_pg.then(|| docker_host_ports(ports).into_iter().map(|p| (p, name.to_owned())).collect::<Vec<_>>())
+            looks_like_pg.then(|| {
+                docker_host_ports(ports)
+                    .into_iter()
+                    .map(|p| (p, name.to_owned()))
+                    .collect::<Vec<_>>()
+            })
         })
         .flatten()
         .collect())
@@ -417,46 +474,116 @@ mod tests {
 
     #[test]
     fn parses_postgres_version_output() {
-        assert_eq!(parse_version("postgres (PostgreSQL) 16.4").as_deref(), Some("16.4"));
-        assert_eq!(parse_version("postgres (PostgreSQL) 18.6").as_deref(), Some("18.6"));
-        assert_eq!(parse_version("postgres (PostgreSQL) 17beta1").as_deref(), Some("17beta1"));
+        assert_eq!(
+            parse_version("postgres (PostgreSQL) 16.4").as_deref(),
+            Some("16.4")
+        );
+        assert_eq!(
+            parse_version("postgres (PostgreSQL) 18.6").as_deref(),
+            Some("18.6")
+        );
+        assert_eq!(
+            parse_version("postgres (PostgreSQL) 17beta1").as_deref(),
+            Some("17beta1")
+        );
         assert_eq!(parse_version("garbage"), None);
+    }
+
+    #[test]
+    fn sorts_versions_numerically() {
+        let mut versions = vec![
+            Some("9.6"),
+            None,
+            Some("16.9"),
+            Some("16.10"),
+            Some("17beta1"),
+        ];
+        versions.sort_by_cached_key(|v| std::cmp::Reverse(version_key(*v)));
+        assert_eq!(
+            versions,
+            vec![
+                Some("17beta1"),
+                Some("16.10"),
+                Some("16.9"),
+                Some("9.6"),
+                None
+            ]
+        );
+    }
+
+    #[test]
+    fn managed_root_is_matched_by_path() {
+        let root = std::env::temp_dir().join("pc-runtimes");
+        assert_eq!(
+            classify(&root.join("binaries/18/bin"), Some(&root)),
+            InstallSource::Managed
+        );
+        assert_ne!(
+            classify(&std::env::temp_dir().join("pc-runtimes2/bin"), Some(&root)),
+            InstallSource::Managed
+        );
     }
 
     #[test]
     fn parses_windows_service_path() {
         let path = r#""C:\Program Files\PostgreSQL\16\bin\pg_ctl.exe" runservice -N "postgresql-x64-16" -D "C:\Program Files\PostgreSQL\16\data" -w"#;
-        assert_eq!(service_exe_dir(path).as_deref(), Some(r"C:\Program Files\PostgreSQL\16\bin"));
-        assert_eq!(service_data_dir(path).as_deref(), Some(r"C:\Program Files\PostgreSQL\16\data"));
+        assert_eq!(
+            service_exe_dir(path).as_deref(),
+            Some(r"C:\Program Files\PostgreSQL\16\bin")
+        );
+        assert_eq!(
+            service_data_dir(path).as_deref(),
+            Some(r"C:\Program Files\PostgreSQL\16\data")
+        );
     }
 
     #[test]
     fn parses_docker_ports() {
-        assert_eq!(docker_host_ports("0.0.0.0:5433->5432/tcp, :::5433->5432/tcp"), vec![5433]);
+        assert_eq!(
+            docker_host_ports("0.0.0.0:5433->5432/tcp, :::5433->5432/tcp"),
+            vec![5433]
+        );
         assert_eq!(docker_host_ports("0.0.0.0:8080->80/tcp"), Vec::<u16>::new());
         assert_eq!(docker_host_ports(""), Vec::<u16>::new());
     }
 
     #[test]
     fn classifies_sources() {
-        assert_eq!(classify(Path::new("/opt/homebrew/opt/postgresql@16/bin"), None), InstallSource::Homebrew);
         assert_eq!(
-            classify(Path::new("/Applications/Postgres.app/Contents/Versions/16/bin"), None),
+            classify(Path::new("/opt/homebrew/opt/postgresql@16/bin"), None),
+            InstallSource::Homebrew
+        );
+        assert_eq!(
+            classify(
+                Path::new("/Applications/Postgres.app/Contents/Versions/16/bin"),
+                None
+            ),
             InstallSource::PostgresApp
         );
-        assert_eq!(classify(Path::new("/usr/lib/postgresql/16/bin"), None), InstallSource::System);
+        assert_eq!(
+            classify(Path::new("/usr/lib/postgresql/16/bin"), None),
+            InstallSource::System
+        );
     }
 
     #[tokio::test]
     async fn closed_port_is_not_postgres() {
         // Bind then drop to get a port that is almost certainly closed.
-        let port = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
         assert!(!is_postgres("127.0.0.1", port).await);
     }
 
     #[tokio::test]
     async fn detection_completes_quickly() {
         let report = detect(None).await;
-        assert!(report.duration_ms < 15_000, "detection took {}ms", report.duration_ms);
+        assert!(
+            report.duration_ms < 15_000,
+            "detection took {}ms",
+            report.duration_ms
+        );
     }
 }

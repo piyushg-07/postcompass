@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use pc_core::driver::{ConnectionConfig, SslMode as DriverSslMode};
+use pc_core::driver::ConnectionConfig;
 use pc_core::{CoreError, DatabaseKind};
 use serde::Deserialize;
 use tauri::State;
@@ -31,15 +31,6 @@ fn new_id() -> String {
     format!("rc-{now}-{rand:08x}")
 }
 
-fn to_driver_ssl(mode: SslMode) -> DriverSslMode {
-    match mode {
-        SslMode::Disable => DriverSslMode::Disable,
-        SslMode::Prefer => DriverSslMode::Prefer,
-        SslMode::Require => DriverSslMode::Require,
-        SslMode::VerifyFull => DriverSslMode::VerifyFull,
-    }
-}
-
 fn make_config(rc: &RemoteConnection, password: String) -> ConnectionConfig {
     ConnectionConfig {
         host: rc.host.clone(),
@@ -47,7 +38,7 @@ fn make_config(rc: &RemoteConnection, password: String) -> ConnectionConfig {
         user: rc.user.clone(),
         password,
         database: rc.database.clone(),
-        ssl_mode: to_driver_ssl(rc.ssl_mode),
+        ssl_mode: rc.ssl_mode,
         ca_cert: rc.ca_cert.clone(),
     }
 }
@@ -101,7 +92,11 @@ pub fn add_remote_connection(
             .as_millis() as f64,
     };
     secrets::set_remote_password(&id, &request.password)?;
-    store.update(|state| state.remote_connections.push(rc))?;
+    if let Err(e) = store.update(|state| state.remote_connections.push(rc)) {
+        // Don't leave a keychain entry behind for a connection that was never saved
+        let _ = secrets::delete_remote_password(&id);
+        return Err(e);
+    }
     Ok(store.snapshot())
 }
 
@@ -145,8 +140,12 @@ pub async fn remove_remote_connection(
 ) -> Result<AppState, CoreError> {
     store.remote_connection(&id)?;
     connections.close(&remote_connection_id(&id)).await;
-    secrets::delete_remote_password(&id)?;
     store.update(|state| state.remote_connections.retain(|r| r.id != id))?;
+    // Best effort, after the removal: a locked keyring mustn't make the connection impossible to remove
+    let key = id.clone();
+    if let Err(e) = secrets::blocking(move || secrets::delete_remote_password(&key)).await {
+        eprintln!("could not delete the saved password of connection {id}: {e}");
+    }
     Ok(store.snapshot())
 }
 
@@ -159,12 +158,14 @@ pub async fn open_remote_connection(
     id: String,
 ) -> Result<super::connections::OpenedConnection, CoreError> {
     let rc = store.remote_connection(&id)?;
-    let password = secrets::remote_password(&id)?;
+    let key = id.clone();
+    let password = secrets::blocking(move || secrets::remote_password(&key)).await?;
     let config = make_config(&rc, password);
 
     let driver = connections.driver(DatabaseKind::Postgres)?;
     let started = Instant::now();
-    let session: Arc<dyn pc_core::driver::DriverSession> = driver.connect(config.clone()).await?.into();
+    let session: Arc<dyn pc_core::driver::DriverSession> =
+        driver.connect(config.clone()).await?.into();
 
     let opened = super::connections::OpenedConnection {
         connection_id: remote_connection_id(&id),
@@ -172,7 +173,9 @@ pub async fn open_remote_connection(
         latency_ms: started.elapsed().as_millis().min(u32::MAX as u128) as u32,
         database: config.database.clone(),
     };
-    connections.insert(opened.connection_id.clone(), session).await;
+    connections
+        .insert(opened.connection_id.clone(), session)
+        .await;
     Ok(opened)
 }
 
@@ -186,7 +189,9 @@ pub async fn test_remote_connection(
     existing_id: Option<String>,
 ) -> Result<pc_core::driver::TestResult, CoreError> {
     let password = match existing_id {
-        Some(id) if request.password.is_empty() => secrets::remote_password(&id)?,
+        Some(id) if request.password.is_empty() => {
+            secrets::blocking(move || secrets::remote_password(&id)).await?
+        }
         _ => request.password,
     };
     let config = ConnectionConfig {
@@ -195,8 +200,11 @@ pub async fn test_remote_connection(
         user: request.user,
         password,
         database: request.database,
-        ssl_mode: to_driver_ssl(request.ssl_mode),
+        ssl_mode: request.ssl_mode,
         ca_cert: clean_path(request.ca_cert),
     };
-    connections.driver(DatabaseKind::Postgres)?.test_connection(&config).await
+    connections
+        .driver(DatabaseKind::Postgres)?
+        .test_connection(&config)
+        .await
 }

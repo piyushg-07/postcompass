@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use pc_core::runtime::{
-    DetectionReport, InstallContext, InstallEvent, InstallRequest, ManagedServer, RuntimeVersion, ServerStatus,
+    DetectionReport, InstallContext, InstallEvent, InstallRequest, ManagedServer, RuntimeVersion,
+    ServerStatus,
 };
 use pc_core::{CoreError, DatabaseKind};
 use serde::Serialize;
@@ -19,21 +20,30 @@ use crate::state::Store;
 /// Versions that can be installed locally, newest first.
 #[tauri::command]
 #[specta::specta]
-pub fn runtime_versions(runtimes: State<'_, Runtimes>, kind: DatabaseKind) -> Result<Vec<RuntimeVersion>, CoreError> {
+pub fn runtime_versions(
+    runtimes: State<'_, Runtimes>,
+    kind: DatabaseKind,
+) -> Result<Vec<RuntimeVersion>, CoreError> {
     let root = runtimes.root_for(kind);
     // Mark versions whose binaries are already here, so the UI can skip the "install" wording
     Ok(runtimes
         .get(kind)?
         .available_versions()
         .into_iter()
-        .map(|v| RuntimeVersion { installed: runtime_postgres::binaries_installed(&root, &v.version), ..v })
+        .map(|v| RuntimeVersion {
+            installed: runtime_postgres::binaries_installed(&root, &v.version),
+            ..v
+        })
         .collect())
 }
 
 /// Scans this machine for existing installs and running servers. Read-only.
 #[tauri::command]
 #[specta::specta]
-pub async fn detect_local(runtimes: State<'_, Runtimes>, kind: DatabaseKind) -> Result<DetectionReport, CoreError> {
+pub async fn detect_local(
+    runtimes: State<'_, Runtimes>,
+    kind: DatabaseKind,
+) -> Result<DetectionReport, CoreError> {
     let runtime = runtimes.get(kind)?;
     Ok(runtime.detect(Some(runtimes.root_for(kind))).await)
 }
@@ -64,26 +74,29 @@ pub async fn install_server(
     on_event: Channel<InstallEvent>,
 ) -> Result<ManagedServer, CoreError> {
     let runtime = runtimes.get(kind)?;
-    let cancel = runtimes.begin_install()?;
+    let install = runtimes.begin_install()?;
     let password = request.password.clone();
     let ctx = InstallContext {
         progress: Arc::new(move |event| {
             let _ = on_event.send(event);
         }),
-        cancel,
+        cancel: install.token.clone(),
         root_dir: runtimes.root_for(kind),
     };
 
     let result = runtime.install(request, ctx).await;
-    runtimes.end_install();
+    drop(install);
     let server = result?;
 
     // Persist; if that fails, don't leave an orphaned running server behind
-    let saved = secrets::set_server_password(&server.id, &password)
+    let id = server.id.clone();
+    let saved = secrets::blocking(move || secrets::set_server_password(&id, &password))
+        .await
         .and_then(|_| store.update(|state| state.servers.push(server.clone())));
     if let Err(e) = saved {
         let _ = runtime.uninstall(&server, false).await;
-        let _ = secrets::delete_server_password(&server.id);
+        let id = server.id.clone();
+        let _ = secrets::blocking(move || secrets::delete_server_password(&id)).await;
         return Err(e);
     }
     Ok(server)
@@ -174,8 +187,16 @@ pub async fn uninstall_server(
 ) -> Result<(), CoreError> {
     let server = store.server(&id)?;
     connections.close(&server_connection_id(&id)).await;
-    runtimes.get(server.kind)?.uninstall(&server, keep_data).await?;
-    secrets::delete_server_password(&id)?;
+    runtimes
+        .get(server.kind)?
+        .uninstall(&server, keep_data)
+        .await?;
     store.update(|state| state.servers.retain(|s| s.id != id))?;
+    // Last and best effort: the server is already gone, and failing here (e.g. a locked keyring)
+    // would leave a half-removed server the user could never remove again
+    let key = id.clone();
+    if let Err(e) = secrets::blocking(move || secrets::delete_server_password(&key)).await {
+        eprintln!("could not delete the saved password of server {id}: {e}");
+    }
     Ok(())
 }

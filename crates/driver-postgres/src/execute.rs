@@ -5,8 +5,8 @@ use std::time::Instant;
 use futures_util::StreamExt;
 use pc_core::driver::{CancellationToken, ExecuteResult, ExplainResult, SqlError, StatementResult};
 use pc_core::{CoreError, CoreResult};
-use tokio_postgres::error::ErrorPosition;
 use postgres_native_tls::MakeTlsConnector;
+use tokio_postgres::error::ErrorPosition;
 use tokio_postgres::{Client, NoTls, SimpleQueryMessage};
 
 use crate::map_error;
@@ -75,13 +75,18 @@ pub async fn execute(
                         if let Some(pending) = current.as_mut() {
                             pending.count += 1;
                             if pending.rows.len() < max_rows as usize {
-                                pending.rows.push((0..row.len()).map(|i| row.get(i).map(str::to_owned)).collect());
+                                pending.rows.push(
+                                    (0..row.len())
+                                        .map(|i| row.get(i).map(str::to_owned))
+                                        .collect(),
+                                );
                             } else {
                                 pending.truncated = true;
                             }
                         }
                     }
-                    Some(Ok(SimpleQueryMessage::CommandComplete(affected))) => match current.take() {
+                    Some(Ok(SimpleQueryMessage::CommandComplete(affected))) => match current.take()
+                    {
                         Some(pending) => statements.push(StatementResult::Rows {
                             columns: pending.columns,
                             rows: pending.rows,
@@ -114,14 +119,21 @@ pub async fn explain(client: &Client, sql: &str, analyze: bool) -> CoreResult<Ex
     if statement.is_empty() {
         return Err(CoreError::InvalidInput("nothing to explain".into()));
     }
-    let options = if analyze { "ANALYZE, BUFFERS, FORMAT JSON" } else { "FORMAT JSON" };
+    let options = if analyze {
+        "ANALYZE, BUFFERS, FORMAT JSON"
+    } else {
+        "FORMAT JSON"
+    };
     let explain_sql = format!("EXPLAIN ({options}) {statement}");
     // The simple protocol would run anything after a `;` too (even a COMMIT); preparing first
     // rejects more than one statement without running anything
     if let Err(e) = client.prepare(&explain_sql).await {
-        if e.as_db_error().is_some_and(|db| db.message().contains("multiple commands")) {
+        if e.as_db_error()
+            .is_some_and(|db| db.message().contains("multiple commands"))
+        {
             return Err(CoreError::InvalidInput(
-                "Explain works on one statement at a time. Select the one you want and try again.".into(),
+                "Explain works on one statement at a time. Select the one you want and try again."
+                    .into(),
             ));
         }
         return Err(map_error(e));

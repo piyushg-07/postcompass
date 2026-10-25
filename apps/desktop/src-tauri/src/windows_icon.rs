@@ -11,8 +11,8 @@ use std::ptr::null;
 use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, ICON_BIG, ICON_SMALL, IMAGE_ICON, LR_DEFAULTCOLOR, LoadImageW, SM_CXICON, SM_CXSMICON,
-    SM_CYICON, SM_CYSMICON, SendMessageW, WM_SETICON,
+    GetSystemMetrics, ICON_BIG, ICON_SMALL, IMAGE_ICON, LR_DEFAULTCOLOR, LoadImageW, SM_CXICON,
+    SM_CXSMICON, SM_CYICON, SM_CYSMICON, SendMessageW, WM_SETICON,
 };
 
 /// The id `tauri-build` gives the embedded application icon (`tauri_utils::platform::WINDOWS_APP_ICON_RESOURCE_ID`).

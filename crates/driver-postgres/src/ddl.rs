@@ -11,7 +11,11 @@ pub fn create_table(t: &TableStructure) -> String {
         .map(|c| {
             let mut line = format!("  {} {}", ident(&c.name), c.data_type);
             if let Some(identity) = &c.identity {
-                let kind = if identity == "always" { "ALWAYS" } else { "BY DEFAULT" };
+                let kind = if identity == "always" {
+                    "ALWAYS"
+                } else {
+                    "BY DEFAULT"
+                };
                 line.push_str(&format!(" GENERATED {kind} AS IDENTITY"));
             }
             if let Some(expr) = &c.generated {
@@ -29,16 +33,28 @@ pub fn create_table(t: &TableStructure) -> String {
 
     if let Some(pk) = t.indexes.iter().find(|i| i.is_primary) {
         let columns: Vec<String> = t.primary_key.iter().map(|c| ident(c)).collect();
-        lines.push(format!("  CONSTRAINT {} PRIMARY KEY ({})", ident(&pk.name), columns.join(", ")));
+        lines.push(format!(
+            "  CONSTRAINT {} PRIMARY KEY ({})",
+            ident(&pk.name),
+            columns.join(", ")
+        ));
     }
     for c in &t.constraints {
         lines.push(format!("  CONSTRAINT {} {}", ident(&c.name), c.definition));
     }
     for fk in &t.foreign_keys {
-        lines.push(format!("  CONSTRAINT {} {}", ident(&fk.name), fk.definition));
+        lines.push(format!(
+            "  CONSTRAINT {} {}",
+            ident(&fk.name),
+            fk.definition
+        ));
     }
 
-    let mut out = format!("CREATE TABLE {} (\n{}\n);", qualified(&t.schema, &t.name), lines.join(",\n"));
+    let mut out = format!(
+        "CREATE TABLE {} (\n{}\n);",
+        qualified(&t.schema, &t.name),
+        lines.join(",\n")
+    );
 
     // Indexes not already created by a primary key or constraint
     for index in &t.indexes {

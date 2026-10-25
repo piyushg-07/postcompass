@@ -179,7 +179,11 @@ impl InstallContext {
     }
 
     pub fn step(&self, step: InstallStep, state: StepState, detail: Option<String>) {
-        self.emit(InstallEvent::Step { step, state, detail });
+        self.emit(InstallEvent::Step {
+            step,
+            state,
+            detail,
+        });
     }
 
     pub fn log(&self, line: impl Into<String>) {
@@ -268,7 +272,11 @@ pub trait LocalRuntime: Send + Sync {
     async fn detect(&self, managed_root: Option<PathBuf>) -> DetectionReport;
 
     /// Installs, initializes and starts a new server. Cleans up after itself on failure or cancel.
-    async fn install(&self, request: InstallRequest, ctx: InstallContext) -> CoreResult<ManagedServer>;
+    async fn install(
+        &self,
+        request: InstallRequest,
+        ctx: InstallContext,
+    ) -> CoreResult<ManagedServer>;
 
     async fn start(&self, server: &ManagedServer) -> CoreResult<()>;
     async fn stop(&self, server: &ManagedServer) -> CoreResult<()>;

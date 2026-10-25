@@ -27,17 +27,38 @@ pub async fn fetch_text(client: &Client, url: &str) -> CoreResult<String> {
 }
 
 /// Downloads `url` to `dest`, resuming from an existing `dest.part` when the server supports it.
-pub async fn download(client: &Client, url: &str, dest: &Path, ctx: &InstallContext) -> CoreResult<()> {
+pub async fn download(
+    client: &Client,
+    url: &str,
+    dest: &Path,
+    ctx: &InstallContext,
+) -> CoreResult<()> {
     let part = dest.with_extension("part");
-    let existing = tokio::fs::metadata(&part).await.map(|m| m.len()).unwrap_or(0);
+    let mut existing = tokio::fs::metadata(&part)
+        .await
+        .map(|m| m.len())
+        .unwrap_or(0);
 
-    let mut request = client.get(url);
-    if existing > 0 {
-        request = request.header(header::RANGE, format!("bytes={existing}-"));
-    }
-    let response = tokio::select! {
-        _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
-        r = request.send() => r.map_err(network)?,
+    let response = loop {
+        let mut request = client.get(url);
+        if existing > 0 {
+            request = request.header(header::RANGE, format!("bytes={existing}-"));
+        }
+        let response = tokio::select! {
+            _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
+            r = request.send() => r.map_err(network)?,
+        };
+        // The `.part` file is already complete or larger than the archive (e.g. it changed upstream):
+        // resuming can never succeed, so start over instead of failing on every attempt
+        if existing > 0 && response.status() == StatusCode::RANGE_NOT_SATISFIABLE {
+            ctx.log("Previous partial download can't be resumed, starting over");
+            tokio::fs::remove_file(&part)
+                .await
+                .map_err(|e| CoreError::io("could not remove the partial download", e))?;
+            existing = 0;
+            continue;
+        }
+        break response;
     };
 
     let resumed = existing > 0 && response.status() == StatusCode::PARTIAL_CONTENT;
@@ -79,7 +100,9 @@ pub async fn download(client: &Client, url: &str, dest: &Path, ctx: &InstallCont
             report(ctx, downloaded, total);
         }
     }
-    file.flush().await.map_err(|e| CoreError::io("could not write download", e))?;
+    file.flush()
+        .await
+        .map_err(|e| CoreError::io("could not write download", e))?;
     drop(file);
     report(ctx, downloaded, total);
 
@@ -109,7 +132,8 @@ fn report(ctx: &InstallContext, downloaded: u64, total: Option<u64>) {
 pub async fn sha256_file(path: &Path) -> CoreResult<String> {
     let path = path.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        let mut file = std::fs::File::open(&path).map_err(|e| CoreError::io("could not open download", e))?;
+        let mut file =
+            std::fs::File::open(&path).map_err(|e| CoreError::io("could not open download", e))?;
         let mut hasher = Sha256::new();
         let mut buffer = vec![0u8; 256 * 1024];
         loop {

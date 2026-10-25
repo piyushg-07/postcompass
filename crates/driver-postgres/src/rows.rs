@@ -32,7 +32,12 @@ pub fn as_refs(params: &[Param]) -> Vec<&(dyn ToSql + Sync)> {
     params.iter().map(Param::as_sql).collect()
 }
 
-pub async fn rows(client: &Client, schema: &str, table: &str, request: RowsRequest) -> CoreResult<RowsPage> {
+pub async fn rows(
+    client: &Client,
+    schema: &str,
+    table: &str,
+    request: RowsRequest,
+) -> CoreResult<RowsPage> {
     let rel = introspect::relation(client, schema, table).await?;
     let (columns, primary_key) = tokio::try_join!(
         introspect::columns(client, rel.oid),
@@ -44,7 +49,10 @@ pub async fn rows(client: &Client, schema: &str, table: &str, request: RowsReque
     let order_sql = build_order(&columns, &primary_key, &request)?;
 
     let limit = request.limit.clamp(1, MAX_PAGE_SIZE);
-    let select_list: Vec<String> = columns.iter().map(|c| format!("{}::text", ident(&c.name))).collect();
+    let select_list: Vec<String> = columns
+        .iter()
+        .map(|c| format!("{}::text", ident(&c.name)))
+        .collect();
     let from = qualified(schema, table);
 
     let filter_params = params.len();
@@ -53,20 +61,14 @@ pub async fn rows(client: &Client, schema: &str, table: &str, request: RowsReque
     let page_sql = format!(
         // The table is aliased so ORDER BY reaches the real (typed) column, not the ::text output column
         "select {} from {from} as t{where_sql}{order_sql} limit ${} offset ${}",
-        if select_list.is_empty() { "null".into() } else { select_list.join(", ") },
+        if select_list.is_empty() {
+            "null".into()
+        } else {
+            select_list.join(", ")
+        },
         filter_params + 1,
         filter_params + 2,
     );
-
-    let mut rows: Vec<Vec<Option<String>>> = client
-        .query(page_sql.as_str(), &as_refs(&params))
-        .await
-        .map_err(map_error)?
-        .iter()
-        .map(|row| (0..columns.len()).map(|i| row.get::<_, Option<String>>(i)).collect())
-        .collect();
-    let has_more = rows.len() > limit as usize;
-    rows.truncate(limit as usize);
 
     // Total: exact for small tables (or any filtered small table), estimated for large unfiltered ones
     let estimate = rel.row_estimate;
@@ -74,29 +76,57 @@ pub async fn rows(client: &Client, schema: &str, table: &str, request: RowsReque
     // counted, but only up to the limit: a huge one costs at most that many rows per page
     let trusted = matches!(rel.kind, TableKind::Table) && estimate >= 0.0;
     let small = estimate < EXACT_COUNT_LIMIT; // -1 (never analyzed) counts as small
-    let (total, total_is_estimate) = if !trusted {
-        let count_sql = format!(
-            "select count(*)::float8 from (select 1 from {from}{where_sql} limit {}) as capped",
-            EXACT_COUNT_LIMIT as u64 + 1
-        );
-        let row = client
-            .query_one(count_sql.as_str(), &as_refs(&params[..filter_params]))
-            .await
-            .map_err(map_error)?;
-        let counted: f64 = row.get(0);
-        if counted > EXACT_COUNT_LIMIT { (None, false) } else { (Some(counted), false) }
-    } else if small {
-        let count_sql = format!("select count(*)::float8 from {from}{where_sql}");
-        let row = client
-            .query_one(count_sql.as_str(), &as_refs(&params[..filter_params]))
-            .await
-            .map_err(map_error)?;
-        (Some(row.get::<_, f64>(0)), false)
-    } else if request.filters.is_empty() {
-        (Some(estimate), true)
-    } else {
-        (None, false)
+    let filter_refs = as_refs(&params[..filter_params]);
+    let count = async {
+        let exact = |count_sql: String| async move {
+            let row = client
+                .query_one(count_sql.as_str(), &filter_refs)
+                .await
+                .map_err(map_error)?;
+            Ok::<f64, CoreError>(row.get(0))
+        };
+        if !trusted {
+            let counted = exact(format!(
+                "select count(*)::float8 from (select 1 from {from}{where_sql} limit {}) as capped",
+                EXACT_COUNT_LIMIT as u64 + 1
+            ))
+            .await?;
+            Ok::<_, CoreError>(if counted > EXACT_COUNT_LIMIT {
+                (None, false)
+            } else {
+                (Some(counted), false)
+            })
+        } else if small {
+            Ok((
+                Some(exact(format!("select count(*)::float8 from {from}{where_sql}")).await?),
+                false,
+            ))
+        } else if request.filters.is_empty() {
+            Ok((Some(estimate), true))
+        } else {
+            Ok((None, false))
+        }
     };
+    // Both queries are sent at once on the connection instead of waiting for each other
+    let page_refs = as_refs(&params);
+    let page = async {
+        client
+            .query(page_sql.as_str(), &page_refs)
+            .await
+            .map_err(map_error)
+    };
+    let (page_rows, (total, total_is_estimate)) = tokio::try_join!(page, count)?;
+
+    let mut rows: Vec<Vec<Option<String>>> = page_rows
+        .iter()
+        .map(|row| {
+            (0..columns.len())
+                .map(|i| row.get::<_, Option<String>>(i))
+                .collect()
+        })
+        .collect();
+    let has_more = rows.len() > limit as usize;
+    rows.truncate(limit as usize);
 
     let editable = matches!(rel.kind, TableKind::Table | TableKind::PartitionedTable);
     Ok(RowsPage {
@@ -116,7 +146,11 @@ fn column<'a>(columns: &'a [ColumnInfo], name: &str) -> CoreResult<&'a ColumnInf
         .ok_or_else(|| CoreError::InvalidInput(format!("unknown column {name}")))
 }
 
-fn build_where(columns: &[ColumnInfo], request: &RowsRequest, params: &mut Vec<Param>) -> CoreResult<String> {
+fn build_where(
+    columns: &[ColumnInfo],
+    request: &RowsRequest,
+    params: &mut Vec<Param>,
+) -> CoreResult<String> {
     let mut clauses = Vec::new();
     for filter in &request.filters {
         let col = column(columns, &filter.column)?;
@@ -127,7 +161,10 @@ fn build_where(columns: &[ColumnInfo], request: &RowsRequest, params: &mut Vec<P
         );
         let value = filter.value.clone();
         if needs_value && value.is_none() {
-            return Err(CoreError::InvalidInput(format!("filter on {} needs a value", col.name)));
+            return Err(CoreError::InvalidInput(format!(
+                "filter on {} needs a value",
+                col.name
+            )));
         }
 
         let mut bind = |v: Option<String>| {
@@ -182,7 +219,11 @@ fn build_where(columns: &[ColumnInfo], request: &RowsRequest, params: &mut Vec<P
     })
 }
 
-fn build_order(columns: &[ColumnInfo], primary_key: &[String], request: &RowsRequest) -> CoreResult<String> {
+fn build_order(
+    columns: &[ColumnInfo],
+    primary_key: &[String],
+    request: &RowsRequest,
+) -> CoreResult<String> {
     let mut parts = Vec::new();
     for sort in &request.sort {
         let col = column(columns, &sort.column)?;

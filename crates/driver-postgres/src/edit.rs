@@ -27,7 +27,12 @@ pub enum ChangeKind {
     Delete,
 }
 
-pub async fn build(client: &Client, schema: &str, table: &str, changes: &[RowChange]) -> CoreResult<Vec<Statement>> {
+pub async fn build(
+    client: &Client,
+    schema: &str,
+    table: &str,
+    changes: &[RowChange],
+) -> CoreResult<Vec<Statement>> {
     let rel = introspect::relation(client, schema, table).await?;
     let (columns, primary_key) = tokio::try_join!(
         introspect::columns(client, rel.oid),
@@ -40,7 +45,12 @@ pub async fn build(client: &Client, schema: &str, table: &str, changes: &[RowCha
         .collect()
 }
 
-fn statement(target: &str, columns: &[ColumnInfo], primary_key: &[String], change: &RowChange) -> CoreResult<Statement> {
+fn statement(
+    target: &str,
+    columns: &[ColumnInfo],
+    primary_key: &[String],
+    change: &RowChange,
+) -> CoreResult<Statement> {
     let mut params = Vec::new();
     let mut bind = |col: &ColumnInfo, value: &Option<String>| -> CoreResult<(String, String)> {
         params.push(Param::Text(value.clone()));
@@ -74,7 +84,11 @@ fn statement(target: &str, columns: &[ColumnInfo], primary_key: &[String], chang
                 shown_values.push(shown);
             }
             Ok(Statement {
-                sql: format!("insert into {target} ({}) values ({})", names.join(", "), sql_values.join(", ")),
+                sql: format!(
+                    "insert into {target} ({}) values ({})",
+                    names.join(", "),
+                    sql_values.join(", ")
+                ),
                 display: format!(
                     "INSERT INTO {target} ({}) VALUES ({});",
                     names.join(", "),
@@ -87,7 +101,9 @@ fn statement(target: &str, columns: &[ColumnInfo], primary_key: &[String], chang
         }
         RowChange::Update { key, values } => {
             if values.is_empty() {
-                return Err(CoreError::InvalidInput("an update needs at least one value".into()));
+                return Err(CoreError::InvalidInput(
+                    "an update needs at least one value".into(),
+                ));
             }
             check_key(primary_key, key)?;
             let mut sets = Vec::new();
@@ -101,7 +117,10 @@ fn statement(target: &str, columns: &[ColumnInfo], primary_key: &[String], chang
             let (where_sql, where_shown) = key_clause(columns, key, &mut bind)?;
             Ok(Statement {
                 sql: format!("update {target} set {} where {where_sql}", sets.join(", ")),
-                display: format!("UPDATE {target} SET {} WHERE {where_shown};", shown_sets.join(", ")),
+                display: format!(
+                    "UPDATE {target} SET {} WHERE {where_shown};",
+                    shown_sets.join(", ")
+                ),
                 params,
                 expect_one: true,
                 kind: ChangeKind::Update,
@@ -149,7 +168,9 @@ fn check_key(primary_key: &[String], key: &[ColumnValue]) -> CoreResult<()> {
     given.sort_unstable();
     expected.sort_unstable();
     if given != expected || key.iter().any(|k| k.value.is_none()) {
-        return Err(CoreError::InvalidInput("rows must be identified by their full primary key".into()));
+        return Err(CoreError::InvalidInput(
+            "rows must be identified by their full primary key".into(),
+        ));
     }
     Ok(())
 }
@@ -193,9 +214,10 @@ pub async fn apply(client: &mut Client, statements: &[Statement]) -> CoreResult<
 
 fn prefix(index: usize, error: CoreError) -> CoreError {
     match error {
-        CoreError::QueryFailed(msg) => {
-            CoreError::QueryFailed(format!("change {} failed: {msg}. Nothing was saved.", index + 1))
-        }
+        CoreError::QueryFailed(msg) => CoreError::QueryFailed(format!(
+            "change {} failed: {msg}. Nothing was saved.",
+            index + 1
+        )),
         other => other,
     }
 }
@@ -260,17 +282,33 @@ mod tests {
             },
         )
         .unwrap();
-        assert_eq!(stmt.sql, "insert into t (name) values (cast($1::text as text))");
+        assert_eq!(
+            stmt.sql,
+            "insert into t (name) values (cast($1::text as text))"
+        );
         assert_eq!(stmt.display, "INSERT INTO t (name) VALUES (NULL);");
 
-        let empty = statement("t", &columns, &["id".into()], &RowChange::Insert { values: vec![] }).unwrap();
+        let empty = statement(
+            "t",
+            &columns,
+            &["id".into()],
+            &RowChange::Insert { values: vec![] },
+        )
+        .unwrap();
         assert_eq!(empty.sql, "insert into t default values");
     }
 
     #[test]
     fn requires_full_primary_key_for_deletes() {
         let columns = vec![col("id", "integer"), col("name", "text")];
-        let no_pk = statement("t", &columns, &[], &RowChange::Delete { key: vec![cv("id", Some("1"))] });
+        let no_pk = statement(
+            "t",
+            &columns,
+            &[],
+            &RowChange::Delete {
+                key: vec![cv("id", Some("1"))],
+            },
+        );
         assert!(no_pk.is_err());
         let wrong_key = statement(
             "t",
