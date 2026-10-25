@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { PRODUCT } from "@/config/product";
-import { SEO_CONFIG, getJsonLdStructuredData } from "@/config/seo";
+import { AUTHOR, SEO_CONFIG, getJsonLdStructuredData, toJsonLd } from "@/config/seo";
 import ScrollReveal from "@/components/layout/ScrollReveal";
 
 // The site's fonts, self-hosted and preloaded by next/font so text renders right away without a layout jump
@@ -34,24 +34,17 @@ export const metadata: Metadata = {
   description: SEO_CONFIG.description,
   applicationName: PRODUCT.name,
   keywords: [...SEO_CONFIG.keywords],
-  authors: [...SEO_CONFIG.authors],
-  creator: SEO_CONFIG.creator,
-  publisher: SEO_CONFIG.publisher,
+  authors: [{ name: AUTHOR.name, url: AUTHOR.url }],
+  creator: AUTHOR.name,
+  publisher: AUTHOR.name,
   alternates: {
     canonical: "/",
+    // Plain-text summaries for AI assistants (https://llmstxt.org)
+    types: { "text/plain": "/llms.txt" },
   },
-  icons: {
-    icon: [
-      { url: "/icon.png", sizes: "128x128", type: "image/png" },
-      { url: "/logo.png", sizes: "128x128", type: "image/png" },
-    ],
-    apple: [
-      { url: "/apple-icon.png", sizes: "128x128", type: "image/png" },
-      { url: "/logo.png", sizes: "128x128", type: "image/png" },
-    ],
-    shortcut: "/logo.png",
-  },
+  // app/icon.png and app/apple-icon.png are picked up automatically
   manifest: "/manifest.webmanifest",
+  // The share image comes from app/opengraph-image.tsx, which Next.js wires up for every page
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -59,22 +52,11 @@ export const metadata: Metadata = {
     siteName: SEO_CONFIG.siteName,
     title: SEO_CONFIG.titleDefault,
     description: SEO_CONFIG.description,
-    images: [
-      {
-        url: SEO_CONFIG.ogImage.url,
-        width: SEO_CONFIG.ogImage.width,
-        height: SEO_CONFIG.ogImage.height,
-        alt: SEO_CONFIG.ogImage.alt,
-        type: SEO_CONFIG.ogImage.type,
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SEO_CONFIG.titleDefault,
     description: SEO_CONFIG.description,
-    creator: SEO_CONFIG.twitterHandle,
-    images: [SEO_CONFIG.ogImage.url],
   },
   robots: {
     index: true,
@@ -104,7 +86,7 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
         />
       </head>
       <body suppressHydrationWarning>

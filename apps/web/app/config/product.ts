@@ -9,8 +9,22 @@ export const PRODUCT = {
   version: "0.1.0",
   license: "MIT",
   github: "https://github.com/piyushg-07/postcompass",
-  website: "https://postcompass.dev",
+  website: "https://www.postcompass.cloud",
 } as const;
+
+/** Cloud providers with presets in the app's connection dialog. Keep in sync with the desktop app. */
+export const CLOUD_PROVIDERS = [
+  "AWS RDS / Aurora",
+  "Google Cloud SQL",
+  "Azure Database for PostgreSQL",
+  "Alibaba Cloud",
+  "Oracle Cloud",
+  "DigitalOcean",
+  "Heroku Postgres",
+  "Neon",
+  "Railway",
+  "Render",
+] as const;
 
 export const RELEASES_URL = `${PRODUCT.github}/releases`;
 export const LATEST_RELEASE_URL = `${PRODUCT.github}/releases/latest`;
@@ -126,7 +140,7 @@ export const FAQ_ITEMS = [
   {
     question: "What can I connect to?",
     answer:
-      "Local PostgreSQL 14 to 18, servers already on your machine, and any remote PostgreSQL, with presets for AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and more.",
+      "Local PostgreSQL 14 to 18, PostgreSQL already running on your computer, and any remote PostgreSQL server, with presets for AWS RDS, Google Cloud SQL, Azure, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku, Neon, Railway and Render.",
   },
   {
     question: "Is it safe to use on a production database?",
@@ -137,6 +151,16 @@ export const FAQ_ITEMS = [
     question: "Is my data private?",
     answer:
       "Yes. There's no telemetry, passwords live in your system keychain, and local servers only listen on 127.0.0.1.",
+  },
+  {
+    question: "Which operating systems does PostCompass support?",
+    answer:
+      "Windows 10 and 11 (64-bit), macOS on Apple Silicon and Intel, and 64-bit Linux as an AppImage, .deb or .rpm. PostCompass picks the right PostgreSQL build for your system automatically.",
+  },
+  {
+    question: "How is PostCompass different from pgAdmin?",
+    answer:
+      "PostCompass is a native desktop app focused on everyday work: it can install and run PostgreSQL for you, edits tables like a spreadsheet and shows query plans visually. pgAdmin is a long-standing, full-featured administration tool. Both are free and open source.",
   },
   {
     question: "Why does my system warn me when I install it?",

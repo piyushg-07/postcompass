@@ -1,110 +1,89 @@
-import { PRODUCT, FAQ_ITEMS } from "./product";
+import { PRODUCT, FAQ_ITEMS, CLOUD_PROVIDERS } from "./product";
+
+/** The maintainer, so search engines and AI assistants can tie the project to a real person. */
+export const AUTHOR = {
+  name: "Piyush Gupta",
+  url: "https://github.com/piyushg-07",
+} as const;
 
 export const SEO_CONFIG = {
   siteName: PRODUCT.name,
-  titleDefault: `${PRODUCT.name} — Fast, Modern Desktop App & GUI for PostgreSQL`,
+  titleDefault: `${PRODUCT.name}: Free PostgreSQL GUI & Desktop Client for Windows, macOS and Linux`,
   titleTemplate: `%s | ${PRODUCT.name}`,
   description:
-    "Spin up a local PostgreSQL database in one click, connect to Supabase, Neon, AWS RDS, or any cloud, and query, edit, and visualize your data in one fast native app. Free, open source (MIT), zero telemetry, and lightweight.",
+    "PostCompass is a free, open-source PostgreSQL GUI. Run a local PostgreSQL server in one click without Docker, connect to AWS RDS, Cloud SQL, Azure, Neon and more, and browse, edit and query your data in a fast native desktop app.",
   canonicalUrl: PRODUCT.website,
   keywords: [
-    "PostgreSQL",
-    "Postgres",
-    "Postgres GUI",
     "PostgreSQL GUI",
+    "Postgres GUI",
     "PostgreSQL client",
-    "Postgres client",
     "PostgreSQL desktop app",
+    "open source PostgreSQL GUI",
+    "free PostgreSQL client",
+    "run PostgreSQL locally without Docker",
+    "local PostgreSQL",
     "pgAdmin alternative",
-    "TablePlus alternative",
-    "DBeaver alternative",
-    "DataGrip alternative",
-    "Supabase Table Editor",
-    "Neon Postgres GUI",
-    "AWS RDS Postgres client",
-    "Local PostgreSQL runner",
-    "Postgres database manager",
-    "SQL editor for PostgreSQL",
-    "PostgreSQL schema designer",
-    "ER diagram visualizer",
-    "Explain analyze visualizer",
-    "Native Postgres app",
-    "Rust database client",
-    "Tauri Postgres client",
-    "Open source Postgres GUI",
-    "Zero telemetry database client",
-    "macOS Postgres GUI",
-    "Windows Postgres GUI",
-    "Linux Postgres GUI",
-    "Database viewer",
-    "PostgreSQL query tool",
+    "PostgreSQL table editor",
+    "PostgreSQL SQL editor",
+    "EXPLAIN ANALYZE visualizer",
+    "PostgreSQL ER diagram",
+    "AWS RDS PostgreSQL client",
+    "Neon PostgreSQL client",
+    "PostgreSQL GUI for Mac",
+    "PostgreSQL GUI for Windows",
+    "PostgreSQL GUI for Linux",
   ],
-  authors: [{ name: "PostCompass Team", url: PRODUCT.github }],
-  creator: "PostCompass",
-  publisher: "PostCompass",
   themeColor: "#09090b",
-  ogImage: {
-    url: `${PRODUCT.website}/screens/table-editor.webp`,
-    width: 1200,
-    height: 630,
-    alt: "PostCompass - Fast, Modern Desktop App for PostgreSQL",
-    type: "image/webp",
-  },
-  twitterHandle: "@postcompass",
 } as const;
 
-/**
- * Returns complete Schema.org JSON-LD structured data graph for Google and AI search engines.
- */
+/** Schema.org data for search engines and AI assistants. Only facts that are true and checkable. */
 export function getJsonLdStructuredData() {
+  const author = {
+    "@type": "Person",
+    "@id": `${PRODUCT.website}#author`,
+    name: AUTHOR.name,
+    url: AUTHOR.url,
+    sameAs: [AUTHOR.url],
+  };
+
   const softwareAppSchema = {
     "@type": "SoftwareApplication",
     "@id": `${PRODUCT.website}#software`,
     name: PRODUCT.name,
-    operatingSystem: "Windows 10+, macOS 11+ (Apple Silicon & Intel), Linux (x86_64)",
+    alternateName: "PostCompass PostgreSQL GUI",
+    operatingSystem: "Windows 10, Windows 11, macOS (Apple Silicon and Intel), Linux (x86_64)",
     applicationCategory: "DeveloperApplication",
-    applicationSubCategory: "Database Management System",
+    applicationSubCategory: "Database client",
     description: SEO_CONFIG.description,
     url: PRODUCT.website,
     downloadUrl: `${PRODUCT.website}/download`,
     softwareVersion: PRODUCT.version,
     license: "https://opensource.org/licenses/MIT",
     isAccessibleForFree: true,
+    codeRepository: PRODUCT.github,
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      ratingCount: "142",
-      bestRating: "5",
-      worstRating: "1",
     },
     screenshot: [
       `${PRODUCT.website}/screens/table-editor.webp`,
       `${PRODUCT.website}/screens/sql-editor.webp`,
       `${PRODUCT.website}/screens/explain-plan.webp`,
       `${PRODUCT.website}/screens/er-diagram.webp`,
-      `${PRODUCT.website}/screens/cloud-providers.webp`,
     ],
     featureList: [
-      "One-click local PostgreSQL 14-18 server download and runner without Docker or admin permissions",
-      "Instant connection presets for Supabase, Neon, AWS RDS, Google Cloud SQL, and Azure Database",
-      "High-speed native table editor with virtualized rows, inline cell editing, and JSON drill-down",
-      "Safe SQL editor with keyword autocomplete, schema introspection, and automatic EXPLAIN ANALYZE rollback",
-      "Interactive visual Entity-Relationship (ER) diagram and schema designer",
-      "Foreign key peeking with instant relational navigation",
-      "Zero telemetry and 100% privacy with credentials stored in the OS system keychain",
-      "Tiny 3MB native installer with instant boot and under 40MB memory usage powered by Rust & Tauri",
+      "One-click local PostgreSQL 14 to 18, with checksum-verified binaries and no Docker or admin rights",
+      `Connections to ${CLOUD_PROVIDERS.join(", ")} or any PostgreSQL server, with TLS certificate verification`,
+      "Detects PostgreSQL already installed or running on the computer",
+      "Spreadsheet-style table editor with filters, sorting, CSV import and export, and foreign-key navigation",
+      "SQL editor with schema-aware autocomplete, query history and charts",
+      "Visual EXPLAIN ANALYZE that highlights the slowest step and runs inside a rolled-back transaction",
+      "Interactive ER diagram of tables and relationships",
+      "Passwords stored in the operating system keychain; no telemetry",
     ],
-    author: {
-      "@type": "Organization",
-      name: "PostCompass",
-      url: PRODUCT.website,
-    },
+    author: { "@id": `${PRODUCT.website}#author` },
+    publisher: { "@id": `${PRODUCT.website}#author` },
   };
 
   const webSiteSchema = {
@@ -113,39 +92,31 @@ export function getJsonLdStructuredData() {
     url: PRODUCT.website,
     name: PRODUCT.name,
     description: SEO_CONFIG.description,
-    inLanguage: "en-US",
-    publisher: {
-      "@type": "Organization",
-      name: "PostCompass",
-      url: PRODUCT.website,
-      logo: `${PRODUCT.website}/logo.png`,
-    },
+    inLanguage: "en",
+    publisher: { "@id": `${PRODUCT.website}#author` },
   };
 
-  const orgSchema = {
-    "@type": "Organization",
-    "@id": `${PRODUCT.website}#organization`,
-    name: "PostCompass",
-    url: PRODUCT.website,
-    logo: `${PRODUCT.website}/logo.png`,
-    sameAs: [PRODUCT.github],
+  return {
+    "@context": "https://schema.org",
+    "@graph": [author, softwareAppSchema, webSiteSchema],
   };
+}
 
-  const faqSchema = {
+/** FAQ structured data. Only on the home page, where the FAQ is actually shown. */
+export function getFaqJsonLd() {
+  return {
+    "@context": "https://schema.org",
     "@type": "FAQPage",
     "@id": `${PRODUCT.website}#faq`,
     mainEntity: FAQ_ITEMS.map((item) => ({
       "@type": "Question",
       name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
     })),
   };
+}
 
-  return {
-    "@context": "https://schema.org",
-    "@graph": [softwareAppSchema, webSiteSchema, orgSchema, faqSchema],
-  };
+/** JSON-LD as a string that's safe to inline in a <script> tag (no `</script>` breakouts). */
+export function toJsonLd(data: unknown) {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
 }

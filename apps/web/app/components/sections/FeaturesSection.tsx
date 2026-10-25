@@ -117,7 +117,7 @@ const SHOWCASE: Showcase[] = [
     icon: Cloud,
     label: "Cloud connections",
     title: "Every cloud, one place",
-    description: "RDS, Supabase, Neon, Cloud SQL and more, with presets.",
+    description: "AWS RDS, Cloud SQL, Azure, DigitalOcean, Neon and more, with presets.",
     points: [
       "Test before you save",
       "Passwords stay in your OS keychain",

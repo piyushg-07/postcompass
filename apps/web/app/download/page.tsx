@@ -18,6 +18,8 @@ export const metadata: Metadata = {
       "Install PostCompass for Windows, macOS, or Linux. 1-click local Postgres database, cloud connections, visual table editor, and SQL query tool.",
     url: `${PRODUCT.website}/download`,
     type: "website",
+    // Setting openGraph here replaces the site-wide one, so the share image is listed again
+    images: ["/opengraph-image"],
   },
 };
 
