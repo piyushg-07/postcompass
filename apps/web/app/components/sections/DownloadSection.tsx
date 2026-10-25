@@ -42,6 +42,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
     ...downloads.platforms.map((d) => d.assets.length - 1),
   );
   const [detected, setDetected] = useState<Platform | null>(null);
+  const onMac = detected === "macos";
 
   useEffect(() => {
     setDetected(detectPlatform(navigator.userAgent));
@@ -59,6 +60,14 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           title="Get PostCompass"
           description="Free and open source. Pick the installer for your system."
         />
+
+        {/* On a Mac the command is the better path (no "Open Anyway" step), so it leads; elsewhere the installers do */}
+        {onMac && (
+          <>
+            <InstallCommand detected={detected} recommended />
+            <p className="mt-10 mb-4 text-center text-[0.85rem] text-fg-muted">Or download an installer</p>
+          </>
+        )}
 
         <div
           className="grid grid-cols-3 items-stretch gap-5 max-[900px]:grid-cols-1"
@@ -164,7 +173,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           })}
         </div>
 
-        <InstallCommand detected={detected} />
+        {!onMac && <InstallCommand detected={detected} />}
         <InstallGuide detected={detected} />
       </div>
     </section>
@@ -177,7 +186,7 @@ const SHELL_COMMAND = `curl -fsSL ${PRODUCT.website}/install.sh | sh`;
 const POWERSHELL_COMMAND = `irm ${PRODUCT.website}/install.ps1 | iex`;
 
 /** The terminal alternative to the installers: one line, latest version, no security prompts. */
-function InstallCommand({ detected }: { detected: Platform | null }) {
+function InstallCommand({ detected, recommended = false }: { detected: Platform | null; recommended?: boolean }) {
   const [choice, setChoice] = useState<"windows" | "unix" | null>(null);
   const shown = choice ?? (detected === "windows" ? "windows" : detected ? "unix" : "windows");
   const options = [
@@ -186,13 +195,28 @@ function InstallCommand({ detected }: { detected: Platform | null }) {
   ] as const;
 
   return (
-    <div className="mt-7 rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] px-6 py-5 max-md:px-4" data-reveal>
+    <div
+      className={`rounded-[14px] border px-6 py-5 max-md:px-4 ${
+        recommended
+          ? "border-[rgba(16,185,129,0.4)] bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(16,185,129,0.015))] shadow-[0_0_60px_-30px_rgba(16,185,129,0.6)]"
+          : "mt-7 border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)]"
+      }`}
+      data-reveal
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[0.95rem] font-semibold text-fg">Or install with one command</p>
+          <p className="flex items-center gap-2 text-[0.95rem] font-semibold text-fg">
+            {recommended ? "Install with one command" : "Or install with one command"}
+            {recommended && (
+              <span className="rounded-full bg-accent-muted px-[0.55rem] py-[0.2rem] text-[0.72rem] font-semibold text-accent-hover">
+                Recommended for Mac
+              </span>
+            )}
+          </p>
           <p className="mt-0.5 text-[0.85rem] text-fg-muted">
-            Always the latest version, with no security prompts. Paste it into{" "}
-            {shown === "windows" ? "PowerShell" : "Terminal"}.
+            {recommended
+              ? "Installs the latest version and opens it, with no “Open Anyway” step. Paste it into Terminal."
+              : `Always the latest version, with no security prompts. Paste it into ${shown === "windows" ? "PowerShell" : "Terminal"}.`}
           </p>
         </div>
         <div role="tablist" aria-label="Operating system" className="flex w-fit gap-1 rounded-[10px] border border-[rgba(255,255,255,0.08)] p-1">
