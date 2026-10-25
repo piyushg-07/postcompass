@@ -1,15 +1,16 @@
-import { Button, Input, RadioCard, RadioCardGroup, RadioChip, StatusBadge, Stepper, Switch, toast } from "@repo/ui";
+import { Badge, Button, Input, RadioCard, RadioCardGroup, RadioChip, StatusBadge, Stepper, toast } from "@repo/ui";
 import {
   ArrowLeft,
   ArrowRight,
   BarChart3,
   BookOpen,
-  Check,
   Code2,
   Globe,
   GraduationCap,
   HardDrive,
   Layers,
+  Lock,
+  Rocket,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -24,6 +25,21 @@ import { useServerStatuses } from "../servers/use-server-statuses";
 
 const STEPS = ["Welcome", "About you", "Usage", "PostgreSQL", "Ready"];
 
+const ROLES: Record<Role, { label: string; icon: ReactNode }> = {
+  developer: { label: "Developer", icon: <Code2 /> },
+  analyst: { label: "Data / Analyst", icon: <BarChart3 /> },
+  dba: { label: "Database admin", icon: <ShieldCheck /> },
+  student: { label: "Student", icon: <GraduationCap /> },
+  other: { label: "Other", icon: <User /> },
+};
+
+const USE_CASES: Record<UseCase, { label: string; description: string; icon: ReactNode }> = {
+  local_dev: { label: "Local development", description: "Postgres on this computer", icon: <HardDrive /> },
+  remote: { label: "Remote servers", description: "Cloud or hosted databases", icon: <Globe /> },
+  both: { label: "Both", description: "Local and remote", icon: <Layers /> },
+  learning: { label: "Learning SQL", description: "A safe place to practice", icon: <BookOpen /> },
+};
+
 interface Answers {
   name: string;
   role: Role;
@@ -33,7 +49,7 @@ interface Answers {
 }
 
 export function Onboarding() {
-  const { setState, refresh } = useAppState();
+  const { state, setState, refresh } = useAppState();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({
     name: "",
@@ -103,11 +119,9 @@ export function Onboarding() {
               </Group>
               <Group label="Your role">
                 <RadioCardGroup className="flex flex-wrap" value={answers.role} onValueChange={(v) => set("role", v as Role)}>
-                  <RadioChip value="developer" title="Developer" icon={<Code2 />} />
-                  <RadioChip value="analyst" title="Data / Analyst" icon={<BarChart3 />} />
-                  <RadioChip value="dba" title="Database admin" icon={<ShieldCheck />} />
-                  <RadioChip value="student" title="Student" icon={<GraduationCap />} />
-                  <RadioChip value="other" title="Other" icon={<User />} />
+                  {Object.entries(ROLES).map(([value, { label, icon }]) => (
+                    <RadioChip key={value} value={value} title={label} icon={icon} />
+                  ))}
                 </RadioCardGroup>
               </Group>
               <Group label="PostgreSQL experience">
@@ -127,10 +141,9 @@ export function Onboarding() {
           {step === 2 && (
             <StepLayout title="How will you use PostCompass?" onBack={back} onNext={next}>
               <RadioCardGroup className="grid-cols-2" value={answers.useCase} onValueChange={(v) => set("useCase", v as UseCase)}>
-                <RadioCard value="local_dev" title="Local development" description="Postgres on this computer" icon={<HardDrive />} />
-                <RadioCard value="remote" title="Remote servers" description="Cloud or hosted databases" icon={<Globe />} />
-                <RadioCard value="both" title="Both" description="Local and remote" icon={<Layers />} />
-                <RadioCard value="learning" title="Learning SQL" description="A safe place to practice" icon={<BookOpen />} />
+                {Object.entries(USE_CASES).map(([value, { label, description, icon }]) => (
+                  <RadioCard key={value} value={value} title={label} description={description} icon={icon} />
+                ))}
               </RadioCardGroup>
             </StepLayout>
           )}
@@ -149,27 +162,13 @@ export function Onboarding() {
           )}
 
           {step === 4 && (
-            <StepLayout
-              title="You're all set"
-              description={installed ? `${installed.name} is running on port ${installed.port}.` : "PostCompass is ready to use."}
+            <ReadyStep
+              answers={answers}
+              server={installed ?? state.servers[0] ?? null}
+              saving={saving}
               onBack={back}
-              nextLabel="Open PostCompass"
-              onNext={() => void finish()}
-              nextLoading={saving}
-            >
-              <ul className="flex flex-col gap-3 text-sm text-fg-muted">
-                <Summary>{answers.name.trim() ? `Hi ${answers.name.trim()}, welcome aboard.` : "Welcome aboard."}</Summary>
-                {installed && <Summary>Local PostgreSQL {installed.version} installed and running.</Summary>}
-                <Summary>Your passwords are stored in your system keychain.</Summary>
-              </ul>
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-card border border-border bg-surface px-4 py-3.5">
-                <span className="flex flex-col gap-1">
-                  <span className="text-sm text-fg">Share anonymous usage stats</span>
-                  <span className="text-xs text-fg-muted">Helps us improve PostCompass. Never includes your data or queries.</span>
-                </span>
-                <Switch checked={answers.telemetry} onCheckedChange={(checked) => set("telemetry", checked)} />
-              </label>
-            </StepLayout>
+              onFinish={() => void finish()}
+            />
           )}
         </div>
       </div>
@@ -329,11 +328,85 @@ function ServerCard({ title, detail, aside }: { title: string; detail: string; a
   );
 }
 
-function Summary({ children }: { children: ReactNode }) {
+function ReadyStep({
+  answers,
+  server,
+  saving,
+  onBack,
+  onFinish,
+}: {
+  answers: Answers;
+  server: ManagedServer | null;
+  saving: boolean;
+  onBack: () => void;
+  onFinish: () => void;
+}) {
+  const name = answers.name.trim();
   return (
-    <li className="flex items-start gap-2">
-      <Check className="mt-0.5 size-4 shrink-0 text-accent" />
-      <span>{children}</span>
-    </li>
+    <div className="flex flex-col items-center gap-12 text-center">
+      <div className="flex flex-col items-center gap-7">
+        <span className="flex size-20 items-center justify-center rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/20 to-accent/5 shadow-[0_0_64px] shadow-accent/20">
+          <Rocket className="size-9 text-accent" strokeWidth={1.75} />
+        </span>
+        <h1 className="flex flex-wrap items-baseline justify-center gap-x-2.5 text-4xl font-semibold tracking-tight">
+          {name ? `${name}, you're ready to` : "You're ready to"}
+          <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[2.9rem] leading-none font-normal text-transparent italic">
+            explore
+          </span>
+        </h1>
+      </div>
+
+      <div className="grid w-full grid-cols-3 gap-3 text-left">
+        <RecapTile
+          icon={<img src={postgresLogo} alt="" className="size-4" draggable={false} />}
+          label="PostgreSQL"
+          value={server ? "Ready" : "Not installed"}
+        />
+        <RecapTile icon={ROLES[answers.role].icon} label="Role" value={ROLES[answers.role].label} />
+        <RecapTile icon={USE_CASES[answers.useCase].icon} label="Usage" value={USE_CASES[answers.useCase].label} />
+      </div>
+
+      <Button
+        size="lg"
+        variant="primary"
+        iconRight={<ArrowRight />}
+        onClick={onFinish}
+        loading={saving}
+        autoFocus
+        className="w-full"
+      >
+        Open PostCompass
+      </Button>
+
+      <div className="-mt-4 flex w-full items-center justify-between">
+        <Button variant="ghost" size="sm" iconLeft={<ArrowLeft />} onClick={onBack} className="-ml-3">
+          Back
+        </Button>
+        <div className="flex items-center gap-5 text-xs text-fg-subtle">
+          <span className="flex items-center gap-1.5">
+            <Lock className="size-3.5" />
+            Passwords stay in your keychain
+          </span>
+          <span className="flex items-center gap-2">
+            Usage stats
+            <Badge>Coming soon</Badge>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecapTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-5">
+      <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-bg text-accent [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="flex flex-col gap-1">
+        <span className="text-xs text-fg-subtle">{label}</span>
+        <span className="truncate text-sm font-medium text-fg">{value}</span>
+      </span>
+    </div>
   );
 }
