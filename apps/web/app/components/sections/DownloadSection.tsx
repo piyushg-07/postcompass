@@ -1,11 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RELEASES_URL, detectPlatform, type Platform, type PlatformDownloads, type ReleaseAsset } from "@/config/product";
-import { WindowsIcon, AppleIcon, LinuxIcon, Download } from "@/components/ui/Icons";
+import {
+  PRODUCT,
+  RELEASES_URL,
+  detectPlatform,
+  type Platform,
+  type PlatformDownloads,
+  type ReleaseAsset,
+} from "@/config/product";
+import {
+  WindowsIcon,
+  AppleIcon,
+  LinuxIcon,
+  Download,
+  ChevronDown,
+} from "@/components/ui/Icons";
 import SectionHeader from "@/components/ui/SectionHeader";
 
-const ICONS: Record<Platform, React.ComponentType<{ size?: number; className?: string }>> = {
+const ICONS: Record<
+  Platform,
+  React.ComponentType<{ size?: number; className?: string }>
+> = {
   windows: WindowsIcon,
   macos: AppleIcon,
   linux: LinuxIcon,
@@ -14,8 +30,6 @@ const ICONS: Record<Platform, React.ComponentType<{ size?: number; className?: s
 const SIZE = "ml-auto font-mono text-[0.75rem]";
 const ASSET =
   "group flex items-center gap-[0.6rem] rounded-[8px] px-[0.6rem] py-[0.55rem] text-[0.875rem] text-fg-secondary [transition:color_0.15s_ease,background_0.15s_ease] hover:bg-[rgba(255,255,255,0.04)] hover:text-fg";
-const TIP =
-  "inline-flex items-center gap-[0.4rem] rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-[0.65rem] py-[0.3rem] text-[0.8125rem] whitespace-nowrap";
 
 interface Props {
   asPage?: boolean;
@@ -24,7 +38,9 @@ interface Props {
 
 export default function DownloadSection({ asPage = false, downloads }: Props) {
   // Every card gets this many "other format" rows (empty ones are invisible) so all cards are the same height
-  const extraRows = Math.max(...downloads.platforms.map((d) => d.assets.length - 1));
+  const extraRows = Math.max(
+    ...downloads.platforms.map((d) => d.assets.length - 1),
+  );
   const [detected, setDetected] = useState<Platform | null>(null);
 
   useEffect(() => {
@@ -44,7 +60,10 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           description="Free and open source. Pick the installer for your system."
         />
 
-        <div className="grid grid-cols-3 items-stretch gap-5 max-[900px]:grid-cols-1" data-reveal="stagger">
+        <div
+          className="grid grid-cols-3 items-stretch gap-5 max-[900px]:grid-cols-1"
+          data-reveal="stagger"
+        >
           {downloads.platforms.map((d) => {
             const Icon = ICONS[d.platform];
             const isDetected = detected === d.platform;
@@ -69,8 +88,12 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                     <Icon size={20} />
                   </span>
                   <div>
-                    <h3 className="m-0 text-[1.1rem] font-[650] text-fg">{d.name}</h3>
-                    <p className="mt-[0.15rem] text-[0.8125rem] text-fg-muted">{d.requirement}</p>
+                    <h3 className="m-0 text-[1.1rem] font-[650] text-fg">
+                      {d.name}
+                    </h3>
+                    <p className="mt-[0.15rem] text-[0.8125rem] text-fg-muted">
+                      {d.requirement}
+                    </p>
                   </div>
                   {isDetected && (
                     <span className="ml-auto rounded-full bg-accent-muted px-[0.55rem] py-[0.2rem] text-[0.72rem] font-semibold whitespace-nowrap text-accent-hover">
@@ -91,7 +114,11 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                     <Download size={15} />
                     <span>{primary.label}</span>
                     {primary.size && (
-                      <span className={`${SIZE} ${isDetected ? "text-[rgba(3,19,12,0.7)]" : "text-fg-muted"}`}>{primary.size}</span>
+                      <span
+                        className={`${SIZE} ${isDetected ? "text-[rgba(3,19,12,0.7)]" : "text-fg-muted"}`}
+                      >
+                        {primary.size}
+                      </span>
                     )}
                   </a>
                 )}
@@ -107,14 +134,27 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                     <li key={a.url}>
                       <a href={a.url} className={ASSET}>
                         <span className="font-medium">{a.label}</span>
-                        <span className="text-[0.8rem] text-fg-faint">{a.note}</span>
-                        {a.size && <span className={`${SIZE} text-fg-muted`}>{a.size}</span>}
-                        <Download size={13} className="text-fg-faint group-hover:text-accent-hover" />
+                        <span className="text-[0.8rem] text-fg-faint">
+                          {a.note}
+                        </span>
+                        {a.size && (
+                          <span className={`${SIZE} text-fg-muted`}>
+                            {a.size}
+                          </span>
+                        )}
+                        <Download
+                          size={13}
+                          className="text-fg-faint group-hover:text-accent-hover"
+                        />
                       </a>
                     </li>
                   ))}
                   {Array.from({ length: extraRows - rest.length }, (_, i) => (
-                    <li key={`spacer-${i}`} className="invisible" aria-hidden="true">
+                    <li
+                      key={`spacer-${i}`}
+                      className="invisible"
+                      aria-hidden="true"
+                    >
                       <span className={ASSET}>&nbsp;</span>
                     </li>
                   ))}
@@ -124,31 +164,292 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
           })}
         </div>
 
-        <div
-          className="mt-7 flex flex-nowrap items-center gap-[0.6rem] rounded-[12px] border border-[rgba(255,255,255,0.06)] px-5 py-4 text-[0.875rem] text-fg-muted max-[1060px]:flex-wrap [&_em]:text-fg-secondary [&_em]:not-italic [&_strong]:text-fg-secondary"
-          data-reveal
-        >
-          <p className="m-0 whitespace-nowrap">
-            <strong>Not code-signed yet.</strong> On first launch:
+        <InstallGuide detected={detected} />
+      </div>
+    </section>
+  );
+}
+
+// ── First-launch install guide ─────────────────────────────────────────────────
+
+type Step = { text: React.ReactNode; code?: string };
+
+/** Per-platform steps past the "unknown developer" warnings, since the installers aren't code-signed yet. */
+const GUIDE: Record<
+  Platform,
+  { title: string; steps: Step[]; extra?: { title: string; steps: Step[] }[] }
+> = {
+  windows: {
+    title: "Windows 10 and 11",
+    steps: [
+      {
+        text: (
+          <>
+            Run the <em>.exe</em> installer (or the <em>.msi</em>).
+          </>
+        ),
+      },
+      {
+        text: (
+          <>
+            If Windows shows <em>Windows protected your PC</em>, click{" "}
+            <em>More info</em>, then <em>Run anyway</em>.
+          </>
+        ),
+      },
+      {
+        text: (
+          <>Finish the installer and open PostCompass from the Start menu.</>
+        ),
+      },
+    ],
+  },
+  macos: {
+    title: "macOS (Apple Silicon and Intel)",
+    steps: [
+      {
+        text: (
+          <>
+            Open the <em>.dmg</em> and drag PostCompass into{" "}
+            <em>Applications</em>.
+          </>
+        ),
+      },
+      {
+        text: (
+          <>
+            Open PostCompass. If macOS says it can&apos;t verify the developer,
+            click <em>Done</em>.
+          </>
+        ),
+      },
+      {
+        text: (
+          <>
+            Open <em>System Settings → Privacy &amp; Security</em>, scroll down
+            and click <em>Open Anyway</em>, then confirm.
+          </>
+        ),
+      },
+      {
+        text: (
+          <>
+            If macOS says the app <em>is damaged and can&apos;t be opened</em>,
+            run this in Terminal and open it again:
+          </>
+        ),
+        code: "xattr -cr /Applications/PostCompass.app",
+      },
+    ],
+  },
+  linux: {
+    title: "Linux (64-bit)",
+    steps: [],
+    extra: [
+      {
+        title: "AppImage (any distribution)",
+        steps: [
+          {
+            text: <>Make it executable and run it:</>,
+            code: "chmod +x PostCompass_*.AppImage && ./PostCompass_*.AppImage",
+          },
+          {
+            text: (
+              <>
+                If it complains about FUSE, install it (on Ubuntu 24.04 the
+                package is <em>libfuse2t64</em>):
+              </>
+            ),
+            code: "sudo apt install libfuse2",
+          },
+        ],
+      },
+      {
+        title: "Debian / Ubuntu (.deb)",
+        steps: [
+          {
+            text: <>Install with apt:</>,
+            code: "sudo apt install ./PostCompass_*_amd64.deb",
+          },
+        ],
+      },
+      {
+        title: "Fedora / RHEL (.rpm)",
+        steps: [
+          {
+            text: <>Install with dnf:</>,
+            code: "sudo dnf install ./PostCompass-*.x86_64.rpm",
+          },
+        ],
+      },
+    ],
+  },
+};
+
+const ORDER: Platform[] = ["windows", "macos", "linux"];
+
+function InstallGuide({ detected }: { detected: Platform | null }) {
+  const [tab, setTab] = useState<Platform | null>(null);
+  const active = tab ?? detected ?? "windows";
+
+  return (
+    // Collapsed by default to keep the section calm; <details> keeps the steps in the HTML for search engines
+    <details
+      className="group mt-7 rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] [transition:border-color_0.2s_ease] open:border-[rgba(255,255,255,0.12)] [&_em]:font-medium [&_em]:text-fg [&_em]:not-italic"
+      data-reveal
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-4 px-6 py-4 max-md:px-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-[0.95rem] font-semibold text-fg">
+            Installing for the first time?
+          </span>
+          <span className="text-[0.85rem] text-fg-muted">
+            PostCompass isn&apos;t code-signed yet, so your system shows a
+            one-time warning. See how to get past it.
+          </span>
+        </span>
+        <ChevronDown
+          size={18}
+          className="shrink-0 text-fg-muted [transition:transform_0.2s_ease] group-open:[transform:rotate(180deg)] group-open:text-accent-hover"
+        />
+      </summary>
+
+      <div className="border-t border-[rgba(255,255,255,0.06)] px-6 pt-5 pb-6 max-md:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[0.8rem] font-semibold tracking-[0.05em] text-fg-faint uppercase">
+            {GUIDE[active].title}
           </p>
-          <span className={TIP}>
-            <WindowsIcon size={13} />
-            Click <em>More info</em>, then <em>Run anyway</em>
-          </span>
-          <span className={TIP}>
-            <AppleIcon size={13} />
-            In <em>Privacy &amp; Security</em>, click <em>Open Anyway</em>
-          </span>
+          <div
+            role="tablist"
+            aria-label="Operating system"
+            className="flex w-fit gap-1 rounded-[10px] border border-[rgba(255,255,255,0.08)] p-1"
+          >
+            {ORDER.map((p) => {
+              const Icon = ICONS[p];
+              const selected = p === active;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  role="tab"
+                  id={`install-tab-${p}`}
+                  aria-selected={selected}
+                  aria-controls={`install-panel-${p}`}
+                  onClick={() => setTab(p)}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[0.85rem] font-medium [transition:background_0.15s_ease,color_0.15s_ease] ${
+                    selected
+                      ? "bg-[rgba(255,255,255,0.08)] text-fg"
+                      : "text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  <Icon size={13} />
+                  {p === "macos"
+                    ? "macOS"
+                    : p === "windows"
+                      ? "Windows"
+                      : "Linux"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Every panel stays in the HTML (only hidden), so the steps are readable without switching tabs */}
+        {ORDER.map((p) => {
+          const guide = GUIDE[p];
+          return (
+            <div
+              key={p}
+              role="tabpanel"
+              id={`install-panel-${p}`}
+              aria-labelledby={`install-tab-${p}`}
+              hidden={p !== active}
+              className="mt-6"
+            >
+              {guide.steps.length > 0 && <Steps steps={guide.steps} />}
+              {guide.extra && (
+                <div className="grid grid-cols-3 gap-6 max-[900px]:grid-cols-1">
+                  {guide.extra.map((group) => (
+                    <div key={group.title}>
+                      <p className="mb-3 text-[0.95rem] font-semibold text-fg">
+                        {group.title}
+                      </p>
+                      <Steps steps={group.steps} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <p className="mt-6 text-[0.85rem] text-fg-muted">
+          Still stuck?{" "}
+          <a
+            href={`${PRODUCT.github}/issues/new/choose`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-hover hover:underline"
+          >
+            Open an issue
+          </a>{" "}
+          or browse{" "}
           <a
             href={RELEASES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-[0.35rem] font-medium whitespace-nowrap text-accent-hover hover:underline"
+            className="text-accent-hover hover:underline"
           >
-            All releases
+            all releases
           </a>
-        </div>
+          .
+        </p>
       </div>
-    </section>
+    </details>
+  );
+}
+
+function Steps({ steps }: { steps: Step[] }) {
+  return (
+    <ol className="flex flex-col gap-4">
+      {steps.map((step, i) => (
+        <li
+          key={i}
+          className="flex gap-3 text-[0.925rem] leading-relaxed text-fg-secondary"
+        >
+          <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.1)] text-[0.75rem] font-semibold text-accent-hover">
+            {i + 1}
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <span>{step.text}</span>
+            {step.code && <CodeLine code={step.code} />}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CodeLine({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-2 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] py-1.5 pr-1.5 pl-3">
+      <code className="min-w-0 flex-1 overflow-x-auto font-mono text-[0.8rem] whitespace-nowrap text-fg">
+        {code}
+      </code>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(code).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+        className="shrink-0 rounded-[6px] px-2.5 py-1 text-[0.75rem] font-medium text-fg-muted [transition:background_0.15s_ease,color_0.15s_ease] hover:bg-[rgba(255,255,255,0.06)] hover:text-fg"
+        aria-label={`Copy: ${code}`}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
   );
 }
