@@ -42,7 +42,7 @@
     "copyright": "© 2026 PostCompass",
     "category": "DeveloperTool",
     "shortDescription": "A modern desktop app for PostgreSQL",
-    "longDescription": "PostCompass is a fast, modern desktop app for PostgreSQL. Install and run local databases in one click, connect to cloud databases (AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and more), browse and edit tables, write SQL with explain plans, explore ER diagrams, and back up or restore databases.",
+    "longDescription": "PostCompass is a fast, modern desktop app for PostgreSQL. Install and run local databases in one click, connect to cloud databases (AWS RDS, Google Cloud SQL, Azure, DigitalOcean, Neon and more), browse and edit tables, write SQL with explain plans, explore ER diagrams, and back up or restore databases.",
     "macOS": {
       "signingIdentity": "-"
     },
@@ -57,6 +57,18 @@
       "wix": {
         "bannerPath": "icons/wix-banner.bmp",
         "dialogImagePath": "icons/wix-dialog.bmp"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1RkM5NTk2ODFGNDQwQTUKUldTbFFQU0JscFg4bGUxL052VU1hd29yeU11OVlGcFdQL2RuOUJCRWI3eTk3M1dsNU8zTzIvOEMK",
+      "endpoints": [
+        "https://github.com/piyushg-07/postcompass/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

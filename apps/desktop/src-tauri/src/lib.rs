@@ -75,6 +75,10 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        // In-app updates: checks the latest GitHub release's latest.json and verifies its signature
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        // Restart after an update is installed
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

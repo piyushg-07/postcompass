@@ -69,7 +69,7 @@ A short overview of how PostCompass protects your data, so you know what to expe
 - The webview runs under a **strict Content Security Policy** (`default-src 'self'`; scripts only from the app bundle; network access only to the Tauri IPC bridge).
 - The UI has a minimal set of Tauri permissions: core APIs, revealing files in your file manager, and open/save file dialogs.
 - Installers are **not yet code-signed**. Only download PostCompass from the official [Releases page](https://github.com/piyushg-07/postcompass/releases).
-- There is **no auto-updater** yet; updates are manual downloads.
+- **In-app updates** are signed: each update package is verified against a public key built into the app before it's installed, so a tampered download is rejected.
 
 ### Privacy
 
@@ -77,6 +77,7 @@ PostCompass **sends no telemetry, analytics or crash reports**. The app makes on
 
 - To the **database servers you connect to**.
 - To **GitHub** (`github.com/theseus-rs/postgresql-binaries`) when you install a local PostgreSQL version, to download the archive and its checksum.
+- To **GitHub** (`github.com/piyushg-07/postcompass/releases`) shortly after launch, to check for a newer PostCompass version, and to download it if you choose to update.
 
 Fonts and all UI assets are bundled with the app; the UI loads nothing from the internet.
 

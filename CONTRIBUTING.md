@@ -209,6 +209,16 @@ Releases are automated with GitHub Actions ([`.github/workflows/release.yml`](.g
 
 Each release needs a new version number: pushing again with the same version updates the existing draft instead of creating a new one.
 
+### In-app updates
+
+Installed copies check `releases/latest/download/latest.json` on launch and offer to update. For that to work:
+
+- The repository secrets `TAURI_SIGNING_PRIVATE_KEY` (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, empty if the key has no password) must be set. CI signs every update package with that key, and `tauri-action` uploads `latest.json` next to the installers.
+- The matching public key is `plugins.updater.pubkey` in `tauri.conf.json`. **Never lose the private key:** installed apps only accept updates signed with it. If it's ever replaced, existing users have to download the next version by hand.
+- Users only see an update once its release is **published** (drafts don't count as "latest").
+- On Linux only the AppImage updates itself; `.deb` and `.rpm` installs are updated by downloading the new package.
+- A local `pnpm build:app` also signs update packages, so it needs the key in `TAURI_SIGNING_PRIVATE_KEY` (the key file's contents or its path). Without it the build stops after the installers are made, at the signing step. `pnpm dev:desktop` doesn't need the key.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).

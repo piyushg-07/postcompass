@@ -85,10 +85,17 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update packages so installed apps can verify them (in-app updates).
+          # The matching public key is in tauri.conf.json; tauri-action also uploads latest.json.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tauriScript: pnpm tauri
           args: ${{ matrix.args }} --ignore-version-mismatches
+          # Windows updates use the .exe (NSIS) installer, the one most people install;
+          # updating an .exe install with the .msi would add a second copy instead
+          updaterJsonPreferNsis: true
           # __VERSION__ is replaced with the version from tauri.conf.json
           tagName: v__VERSION__
           releaseName: PostCompass v__VERSION__
@@ -98,8 +105,9 @@ jobs:
 
             ## ✨ Highlights
 
-            - **One-click local PostgreSQL 18.** Installed and run for you, no admin rights needed
-            - **Cloud connections.** AWS RDS, Supabase, Neon, Google Cloud SQL, Azure and any PostgreSQL, with passwords in your system keychain
+            - **One-click local PostgreSQL 14 to 18.** Installed and run for you, no admin rights needed
+            - **In-app updates.** PostCompass tells you when a new version is out and installs it in one click
+            - **Cloud connections.** AWS RDS, Google Cloud SQL, Azure, DigitalOcean, Neon and any PostgreSQL, with passwords in your system keychain
             - **Table editor.** Inline editing, filters, sorting and foreign-key navigation
             - **SQL editor.** Autocomplete, query history and visual `EXPLAIN ANALYZE`
             - **ER diagram, command palette (`Ctrl+K`), backup and restore**

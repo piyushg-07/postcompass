@@ -17,6 +17,7 @@ The first public release of PostCompass, a fast, modern desktop app for PostgreS
 
 - Guided first-run setup: a few quick questions about you and how you'll use PostCompass, then install PostgreSQL in one click or skip it.
 - Settings page with your profile (name, role, setup date), app preferences and version info.
+- In-app updates: PostCompass checks for a new version on launch (or from Settings) and installs it in one click. Updates are signed and verified before installing.
 
 #### Local databases
 

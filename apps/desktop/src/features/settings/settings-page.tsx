@@ -1,9 +1,11 @@
-import { Badge, Card, Switch, toast } from "@repo/ui";
+import { Badge, Button, Card, Switch, toast } from "@repo/ui";
+import type { Update } from "@tauri-apps/plugin-updater";
 import { User } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
 import { PageHeader } from "../../app/page";
+import { checkForUpdate, installUpdate } from "../../app/updates";
 import type { Profile, Role } from "../../lib/bindings";
 import { platformLabel } from "../../lib/format";
 import { commands, describeError, unwrap } from "../../lib/ipc";
@@ -81,6 +83,7 @@ export function SettingsPage() {
             </span>
             <span className="font-mono text-xs text-fg-muted">v{info.version}</span>
           </div>
+          <UpdateButton />
         </div>
         <InfoRow label="Platform">{platformLabel(info.os, info.arch)}</InfoRow>
         <InfoRow label="Supports">{info.supportedDatabases.map((db) => db.displayName).join(", ")}</InfoRow>
@@ -116,6 +119,43 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="text-sm font-semibold text-fg">{title}</h2>
       <Card className="divide-y divide-border overflow-hidden p-0">{children}</Card>
     </section>
+  );
+}
+
+/** Checks for a newer release on demand; offers to install it when there is one. */
+function UpdateButton() {
+  const [status, setStatus] = useState<"idle" | "checking" | "latest" | "installing">("idle");
+  const [update, setUpdate] = useState<Update | null>(null);
+
+  const run = async () => {
+    if (update) {
+      setStatus("installing");
+      await installUpdate(update).catch(() => setStatus("idle"));
+      return;
+    }
+    setStatus("checking");
+    try {
+      const found = await checkForUpdate();
+      setUpdate(found);
+      setStatus(found ? "idle" : "latest");
+    } catch (e) {
+      setStatus("idle");
+      toast.error("Couldn't check for updates", { description: describeError(e).message });
+    }
+  };
+
+  return (
+    <div className="ml-auto flex items-center gap-3">
+      {status === "latest" && <span className="text-xs text-fg-muted">You're on the latest version</span>}
+      <Button
+        size="sm"
+        variant={update ? "primary" : "secondary"}
+        loading={status === "checking" || status === "installing"}
+        onClick={() => void run()}
+      >
+        {update ? `Install ${update.version}` : "Check for updates"}
+      </Button>
+    </div>
   );
 }
 

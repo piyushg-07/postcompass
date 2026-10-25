@@ -10,6 +10,7 @@ import { ErrorBoundary } from "./error-boundary";
 import { useNavigation } from "./navigation";
 import { Sidebar } from "./sidebar/sidebar";
 import { useUiPrefs } from "./ui-prefs";
+import { useUpdateCheck } from "./updates";
 
 // The explorer pulls in the SQL editor and data grid; load it when a database is first opened
 const ExplorerPage = lazy(() =>
@@ -24,6 +25,7 @@ export function Shell() {
   const closeServer = useNavigation((s) => s.closeServer);
   const toggleSidebar = useUiPrefs((s) => s.toggleSidebar);
   useHotkey("Mod+B", toggleSidebar, { ignoreInputs: false });
+  useUpdateCheck();
 
   const inExplorer = section === "explorer" && openServerId !== null;
   useAutoCollapse(inExplorer);
