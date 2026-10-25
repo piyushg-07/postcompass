@@ -34,7 +34,7 @@ export function Checkbox({ className, ...props }: ComponentProps<typeof Checkbox
 }
 
 export function RadioCardGroup({ className, ...props }: ComponentProps<typeof RadioGroup.Root>) {
-  return <RadioGroup.Root className={cn("grid gap-2", className)} {...props} />;
+  return <RadioGroup.Root className={cn("grid gap-3", className)} {...props} />;
 }
 
 /** A large selectable card, used for onboarding choices. */
@@ -55,16 +55,16 @@ export function RadioCard({
     <RadioGroup.Item
       value={value}
       className={cn(
-        "group flex w-full cursor-pointer items-start gap-3 rounded-card border border-border bg-surface p-3 text-left transition-colors hover:border-border-strong hover:bg-surface-hover data-[state=checked]:border-accent/60 data-[state=checked]:bg-accent-muted",
+        "group flex w-full cursor-pointer items-start gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-colors hover:border-border-strong hover:bg-surface-hover data-[state=checked]:border-accent/60 data-[state=checked]:bg-accent-muted",
         className,
       )}
     >
       {icon && (
         <span className="mt-0.5 text-fg-muted group-data-[state=checked]:text-accent [&_svg]:size-4">{icon}</span>
       )}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-sm font-medium text-fg">{title}</span>
-        {description && <span className="text-xs text-fg-muted">{description}</span>}
+        {description && <span className="text-xs leading-relaxed text-fg-muted">{description}</span>}
       </span>
       <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-border-strong group-data-[state=checked]:border-accent">
         <RadioGroup.Indicator className="size-2 rounded-full bg-accent" />

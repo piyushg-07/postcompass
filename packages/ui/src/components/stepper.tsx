@@ -4,11 +4,11 @@ import { cn } from "../lib/cn";
 /** Horizontal step indicator, e.g. for onboarding. `current` is 0-based. */
 export function Stepper({ steps, current, className }: { steps: string[]; current: number; className?: string }) {
   return (
-    <ol className={cn("flex items-center gap-2", className)} aria-label={`Step ${current + 1} of ${steps.length}`}>
+    <ol className={cn("flex items-center gap-3", className)} aria-label={`Step ${current + 1} of ${steps.length}`}>
       {steps.map((label, index) => {
         const state = index < current ? "done" : index === current ? "current" : "upcoming";
         return (
-          <li key={label} className="flex items-center gap-2" aria-current={state === "current" ? "step" : undefined}>
+          <li key={label} className="flex items-center gap-3" aria-current={state === "current" ? "step" : undefined}>
             <span
               className={cn(
                 "flex size-5 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors",
@@ -21,7 +21,7 @@ export function Stepper({ steps, current, className }: { steps: string[]; curren
             </span>
             <span className={cn("text-xs", state === "upcoming" ? "text-fg-subtle" : "text-fg-muted")}>{label}</span>
             {index < steps.length - 1 && (
-              <span className={cn("h-px w-6", index < current ? "bg-accent/50" : "bg-border-strong")} aria-hidden />
+              <span className={cn("h-px w-8", index < current ? "bg-accent/50" : "bg-border-strong")} aria-hidden />
             )}
           </li>
         );

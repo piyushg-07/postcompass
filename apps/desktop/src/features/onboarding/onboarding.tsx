@@ -14,8 +14,8 @@ import {
   User,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
-import { CompassMark } from "../../app/compass-mark";
 import type { Experience, ManagedServer, Role, UseCase } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { DetectionResults } from "../servers/detection-results";
@@ -71,17 +71,14 @@ export function Onboarding() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
-        <div className="flex items-center gap-2.5">
-          <CompassMark size={22} />
-          <span className="text-sm font-semibold tracking-tight">PostCompass</span>
-        </div>
-        {step > 0 && <Stepper steps={STEPS} current={step} />}
-        <span className="w-24" />
-      </header>
+      {step > 0 && (
+        <header className="flex h-16 shrink-0 items-center justify-center border-b border-border px-8">
+          <Stepper steps={STEPS} current={step} />
+        </header>
+      )}
 
-      <div className="flex flex-1 justify-center overflow-y-auto px-6 py-10">
-        <div className="flex w-full max-w-xl flex-col gap-6">
+      <div className="flex flex-1 justify-center overflow-y-auto px-8 py-14">
+        <div className="my-auto flex w-full max-w-xl flex-col">
           {step === 0 && <WelcomeStep onNext={next} />}
 
           {step === 1 && (
@@ -153,13 +150,13 @@ export function Onboarding() {
               onNext={() => void finish()}
               nextLoading={saving}
             >
-              <ul className="flex flex-col gap-2 text-sm text-fg-muted">
+              <ul className="flex flex-col gap-3 text-sm text-fg-muted">
                 <Summary>{answers.name.trim() ? `Hi ${answers.name.trim()}, welcome aboard.` : "Welcome aboard."}</Summary>
                 {installed && <Summary>Local PostgreSQL {installed.version} installed and running.</Summary>}
                 <Summary>Your passwords are stored in your system keychain.</Summary>
               </ul>
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
-                <span className="flex flex-col">
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-card border border-border bg-surface px-4 py-3.5">
+                <span className="flex flex-col gap-1">
                   <span className="text-sm text-fg">Share anonymous usage stats</span>
                   <span className="text-xs text-fg-muted">Helps us improve PostCompass. Never includes your data or queries.</span>
                 </span>
@@ -175,11 +172,11 @@ export function Onboarding() {
 
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 py-16 text-center">
-      <CompassMark size={56} />
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Welcome to PostCompass</h1>
-        <p className="mx-auto max-w-md text-fg-muted">
+    <div className="flex flex-col items-center gap-10 text-center">
+      <img src={appIcon} alt="PostCompass" width={88} height={88} draggable={false} />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-4xl font-semibold tracking-tight">Welcome to PostCompass</h1>
+        <p className="mx-auto max-w-md text-base leading-relaxed text-fg-muted">
           A faster, friendlier way to work with PostgreSQL. Let's get you set up. It takes about a minute.
         </p>
       </div>
@@ -286,14 +283,14 @@ function StepLayout({
   nextLoading?: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="text-sm text-fg-muted">{description}</p>}
+    <section className="flex flex-col gap-10">
+      <div className="flex flex-col gap-2.5">
+        <h1 className="text-[28px] leading-tight font-semibold tracking-tight">{title}</h1>
+        {description && <p className="text-[15px] leading-relaxed text-fg-muted">{description}</p>}
       </div>
-      <div className="flex flex-col gap-5">{children}</div>
+      <div className="flex flex-col gap-8">{children}</div>
       {(onBack || onNext) && (
-        <div className="flex items-center justify-between border-t border-border pt-5">
+        <div className="flex items-center justify-between border-t border-border pt-6">
           {onBack ? (
             <Button variant="ghost" iconLeft={<ArrowLeft />} onClick={onBack}>
               Back
@@ -314,8 +311,8 @@ function StepLayout({
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-fg-muted">{label}</span>
+    <div className="flex flex-col gap-3">
+      <span className="text-sm font-medium text-fg">{label}</span>
       {children}
     </div>
   );
