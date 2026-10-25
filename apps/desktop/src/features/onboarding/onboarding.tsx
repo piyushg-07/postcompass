@@ -1,4 +1,4 @@
-import { Button, Input, RadioCard, RadioCardGroup, RadioChip, Stepper, Switch, toast } from "@repo/ui";
+import { Button, Input, RadioCard, RadioCardGroup, RadioChip, StatusBadge, Stepper, Switch, toast } from "@repo/ui";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,12 +15,12 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import appIcon from "../../../app-icon.svg";
+import postgresLogo from "../../assets/providers/postgresql.svg";
 import { useAppState } from "../../app/app-state";
 import type { Experience, ManagedServer, Role, UseCase } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
-import { DetectionResults } from "../servers/detection-results";
 import { InstallFlow } from "../servers/install-flow";
-import { foundExternal, useDetection } from "../servers/use-detection";
+import { useServerStatuses } from "../servers/use-server-statuses";
 
 const STEPS = ["Welcome", "About you", "Usage", "PostgreSQL", "Ready"];
 
@@ -205,69 +205,48 @@ function PostgresStep({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const detection = useDetection();
+  const { state } = useAppState();
   const [installing, setInstalling] = useState(false);
-  const report = detection.state.status === "done" ? detection.state.report : null;
-  const found = report ? foundExternal(report) : false;
+  const ready = installed ?? state.servers[0] ?? null;
+  const { statuses } = useServerStatuses(ready ? [ready.id] : []);
+  const status = ready ? statuses[ready.id] : undefined;
 
   if (installing) {
     return (
-      <StepLayout title="Install PostgreSQL" description="Installs PostgreSQL privately for this computer. No admin rights needed.">
+      <StepLayout title="Install PostgreSQL">
         <InstallFlow onInstalled={onInstalled} onCancel={() => setInstalling(false)} cancelLabel="Back" />
       </StepLayout>
     );
   }
 
-  const title =
-    detection.state.status === "scanning"
-      ? "Looking for PostgreSQL…"
-      : found
-        ? "We found PostgreSQL on this computer"
-        : "PostgreSQL isn't installed yet";
-  const description =
-    detection.state.status === "scanning"
-      ? "Checking installed programs, services and local ports."
-      : found
-        ? "You can connect to it, or install a separate one managed by PostCompass."
-        : "Install it in one click. No admin rights needed, and it won't touch anything else on your computer.";
+  if (ready) {
+    return (
+      <StepLayout title="PostgreSQL is ready" onBack={onBack} onNext={onNext}>
+        <ServerCard
+          title={ready.name}
+          detail={`${ready.host}:${ready.port}`}
+          aside={status && <StatusBadge status={status} />}
+        />
+      </StepLayout>
+    );
+  }
 
   return (
-    <StepLayout title={title} description={description} onBack={onBack}>
-      <DetectionResults state={detection.state} />
-
-      {report && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" onClick={onNext}>
-            Skip, I'll connect to a remote server
+    <StepLayout
+      title="Set up PostgreSQL"
+      onBack={onBack}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onNext}>
+            Skip for now
           </Button>
-          <div className="flex gap-2">
-            {found ? (
-              <>
-                <Button onClick={() => setInstalling(true)}>Install a separate one</Button>
-                <Button variant="primary" iconRight={<ArrowRight />} onClick={onNext}>
-                  Use existing
-                </Button>
-              </>
-            ) : installed ? (
-              <Button variant="primary" iconRight={<ArrowRight />} onClick={onNext}>
-                Continue
-              </Button>
-            ) : (
-              <Button variant="primary" onClick={() => setInstalling(true)}>
-                Install PostgreSQL
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-      {detection.state.status === "error" && (
-        <div className="flex justify-end gap-2">
-          <Button onClick={detection.rescan}>Scan again</Button>
-          <Button variant="primary" onClick={() => setInstalling(true)}>
+          <Button variant="primary" iconRight={<ArrowRight />} onClick={() => setInstalling(true)}>
             Install PostgreSQL
           </Button>
-        </div>
-      )}
+        </>
+      }
+    >
+      <ServerCard title="PostgreSQL" detail="Runs privately on this computer. No admin rights or Docker." />
     </StepLayout>
   );
 }
@@ -280,6 +259,7 @@ function StepLayout({
   onNext,
   nextLabel = "Continue",
   nextLoading,
+  actions,
 }: {
   title: string;
   description?: string;
@@ -288,6 +268,8 @@ function StepLayout({
   onNext?: () => void;
   nextLabel?: string;
   nextLoading?: boolean;
+  /** Replaces the Continue button on the right of the footer. */
+  actions?: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-12">
@@ -296,7 +278,7 @@ function StepLayout({
         {description && <p className="text-[15px] leading-relaxed text-fg-muted">{description}</p>}
       </div>
       <div className="flex flex-col gap-11">{children}</div>
-      {(onBack || onNext) && (
+      {(onBack || onNext || actions) && (
         <div className="flex items-center justify-between border-t border-border pt-8">
           {onBack ? (
             <Button variant="ghost" iconLeft={<ArrowLeft />} onClick={onBack}>
@@ -305,10 +287,14 @@ function StepLayout({
           ) : (
             <span />
           )}
-          {onNext && (
-            <Button variant="primary" iconRight={<ArrowRight />} onClick={onNext} loading={nextLoading}>
-              {nextLabel}
-            </Button>
+          {actions ? (
+            <div className="flex items-center gap-3">{actions}</div>
+          ) : (
+            onNext && (
+              <Button variant="primary" iconRight={<ArrowRight />} onClick={onNext} loading={nextLoading}>
+                {nextLabel}
+              </Button>
+            )
           )}
         </div>
       )}
@@ -324,6 +310,21 @@ function Group({ label, hint, htmlFor, children }: { label: string; hint?: strin
         {hint && <span className="text-xs font-normal text-fg-subtle">{hint}</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+function ServerCard({ title, detail, aside }: { title: string; detail: string; aside?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-5 rounded-card border border-border bg-surface p-5">
+      <span className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-border bg-bg">
+        <img src={postgresLogo} alt="" width={32} height={32} draggable={false} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="text-base font-medium text-fg">{title}</span>
+        <span className="truncate text-sm text-fg-muted">{detail}</span>
+      </span>
+      {aside}
     </div>
   );
 }
