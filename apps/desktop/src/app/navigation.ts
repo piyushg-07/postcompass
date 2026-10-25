@@ -75,8 +75,13 @@ export const useNavigation = create<NavigationState>()(
           return {
             openServerIds: rest,
             openServerId: next,
+            // Only the explorer depends on it; Home or Settings stay where they are
             section:
-              next && s.section === "explorer" ? "explorer" : "databases",
+              s.section !== "explorer"
+                ? s.section
+                : next
+                  ? "explorer"
+                  : "databases",
           };
         }),
       setInstallDialogOpen: (open) => set({ installDialogOpen: open }),

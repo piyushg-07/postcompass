@@ -66,17 +66,20 @@ export const useUndoStore = create<{
   restore: (table, direction, entry) =>
     set((s) => {
       const stacks = s.tables[table] ?? EMPTY;
+      // Taken out by identity: a change recorded meanwhile (which clears `future`) means the
+      // entry may no longer be the last one, and slicing would drop the wrong entry
+      const without = (list: UndoEntry[]) => list.filter((e) => e !== entry);
       return {
         tables: {
           ...s.tables,
           [table]:
             direction === "undo"
               ? {
-                  past: [...stacks.past, entry],
-                  future: stacks.future.slice(0, -1),
+                  past: [...stacks.past, entry].slice(-LIMIT),
+                  future: without(stacks.future),
                 }
               : {
-                  past: stacks.past.slice(0, -1),
+                  past: without(stacks.past),
                   future: [...stacks.future, entry],
                 },
         },

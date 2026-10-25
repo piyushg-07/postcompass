@@ -1,154 +1,22 @@
-import { cn, Popover, PopoverAnchor, PopoverContent } from "@repo/ui";
+import { cn, Popover, PopoverAnchor } from "@repo/ui";
 import { Search, X } from "lucide-react";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { FilterSpec } from "../../../lib/bindings";
-import type { TypeKind } from "../../../lib/pg-types";
+import {
+  type Draft,
+  type FilterColumn,
+  fromSpec,
+  type Op,
+  operatorsFor,
+  toSpec,
+  valueOptions,
+} from "./filter/filter-spec";
+import { type Item, ListContent, OptionList } from "./filter/option-list";
 
-/** A column as the filter bar needs it. */
-export interface FilterColumn {
-  name: string;
-  /** Short type, shown next to the name in the list. */
-  format?: string;
-  kind?: TypeKind;
-  enumValues?: string[];
-}
-
-type Op = "=" | "<>" | ">" | "<" | ">=" | "<=" | "~~" | "~~*" | "in" | "is";
-type OpGroup = "comparison" | "pattern" | "setNull";
-
-/** Supabase's operators, grouped as in its menu. */
-const OPERATORS: { value: Op; label: string; group: OpGroup }[] = [
-  { value: "=", label: "Equals", group: "comparison" },
-  { value: "<>", label: "Not equal", group: "comparison" },
-  { value: ">", label: "Greater than", group: "comparison" },
-  { value: "<", label: "Less than", group: "comparison" },
-  { value: ">=", label: "Greater or equal", group: "comparison" },
-  { value: "<=", label: "Less or equal", group: "comparison" },
-  { value: "~~", label: "Like", group: "pattern" },
-  { value: "~~*", label: "iLike", group: "pattern" },
-  { value: "in", label: "In list", group: "setNull" },
-  { value: "is", label: "Is", group: "setNull" },
-];
-
-const DATE_KINDS = new Set<TypeKind>([
-  "date",
-  "time",
-  "timestamp",
-  "timestamptz",
-]);
-
-function operatorsFor(kind?: TypeKind) {
-  if (kind === "bool")
-    return OPERATORS.filter((o) => ["=", "<>", "is"].includes(o.value));
-  if (kind && DATE_KINDS.has(kind))
-    return OPERATORS.filter(
-      (o) => o.group === "comparison" || o.value === "is",
-    );
-  return OPERATORS;
-}
-
-const pad = (n: number) => String(n).padStart(2, "0");
-const day = (offset: number) => {
-  const d = new Date(Date.now() - offset * 86400000);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-
-/** Ready-made values for a condition, like Supabase's value menu. */
-function valueOptions(column: FilterColumn | undefined, op: Op) {
-  if (op === "is")
-    return [
-      { value: "null", label: "NULL" },
-      { value: "not null", label: "NOT NULL" },
-      ...(column?.kind === "bool"
-        ? [
-            { value: "true", label: "TRUE" },
-            { value: "false", label: "FALSE" },
-          ]
-        : []),
-    ];
-  if (op === "~~" || op === "~~*" || op === "in") return [];
-  if (column?.kind === "bool")
-    return [
-      { value: "true", label: "true" },
-      { value: "false", label: "false" },
-    ];
-  if (column?.kind === "enum")
-    return (column.enumValues ?? []).map((v) => ({ value: v, label: v }));
-  if (column?.kind && DATE_KINDS.has(column.kind) && column.kind !== "time")
-    return [
-      { value: day(0), label: "Today" },
-      { value: day(1), label: "Yesterday" },
-      { value: day(7), label: "Last 7 days" },
-      { value: day(30), label: "Last 30 days" },
-    ];
-  return [];
-}
-
-interface Draft {
-  column: string;
-  op: Op;
-  value: string;
-}
-
-const SIMPLE: Partial<Record<Op, FilterSpec["op"]>> = {
-  "=": "equals",
-  "<>": "not_equals",
-  ">": "greater_than",
-  "<": "less_than",
-  ">=": "greater_or_equal",
-  "<=": "less_or_equal",
-  "~~": "like",
-  "~~*": "i_like",
-  in: "in_list",
-};
-const IS_VALUES: Record<string, FilterSpec["op"]> = {
-  null: "is_null",
-  "not null": "is_not_null",
-  true: "is_true",
-  false: "is_false",
-};
-
-/** A finished condition as the backend takes it; `null` while it's incomplete. */
-function toSpec(d: Draft, column?: FilterColumn): FilterSpec | null {
-  if (d.op === "is") {
-    const op = IS_VALUES[d.value.trim().toLowerCase()];
-    return op ? { column: d.column, op, value: null } : null;
-  }
-  // Spaces only matter in text; uuids and numbers are often pasted with stray ones
-  const text = column?.kind === "text" && column.format !== "uuid";
-  const value = text ? d.value : d.value.trim();
-  if (value === "") return null;
-  return { column: d.column, op: SIMPLE[d.op]!, value };
-}
-
-function fromSpec(f: FilterSpec): Draft {
-  const is = Object.entries(IS_VALUES).find(([, op]) => op === f.op);
-  if (is) return { column: f.column, op: "is", value: is[0] };
-  if (f.op === "contains")
-    return { column: f.column, op: "~~*", value: `%${f.value ?? ""}%` };
-  if (f.op === "starts_with")
-    return { column: f.column, op: "~~*", value: `${f.value ?? ""}%` };
-  const op = (Object.entries(SIMPLE).find(([, o]) => o === f.op)?.[0] ??
-    "=") as Op;
-  return { column: f.column, op, value: f.value ?? "" };
-}
+export type { FilterColumn } from "./filter/filter-spec";
 
 type Part = "column" | "op" | "value";
 type Active = { index: number; part: Part } | "freeform" | null;
-
-interface Item {
-  value: string;
-  label: string;
-  hint?: string;
-  symbol?: string;
-  group?: string;
-}
 
 /**
  * Supabase's filter bar: each filter is a pill of column, operator and value you can click to
@@ -492,81 +360,6 @@ export function FilterBar({
         </PopoverAnchor>
         <ListContent>{list}</ListContent>
       </Popover>
-    </div>
-  );
-}
-
-function ListContent({ children }: { children: ReactNode }) {
-  return (
-    <PopoverContent
-      align="start"
-      sideOffset={6}
-      className="max-w-[360px] min-w-[220px] p-0"
-      onOpenAutoFocus={(e) => e.preventDefault()}
-      onCloseAutoFocus={(e) => e.preventDefault()}
-    >
-      {children}
-    </PopoverContent>
-  );
-}
-
-const GROUP_LABELS: Record<string, string> = {
-  comparison: "Comparison",
-  pattern: "Pattern",
-  setNull: "Set & null",
-};
-
-/** The menu under a pill or the bar: mouse or arrow keys to pick. */
-function OptionList({
-  items,
-  highlight,
-  onHover,
-  onSelect,
-}: {
-  items: Item[];
-  highlight: number;
-  onHover: (index: number) => void;
-  onSelect: (item: Item) => void;
-}) {
-  return (
-    <div className="max-h-[300px] overflow-y-auto p-1">
-      {items.map((item, i) => (
-        <div key={`${item.group ?? ""}:${item.value}`}>
-          {item.group && item.group !== items[i - 1]?.group && (
-            <p
-              className={cn(
-                "px-2 pt-1.5 pb-1 text-[11px] text-fg-subtle",
-                i > 0 && "mt-1 border-t border-border pt-2",
-              )}
-            >
-              {GROUP_LABELS[item.group]}
-            </p>
-          )}
-          <button
-            type="button"
-            // Keep focus in the input so blur doesn't close the menu first
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onSelect(item);
-            }}
-            onMouseEnter={() => onHover(i)}
-            className={cn(
-              "flex h-7 w-full cursor-pointer items-center justify-between gap-2 rounded px-2 text-left text-xs text-fg",
-              i === highlight ? "bg-surface-hover" : undefined,
-            )}
-          >
-            <span className="truncate">{item.label}</span>
-            {item.hint && (
-              <span className="shrink-0 text-fg-subtle">{item.hint}</span>
-            )}
-            {item.symbol && (
-              <span className="ml-auto shrink-0 rounded-sm bg-surface-hover px-1.5 py-0.5 font-mono text-fg-muted">
-                {item.symbol}
-              </span>
-            )}
-          </button>
-        </div>
-      ))}
     </div>
   );
 }

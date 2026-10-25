@@ -110,8 +110,11 @@ export function IndexDialog({
   const [unique, setUnique] = useState(false);
   const [method, setMethod] = useState("btree");
   const [name, setName] = useState("");
+  // Only B-tree indexes can be unique; Postgres rejects UNIQUE for the other methods
+  const canUnique = method === "btree";
+  const isUnique = unique && canUnique;
   const suggested = suggestIdentifier(
-    `${structure.name}_${columns.join("_") || "col"}_${unique ? "key" : "idx"}`,
+    `${structure.name}_${columns.join("_") || "col"}_${isUnique ? "key" : "idx"}`,
   ).slice(0, 63);
   const finalName = name.trim() || suggested;
   const sql = columns.length
@@ -120,7 +123,7 @@ export function IndexDialog({
         structure.name,
         finalName,
         columns,
-        unique,
+        isUnique,
         method,
       )
     : null;
@@ -205,12 +208,14 @@ export function IndexDialog({
             )}
           </Field>
 
-          <ToggleRow
-            title="Unique"
-            description="Reject rows that repeat these values"
-            checked={unique}
-            onChange={setUnique}
-          />
+          {canUnique && (
+            <ToggleRow
+              title="Unique"
+              description="Reject rows that repeat these values"
+              checked={unique}
+              onChange={setUnique}
+            />
+          )}
 
           <Field label="Name" hint="Optional">
             {(p) => (

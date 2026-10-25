@@ -11,81 +11,27 @@ import {
 } from "@repo/ui";
 import { AlertTriangle, ArrowRight, Plus, X } from "lucide-react";
 import { useState } from "react";
-import type { ForeignKeyInfo } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
-import { ident, qualified } from "../../../lib/sql";
 import { useSchemas, useStructure, useTables } from "../explorer-context";
 import { SqlBlock } from "../sql/sql-editor";
+import {
+  type ForeignKeyDraft,
+  type ForeignKeyEntry,
+  foreignKeyStatus,
+} from "./foreign-key-sql";
 
-/** A foreign key being set up in a form, before any SQL runs. */
-export interface ForeignKeyDraft {
-  schema: string;
-  table: string;
-  pairs: { column: string; refColumn: string }[];
-  onUpdate: string;
-  onDelete: string;
-}
-
-/**
- * A foreign key in a form's list: new ones have no `name`; existing ones keep their constraint
- * name and the values they started with, so changes become DROP + ADD.
- */
-export interface ForeignKeyEntry extends ForeignKeyDraft {
-  name?: string;
-  original?: ForeignKeyDraft;
-  toRemove?: boolean;
-}
-
-/** An existing constraint as a list entry. */
-export function foreignKeyEntry(fk: ForeignKeyInfo): ForeignKeyEntry {
-  const draft: ForeignKeyDraft = {
-    schema: fk.referencedSchema,
-    table: fk.referencedTable,
-    pairs: fk.columns.map((column, i) => ({
-      column,
-      refColumn: fk.referencedColumns[i] ?? "",
-    })),
-    onUpdate: fk.onUpdate,
-    onDelete: fk.onDelete,
-  };
-  return { ...draft, name: fk.name, original: draft };
-}
-
-export type ForeignKeyStatus = "ADD" | "UPDATE" | "REMOVE" | undefined;
-
-export function foreignKeyStatus(fk: ForeignKeyEntry): ForeignKeyStatus {
-  if (fk.toRemove) return "REMOVE";
-  if (!fk.name) return "ADD";
-  const { name: _n, original, toRemove: _r, ...now } = fk;
-  return JSON.stringify(now) !== JSON.stringify(original)
-    ? "UPDATE"
-    : undefined;
-}
-
-/**
- * SQL for a list of foreign keys on `schema.table`: `drops` run before column changes (so a
- * dropped or retyped column isn't blocked), `adds` after them.
- */
-export function foreignKeyStatements(
-  schema: string,
-  table: string,
-  entries: ForeignKeyEntry[],
-) {
-  const target = `ALTER TABLE ${qualified(schema, table)}`;
-  const drops: string[] = [];
-  const adds: string[] = [];
-  for (const fk of entries) {
-    const status = foreignKeyStatus(fk);
-    if ((status === "REMOVE" || status === "UPDATE") && fk.name)
-      drops.push(`${target} DROP CONSTRAINT ${ident(fk.name)};`);
-    if (status === "ADD") adds.push(`${target} ADD ${foreignKeyClause(fk)};`);
-    if (status === "UPDATE" && fk.name)
-      adds.push(
-        `${target} ADD CONSTRAINT ${ident(fk.name)} ${foreignKeyClause(fk)};`,
-      );
-  }
-  return { drops, adds };
-}
+export {
+  foreignKeyClause,
+  type ForeignKeyDraft,
+  type ForeignKeyEntry,
+  foreignKeyEntry,
+  type ForeignKeyStatus,
+  foreignKeyStatements,
+  foreignKeyStatus,
+  removeForeignKey,
+  saveForeignKey,
+  undoRemoveForeignKey,
+} from "./foreign-key-sql";
 
 /** One foreign key in a list, like Supabase's: where it points, with Edit and Remove. */
 export function ForeignKeyRow({
@@ -159,28 +105,6 @@ export function ForeignKeyRow({
   );
 }
 
-/** List state helpers shared by the table and column panels. */
-export function removeForeignKey(list: ForeignKeyEntry[], index: number) {
-  // A new one just disappears; an existing one is marked until saved
-  return list[index]?.name
-    ? list.map((x, i) => (i === index ? { ...x, toRemove: true } : x))
-    : list.filter((_, i) => i !== index);
-}
-
-export function undoRemoveForeignKey(list: ForeignKeyEntry[], index: number) {
-  return list.map((x, i) => (i === index ? { ...x, toRemove: false } : x));
-}
-
-export function saveForeignKey(
-  list: ForeignKeyEntry[],
-  index: number,
-  fk: ForeignKeyDraft,
-) {
-  return index >= 0
-    ? list.map((x, i) => (i === index ? { ...x, ...fk } : x))
-    : [...list, fk];
-}
-
 const ACTIONS = [
   {
     value: "NO ACTION",
@@ -200,16 +124,6 @@ const ACTIONS = [
   { value: "SET NULL", label: "Set NULL", hint: "clear these columns" },
   { value: "SET DEFAULT", label: "Set default", hint: "reset these columns" },
 ];
-
-/** `FOREIGN KEY (…) REFERENCES … ON UPDATE … ON DELETE …`, for CREATE or ALTER TABLE. */
-export function foreignKeyClause(fk: ForeignKeyDraft) {
-  return (
-    `FOREIGN KEY (${fk.pairs.map((p) => ident(p.column)).join(", ")}) ` +
-    `REFERENCES ${qualified(fk.schema, fk.table)} (${fk.pairs.map((p) => ident(p.refColumn)).join(", ")})` +
-    `${fk.onUpdate !== "NO ACTION" ? ` ON UPDATE ${fk.onUpdate}` : ""}` +
-    `${fk.onDelete !== "NO ACTION" ? ` ON DELETE ${fk.onDelete}` : ""}`
-  );
-}
 
 /**
  * "Add foreign key relationship", like Supabase's: pick the schema and table to point to, match

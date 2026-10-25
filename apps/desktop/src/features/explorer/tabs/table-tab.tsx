@@ -16,7 +16,7 @@ import { useDefinition, useExplorer, useStructure } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
 import { SqlBlock } from "../sql/sql-editor";
 import { StructureView } from "../structure/structure-view";
-import { type Tab, type TableView, useWorkspace } from "../workspace-store";
+import { type Tab, type TableView, useWorkspaceActions } from "../workspace-store";
 import { LoadError } from "../load-error";
 
 type TableTabModel = Extract<Tab, { type: "table" }>;
@@ -34,7 +34,7 @@ type Action = "secure";
 
 export function TableTab({ tab }: { tab: TableTabModel }) {
   const { serverId } = useExplorer();
-  const { updateTab } = useWorkspace(serverId);
+  const { updateTab } = useWorkspaceActions(serverId);
   const [action, setAction] = useState<Action | null>(null);
   const isView = tab.kind === "view" || tab.kind === "materialized_view";
 
@@ -200,7 +200,7 @@ export function DefinitionView({
   title?: string;
 }) {
   const { serverId } = useExplorer();
-  const { newQuery } = useWorkspace(serverId);
+  const { newQuery } = useWorkspaceActions(serverId);
   const definition = useDefinition(database, schema, kind, name);
   if (definition.isPending) {
     return (

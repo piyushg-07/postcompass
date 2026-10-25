@@ -1,6 +1,6 @@
 import { Badge, Card, Switch, toast } from "@repo/ui";
 import { User } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
 import { PageHeader } from "../../app/page";
@@ -19,11 +19,18 @@ const ROLE_LABELS: Record<Role, string> = {
 export function SettingsPage() {
   const { state, info, setState } = useAppState();
 
+  // Each save sends the whole settings object, so a second toggle before the first answer would
+  // be built from stale settings and could undo it; ignore toggles while one is in flight.
+  const saving = useRef(false);
   const saveSettings = async (stopServersOnQuit: boolean) => {
+    if (saving.current) return;
+    saving.current = true;
     try {
       setState(await unwrap(commands.updateSettings({ ...state.settings, stopServersOnQuit })));
     } catch (e) {
       toast.error("Couldn't save settings", { description: describeError(e).message });
+    } finally {
+      saving.current = false;
     }
   };
 

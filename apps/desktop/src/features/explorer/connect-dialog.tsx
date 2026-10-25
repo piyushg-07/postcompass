@@ -12,12 +12,12 @@ interface Details {
   port: number;
   database: string;
   user: string;
-  /** Already URL-encoded where a format needs it. */
+  /** Raw; each format encodes what it needs. */
   password: string;
 }
 
 const uri = (d: Details) =>
-  `postgresql://${d.user}:${encodeURIComponent(d.password)}@${d.host}:${d.port}/${encodeURIComponent(d.database)}`;
+  `postgresql://${encodeURIComponent(d.user)}:${encodeURIComponent(d.password)}@${d.host}:${d.port}/${encodeURIComponent(d.database)}`;
 
 /** Connection strings: what they are and where they go. */
 const STRINGS: {
@@ -49,7 +49,7 @@ const STRINGS: {
     label: "JDBC",
     hint: "For Java, Kotlin and JVM tools like DBeaver.",
     build: (d) =>
-      `jdbc:postgresql://${d.host}:${d.port}/${encodeURIComponent(d.database)}?user=${d.user}&password=${encodeURIComponent(d.password)}`,
+      `jdbc:postgresql://${d.host}:${d.port}/${encodeURIComponent(d.database)}?user=${encodeURIComponent(d.user)}&password=${encodeURIComponent(d.password)}`,
   },
 ];
 
@@ -178,8 +178,9 @@ function ConnectDialogBody({
       .replaceAll(encodeURIComponent("PASSWORD"), MASK)
       .replaceAll("PASSWORD", MASK);
 
-  const copy = (text: string, what: string) => {
-    if (!secret) {
+  // Only text that carries the password needs it; host, port… copy regardless
+  const copy = (text: string, what: string, needsSecret = true) => {
+    if (needsSecret && !secret) {
       toast.error("Couldn't read the password", {
         description: password.error
           ? describeError(password.error).message
@@ -242,10 +243,18 @@ function ConnectDialogBody({
       <div className="flex flex-col gap-3">
         {view === "params" ? (
           <div className="grid grid-cols-2 gap-2.5">
-            <Param label="Host" value={server.host} onCopy={copy} />
-            <Param label="Port" value={String(server.port)} onCopy={copy} />
-            <Param label="Database" value={database} onCopy={copy} />
-            <Param label="User" value={server.superuser} onCopy={copy} />
+            <Param label="Host" value={server.host}
+              onCopy={(text, what) => copy(text, what, false)}
+            />
+            <Param label="Port" value={String(server.port)}
+              onCopy={(text, what) => copy(text, what, false)}
+            />
+            <Param label="Database" value={database}
+              onCopy={(text, what) => copy(text, what, false)}
+            />
+            <Param label="User" value={server.superuser}
+              onCopy={(text, what) => copy(text, what, false)}
+            />
             <Param
               label="Password"
               value={secret}

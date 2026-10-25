@@ -13,10 +13,20 @@ export class IpcError extends Error {
   }
 }
 
+/**
+ * Tauri rejects with a bare string (not a `CoreError`) when a command can't run at all, e.g. its
+ * arguments failed to deserialize. Without this the error would have no message and no code.
+ */
+function toCoreError(error: unknown): CoreError {
+  if (typeof error === "object" && error !== null && "code" in error && "message" in error)
+    return error as CoreError;
+  return { code: "internal", message: typeof error === "string" ? error : String(error) };
+}
+
 /** Turns a tauri-specta `Result` into a plain value, throwing `IpcError` on failure. */
 export async function unwrap<T>(result: Promise<Result<T>>): Promise<T> {
   const res = await result;
-  if (res.status === "error") throw new IpcError(res.error);
+  if (res.status === "error") throw new IpcError(toCoreError(res.error));
   return res.data;
 }
 

@@ -13,32 +13,19 @@ import { AlertTriangle, Check } from "lucide-react";
 import { useState } from "react";
 import type { PolicyInfo } from "../../../lib/bindings";
 import { describeError } from "../../../lib/ipc";
-import { ident, qualified } from "../../../lib/sql";
 import { useRunSql } from "../explorer-context";
 import { SqlBlock } from "../sql/sql-editor";
+import {
+  type Command,
+  COMMANDS,
+  createPolicySql,
+  type PolicyDraft,
+  replacePolicySql,
+  usesCheck,
+  usesUsing,
+} from "./policy-sql";
 
-export const COMMANDS = [
-  "ALL",
-  "SELECT",
-  "INSERT",
-  "UPDATE",
-  "DELETE",
-] as const;
-type Command = (typeof COMMANDS)[number];
-
-interface Draft {
-  name: string;
-  command: Command;
-  permissive: boolean;
-  roles: string[];
-  using: string;
-  withCheck: string;
-}
-
-/** Which expressions a command takes: USING filters existing rows, WITH CHECK new ones. */
-const usesUsing = (c: Command) => c !== "INSERT";
-const usesCheck = (c: Command) =>
-  c === "ALL" || c === "INSERT" || c === "UPDATE";
+export { COMMANDS, createPolicySql, dropPolicySql } from "./policy-sql";
 
 const COMMAND_HINTS: Record<Command, string> = {
   ALL: "Every operation",
@@ -51,7 +38,7 @@ const COMMAND_HINTS: Record<Command, string> = {
 const TEMPLATES: {
   title: string;
   description: string;
-  draft: Partial<Draft>;
+  draft: Partial<PolicyDraft>;
 }[] = [
   {
     title: "Read access for everyone",
@@ -100,30 +87,6 @@ const TEMPLATES: {
     },
   },
 ];
-
-/** Role names in a `TO` list: `public` is a keyword, the rest are identifiers. */
-function roleList(roles: string[]) {
-  return roles.map((r) => (r === "public" ? "public" : ident(r))).join(", ");
-}
-
-export function createPolicySql(schema: string, table: string, d: Draft) {
-  const lines = [
-    `CREATE POLICY ${ident(d.name.trim())}`,
-    `  ON ${qualified(schema, table)}`,
-    `  AS ${d.permissive ? "PERMISSIVE" : "RESTRICTIVE"}`,
-    `  FOR ${d.command}`,
-    `  TO ${roleList(d.roles.length ? d.roles : ["public"])}`,
-  ];
-  if (usesUsing(d.command) && d.using.trim())
-    lines.push(`  USING (${d.using.trim()})`);
-  if (usesCheck(d.command) && d.withCheck.trim())
-    lines.push(`  WITH CHECK (${d.withCheck.trim()})`);
-  return `${lines.join("\n")};`;
-}
-
-export function dropPolicySql(schema: string, table: string, name: string) {
-  return `DROP POLICY ${ident(name)} ON ${qualified(schema, table)};`;
-}
 
 /**
  * "Create / edit policy" side panel, like Supabase's: name, command, roles and the two
@@ -180,7 +143,7 @@ function PolicyForm({
   onDone: () => void;
 }) {
   const run = useRunSql();
-  const [draft, setDraft] = useState<Draft>(() => ({
+  const [draft, setDraft] = useState<PolicyDraft>(() => ({
     name: policy?.name ?? "",
     command: (policy?.command as Command | undefined) ?? "SELECT",
     permissive: policy?.permissive ?? true,
@@ -188,7 +151,7 @@ function PolicyForm({
     using: policy?.using ?? "",
     withCheck: policy?.withCheck ?? "",
   }));
-  const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
+  const patch = (p: Partial<PolicyDraft>) => setDraft((d) => ({ ...d, ...p }));
 
   const missing = !draft.name.trim()
     ? "Give the policy a name."
@@ -200,21 +163,20 @@ function PolicyForm({
         ? "Add a WITH CHECK expression."
         : null;
 
-  const create = createPolicySql(schema, table, draft);
-  // Postgres can't change a policy's command or behaviour in place, so edits replace it
   const sql = policy
-    ? `BEGIN;\n${dropPolicySql(schema, table, policy.name)}\n${create}\nCOMMIT;`
-    : create;
+    ? replacePolicySql(schema, table, policy.name, draft)
+    : createPolicySql(schema, table, draft);
 
-  const toggleRole = (role: string) =>
-    patch({
-      roles:
-        role === "public"
-          ? ["public"]
-          : draft.roles.includes(role)
-            ? draft.roles.filter((r) => r !== role)
-            : [...draft.roles.filter((r) => r !== "public"), role],
-    });
+  const toggleRole = (role: string) => {
+    const roles =
+      role === "public"
+        ? ["public"]
+        : draft.roles.includes(role)
+          ? draft.roles.filter((r) => r !== role)
+          : [...draft.roles.filter((r) => r !== "public"), role];
+    // No roles means everyone (that's what the SQL does), so show it that way
+    patch({ roles: roles.length ? roles : ["public"] });
+  };
 
   const submit = () => {
     if (missing || run.isPending) return;

@@ -1,24 +1,41 @@
-import { Badge, Button, cn, IconButton, Skeleton, Tooltip } from "@repo/ui";
+import { Badge, IconButton, Skeleton, Tooltip } from "@repo/ui";
 import {
   Check,
   KeyRound,
   Link2,
   Pencil,
-  Plus,
   ShieldCheck,
   ShieldOff,
   Trash2,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import type { ColumnInfo, TableKind } from "../../../lib/bindings";
 import { formatBytes } from "../../../lib/format";
 import { dropColumn, dropConstraint, dropIndex } from "../../../lib/sql";
 import { useExplorer, useSchemaGraph, useStructure } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
-import { useWorkspace } from "../workspace-store";
+import { useWorkspaceActions } from "../workspace-store";
 import { ColumnSheet } from "./add-column-sheet";
 import { ForeignKeyDialog, IndexDialog } from "./index-dialogs";
 import { LoadError } from "../load-error";
+import {
+  constraintRule,
+  indexedOn,
+  parseTrigger,
+  tidyDefault,
+} from "./structure-format";
+import {
+  AddButton,
+  Cell,
+  Empty,
+  FkAction,
+  None,
+  Row,
+  RowActions,
+  Section,
+  Table,
+  TableLink,
+} from "./structure-parts";
 
 interface PendingSql {
   title: string;
@@ -37,7 +54,7 @@ export function StructureView({
   table: string;
 }) {
   const { serverId } = useExplorer();
-  const { openTab } = useWorkspace(serverId);
+  const { openTab } = useWorkspaceActions(serverId);
   const structure = useStructure(database, schema, table);
   // Tables in the same schema whose foreign keys point here
   const graph = useSchemaGraph(database, schema);
@@ -508,201 +525,5 @@ export function StructureView({
         />
       )}
     </div>
-  );
-}
-
-const FK_ACTIONS: Record<string, { label: string; hint: string }> = {
-  CASCADE: { label: "Cascade", hint: "Rows here change or go with it" },
-  "SET NULL": { label: "Set null", hint: "The column here is set to NULL" },
-  "SET DEFAULT": {
-    label: "Set default",
-    hint: "The column here goes back to its default",
-  },
-  RESTRICT: { label: "Restrict", hint: "Blocked while rows here point to it" },
-  "NO ACTION": {
-    label: "No action",
-    hint: "Blocked while rows here point to it",
-  },
-};
-
-/** `'pending'::order_status` → `'pending'`; the cast only repeats the column type. */
-function tidyDefault(value: string) {
-  return value.replace(/^('(?:[^']|'')*')::[\w\s."[\]]+$/, "$1");
-}
-
-/** The part of an index after `USING method`, e.g. `(placed_at DESC)`, without the brackets. */
-function indexedOn(index: { definition: string; columns: string[] }) {
-  const m = /USING \S+ \((.*)\)(.*)$/i.exec(index.definition);
-  if (!m) return index.columns.join(", ");
-  return `${m[1]}${m[2]}`;
-}
-
-/** `CHECK ((price > 0))` → `price > 0`; other kinds as written. */
-function constraintRule(definition: string) {
-  const check = /^CHECK \((.*)\)$/i.exec(definition.trim());
-  if (!check) return definition;
-  const inner = check[1]!;
-  return inner.startsWith("(") && inner.endsWith(")")
-    ? inner.slice(1, -1)
-    : inner;
-}
-
-/** Pulls the timing, events and function out of a `CREATE TRIGGER` statement. */
-function parseTrigger(definition: string) {
-  const m =
-    /TRIGGER \S+ (BEFORE|AFTER|INSTEAD OF) (.+?) ON .+?EXECUTE (?:FUNCTION|PROCEDURE) ([^\s(]+)/i.exec(
-      definition,
-    );
-  if (!m) return null;
-  return {
-    timing: m[1]!,
-    events: m[2]!.split(/\s+OR\s+/i).map((e) => e.split(/\s/)[0]!),
-    fn: m[3]!,
-  };
-}
-
-function Section({
-  title,
-  count,
-  hint,
-  action,
-  children,
-}: {
-  title: string;
-  count: number;
-  hint: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-2.5">
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-fg">
-            {title}
-            <span className="rounded-full bg-surface-hover px-1.5 font-mono text-[10px] font-normal text-fg-muted">
-              {count}
-            </span>
-          </h3>
-          <p className="text-xs text-fg-subtle">{hint}</p>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function AddButton({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Button size="sm" variant="ghost" iconLeft={<Plus />} onClick={onClick}>
-      {children}
-    </Button>
-  );
-}
-
-function Table({ head, children }: { head: string[]; children: ReactNode }) {
-  return (
-    <div className="overflow-x-auto rounded-card border border-border">
-      <table className="w-full text-xs">
-        <thead className="bg-surface text-left text-fg-subtle">
-          <tr className="border-b border-border">
-            {head.map((h, i) => (
-              <th key={i} className="px-3 py-2 font-medium whitespace-nowrap">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
-  );
-}
-
-function Row({ children }: { children: ReactNode }) {
-  return (
-    <tr className="group border-b border-border/60 last:border-b-0 hover:bg-surface-hover/40">
-      {children}
-    </tr>
-  );
-}
-
-function Cell({
-  children,
-  mono,
-  className,
-}: {
-  children: ReactNode;
-  mono?: boolean;
-  className?: string;
-}) {
-  return (
-    <td
-      className={cn("px-3 py-2 text-fg-muted", mono && "font-mono", className)}
-    >
-      {children}
-    </td>
-  );
-}
-
-function RowActions({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-      {children}
-    </div>
-  );
-}
-
-function Empty({
-  action,
-  children,
-}: {
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-card border border-dashed border-border px-3 py-2 text-xs text-fg-subtle">
-      <p className="py-1">{children}</p>
-      {action}
-    </div>
-  );
-}
-
-function None() {
-  return <span className="text-fg-subtle/60">—</span>;
-}
-
-function TableLink({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-fg hover:text-info hover:underline"
-    >
-      {children}
-    </button>
-  );
-}
-
-function FkAction({ action }: { action: string }) {
-  const known = FK_ACTIONS[action.toUpperCase()];
-  if (!known) return <>{action}</>;
-  return (
-    <Tooltip content={known.hint}>
-      <span className="cursor-default">{known.label}</span>
-    </Tooltip>
   );
 }

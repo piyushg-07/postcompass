@@ -234,6 +234,7 @@ function SearchSelect({
                 }
               }}
               placeholder="Search"
+              aria-label="Search options"
               className="h-7 w-full bg-transparent pr-2 pl-7 text-xs text-fg outline-none placeholder:text-fg-subtle"
             />
           </div>

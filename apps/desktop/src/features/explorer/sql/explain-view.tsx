@@ -1,58 +1,6 @@
 import { Badge, cn } from "@repo/ui";
 import { useMemo } from "react";
-
-interface PlanNode {
-  "Node Type": string;
-  "Relation Name"?: string;
-  "Index Name"?: string;
-  Alias?: string;
-  "Join Type"?: string;
-  "Total Cost"?: number;
-  "Plan Rows"?: number;
-  "Actual Rows"?: number;
-  "Actual Total Time"?: number;
-  "Actual Loops"?: number;
-  Filter?: string;
-  "Index Cond"?: string;
-  "Hash Cond"?: string;
-  "Join Filter"?: string;
-  "Rows Removed by Filter"?: number;
-  "Shared Hit Blocks"?: number;
-  "Shared Read Blocks"?: number;
-  Plans?: PlanNode[];
-}
-
-interface PlanRoot {
-  Plan: PlanNode;
-  "Planning Time"?: number;
-  "Execution Time"?: number;
-}
-
-interface FlatNode {
-  node: PlanNode;
-  depth: number;
-  /** Time spent in this node itself (excluding children), ms. Only with ANALYZE. */
-  selfTime: number | null;
-}
-
-function flatten(node: PlanNode, depth: number, out: FlatNode[]) {
-  const loops = node["Actual Loops"] ?? 1;
-  const total =
-    node["Actual Total Time"] !== undefined
-      ? node["Actual Total Time"] * loops
-      : null;
-  const children = (node.Plans ?? []).reduce(
-    (sum, child) =>
-      sum + (child["Actual Total Time"] ?? 0) * (child["Actual Loops"] ?? 1),
-    0,
-  );
-  out.push({
-    node,
-    depth,
-    selfTime: total === null ? null : Math.max(0, total - children),
-  });
-  for (const child of node.Plans ?? []) flatten(child, depth + 1, out);
-}
+import { parsePlan } from "./explain-plan";
 
 /** Visual EXPLAIN plan: an indented tree with time bars; the slowest step is highlighted. */
 export function ExplainView({
@@ -62,26 +10,14 @@ export function ExplainView({
   planJson: string;
   analyzed: boolean;
 }) {
-  const parsed = useMemo(() => {
-    try {
-      const roots = JSON.parse(planJson) as PlanRoot[];
-      const root = roots[0]!;
-      const nodes: FlatNode[] = [];
-      flatten(root.Plan, 0, nodes);
-      return { root, nodes };
-    } catch {
-      return null;
-    }
-  }, [planJson]);
+  const parsed = useMemo(() => parsePlan(planJson), [planJson]);
 
   if (!parsed)
     return (
       <pre className="p-4 font-mono text-xs text-fg-muted">{planJson}</pre>
     );
 
-  const { root, nodes } = parsed;
-  const maxSelf = Math.max(0, ...nodes.map((n) => n.selfTime ?? 0));
-  const maxCost = Math.max(1, ...nodes.map((n) => n.node["Total Cost"] ?? 0));
+  const { root, nodes, maxSelf, maxCost } = parsed;
 
   return (
     <div className="flex h-full flex-col overflow-auto">

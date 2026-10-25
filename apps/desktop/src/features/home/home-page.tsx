@@ -22,7 +22,9 @@ import { useServerStatuses } from "../servers/use-server-statuses";
 /** Start page: a live network banner, every connection (local and cloud), and where you left off. */
 export function HomePage() {
   const { state } = useAppState();
-  const nav = useNavigation();
+  // Just the actions: subscribing to the whole store re-rendered Home on every navigation change
+  const goTo = useNavigation((s) => s.goTo);
+  const openServer = useNavigation((s) => s.openServer);
   const { statuses, setStatus } = useServerStatuses(
     state.servers.map((s) => s.id),
   );
@@ -66,7 +68,7 @@ export function HomePage() {
               size="sm"
               variant="ghost"
               iconRight={<ArrowRight />}
-              onClick={() => nav.goTo("databases")}
+              onClick={() => goTo("databases")}
             >
               Manage
             </Button>
@@ -85,7 +87,7 @@ export function HomePage() {
               <RemoteRow
                 key={remote.id}
                 remote={remote}
-                onOpen={() => nav.openServer(`remote:${remote.id}`)}
+                onOpen={() => openServer(`remote:${remote.id}`)}
               />
             ))}
           </ul>
@@ -126,7 +128,7 @@ export function HomePage() {
                         kind: table.kind,
                         view: "data",
                       });
-                      nav.openServer(serverId);
+                      openServer(serverId);
                     }}
                   />
                 ))}
@@ -152,7 +154,7 @@ export function HomePage() {
                       useWorkspaceStore
                         .getState()
                         .newQuery(serverId, entry.database, entry.sql);
-                      nav.openServer(serverId);
+                      openServer(serverId);
                     }}
                   />
                 ))}

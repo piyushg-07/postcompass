@@ -1,21 +1,7 @@
 import { cn, Select } from "@repo/ui";
 import { BarChart3, LineChart } from "lucide-react";
 import { useMemo, useState } from "react";
-
-/** Points shown at most; the rest of the result is left out of the chart. */
-const MAX_POINTS = 200;
-const NUMBER = /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i;
-
-function isNumeric(rows: (string | null)[][], col: number) {
-  let seen = false;
-  for (const row of rows.slice(0, MAX_POINTS)) {
-    const v = row[col];
-    if (v === null || v === undefined || v === "") continue;
-    if (!NUMBER.test(v.trim())) return false;
-    seen = true;
-  }
-  return seen;
-}
+import { chartPoints, isNumeric, MAX_POINTS } from "./chart-data";
 
 const compact = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -58,13 +44,15 @@ export function ChartView({
       </div>
     );
 
-  const yCol = y >= 0 ? y : firstNumber;
-  const points = rows.slice(0, MAX_POINTS).map((r) => ({
-    label: r[x] ?? "NULL",
-    value: Number(r[yCol] ?? 0) || 0,
-  }));
-  const max = Math.max(0, ...points.map((p) => p.value));
-  const min = Math.min(0, ...points.map((p) => p.value));
+  // The picked column may stop being numeric when the same query is run again
+  const yCol = y >= 0 && numeric[y] ? y : firstNumber;
+  const points = chartPoints(rows, x, yCol);
+  let max = 0;
+  let min = 0;
+  for (const p of points) {
+    max = Math.max(max, p.value);
+    min = Math.min(min, p.value);
+  }
   const span = max - min || 1;
   const height = (v: number) => ((v - min) / span) * 100;
   const zero = height(0);
@@ -99,6 +87,7 @@ export function ChartView({
               key={k}
               type="button"
               aria-label={k === "bar" ? "Bar chart" : "Line chart"}
+              aria-pressed={kind === k}
               onClick={() => setKind(k)}
               className={cn(
                 "flex h-6 w-7 cursor-pointer items-center justify-center rounded [&_svg]:size-3.5",

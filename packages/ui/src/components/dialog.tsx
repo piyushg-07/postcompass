@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { cn } from "../lib/cn";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -129,6 +129,14 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   const [typed, setTyped] = useState("");
+  const inputId = useId();
+  // Clear what was typed whenever the dialog closes, also when the parent closes it (e.g. after
+  // the action succeeded); otherwise the next opening starts already confirmed.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) setTyped("");
+  }
   const canConfirm = !confirmText || typed === confirmText;
 
   return (
@@ -142,10 +150,10 @@ export function ConfirmDialog({
       <DialogContent title={title} description={description}>
         {confirmText && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-fg-muted">
+            <label htmlFor={inputId} className="text-xs text-fg-muted">
               Type <span className="font-mono text-fg">{confirmText}</span> to confirm
             </label>
-            <Input value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus spellCheck={false} />
+            <Input id={inputId} value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus spellCheck={false} />
           </div>
         )}
         <DialogFooter>

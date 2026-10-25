@@ -9,167 +9,23 @@ import {
 import { AlertTriangle, ClipboardPaste, FileUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ColumnInfo } from "../../../lib/bindings";
+import { shortType } from "../../../lib/pg-types";
+import { isBlankRow, parseClipboard } from "./paste/parse-clipboard";
 import {
-  baseTypeName,
-  INTEGER_TYPES,
-  shortType,
-  typeKind,
-} from "../../../lib/pg-types";
+  cellCheck,
+  findProblems,
+  guessMapping,
+  rowValues,
+  SKIP,
+  writable,
+} from "./paste/validate";
 
-/**
- * Splits clipboard text into rows of cells. Excel and Google Sheets copy as tab-separated text,
- * quoting cells that contain tabs, line breaks or quotes; CSV (commas) works too.
- */
-export function parseClipboard(
-  text: string,
-  delimiter?: "\t" | ",",
-): string[][] {
-  const clean = text.replace(/\r\n?/g, "\n").replace(/\n+$/, "");
-  if (!clean) return [];
-  delimiter ??= clean.includes("\t") ? "\t" : ",";
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < clean.length; i++) {
-    const ch = clean[i]!;
-    if (quoted) {
-      if (ch === '"' && clean[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (ch === '"') quoted = false;
-      else cell += ch;
-    } else if (ch === '"' && cell === "") quoted = true;
-    else if (ch === delimiter) {
-      row.push(cell);
-      cell = "";
-    } else if (ch === "\n") {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else cell += ch;
-  }
-  row.push(cell);
-  rows.push(row);
-  return rows;
-}
+export { isTabular, parseClipboard } from "./paste/parse-clipboard";
 
-/** Whether pasted text looks like rows of a table rather than a single value. */
-export function isTabular(text: string) {
-  const rows = parseClipboard(text);
-  return rows.length > 1 || (rows[0]?.length ?? 0) > 1;
-}
-
-const SKIP = "__skip__";
-
-const BOOLS = new Set([
-  "true",
-  "false",
-  "t",
-  "f",
-  "yes",
-  "no",
-  "y",
-  "n",
-  "on",
-  "off",
-  "1",
-  "0",
-]);
-const UUID =
-  /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
-
-/**
- * Why a pasted value won't fit `column`, checked before inserting; `null` when it looks fine.
- * Mirrors what PostgreSQL accepts closely enough to catch typos like "abcd" in a number column.
- */
-function cellProblem(
-  value: string,
-  column: ColumnInfo,
-  enums: ReadonlyMap<string, string[]>,
-): string | null {
-  const v = value.trim();
-  const kind = typeKind(column.dataType, new Set(enums.keys()));
-  const base = baseTypeName(column.dataType);
-  switch (kind) {
-    case "number":
-      if (INTEGER_TYPES.has(base))
-        return /^[+-]?\d+$/.test(v) ? null : "isn't a whole number";
-      return /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(v)
-        ? null
-        : "isn't a number";
-    case "bool":
-      return BOOLS.has(v.toLowerCase()) ? null : "isn't true or false";
-    case "date":
-    case "timestamp":
-    case "timestamptz":
-      return Number.isNaN(Date.parse(v.replace(" ", "T"))) &&
-        Number.isNaN(Date.parse(v))
-        ? "isn't a date"
-        : null;
-    case "time":
-      return /^\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?/.test(v) ? null : "isn't a time";
-    case "json":
-      try {
-        JSON.parse(value);
-        return null;
-      } catch {
-        return "isn't valid JSON";
-      }
-    case "enum": {
-      const allowed = enums.get(base);
-      return !allowed || allowed.includes(v)
-        ? null
-        : `isn't one of ${allowed.join(", ")}`;
-    }
-    case "array":
-      return /^\{.*\}$/s.test(v) ? null : "isn't a list like {a,b}";
-    default:
-      if (base === "uuid" && !UUID.test(v)) return "isn't a uuid";
-      return null;
-  }
-}
 /** Rows shown in the preview; the rest are inserted too. */
 const PREVIEW_ROWS = 100;
 
-/** Columns a pasted value can go into: generated and always-identity ones fill themselves. */
-const writable = (c: ColumnInfo) => !c.generated && c.identity !== "always";
-/**
- * Generated ids (identity or a primary key with a default, like serial or uuid), which pasted
- * data without a header usually leaves out when matching by order.
- */
-const automatic = (c: ColumnInfo) =>
-  c.identity !== null || (c.isPrimaryKey && c.default !== null);
-
-/**
- * Matches pasted columns to table columns: by header names when the first row is a header,
- * otherwise by order, skipping columns the database fills in when there are fewer values.
- */
-function guessMapping(rows: string[][], columns: ColumnInfo[]) {
-  const width = Math.max(...rows.map((r) => r.length));
-  const targets = columns.filter(writable);
-  const byName = new Map(targets.map((c) => [c.name.toLowerCase(), c.name]));
-  const header = rows[0] ?? [];
-  const headerHits = header.filter((h) =>
-    byName.has(h.trim().toLowerCase()),
-  ).length;
-  if (headerHits > 0 && headerHits >= Math.ceil(header.length / 2))
-    return {
-      hasHeader: true,
-      mapping: Array.from(
-        { length: width },
-        (_, i) => byName.get((header[i] ?? "").trim().toLowerCase()) ?? SKIP,
-      ),
-    };
-  const order =
-    width >= targets.length ? targets : targets.filter((c) => !automatic(c));
-  const list = order.length >= width ? order : targets;
-  return {
-    hasHeader: false,
-    mapping: Array.from({ length: width }, (_, i) => list[i]?.name ?? SKIP),
-  };
-}
+const NO_ENUMS: ReadonlyMap<string, string[]> = new Map();
 
 /**
  * Side panel previewing rows pasted from a spreadsheet: which pasted column goes into which
@@ -181,7 +37,7 @@ export function PasteRowsDialog({
   fileName,
   table,
   columns,
-  enums = new Map(),
+  enums = NO_ENUMS,
   saving,
   onCancel,
   onInsert,
@@ -240,13 +96,17 @@ function PasteBody({
       : ","
     : undefined;
   const parsed = useMemo(
-    () => parseClipboard(text, delimiter),
+    // Blank lines (common at the end of or between CSV records) would insert all-default rows
+    () => parseClipboard(text, delimiter).filter((r) => !isBlankRow(r)),
     [text, delimiter],
   );
   const guess = useMemo(() => guessMapping(parsed, columns), [parsed, columns]);
   const [hasHeader, setHasHeader] = useState(guess.hasHeader);
   const [mapping, setMapping] = useState(guess.mapping);
-  const rows = hasHeader ? parsed.slice(1) : parsed;
+  const rows = useMemo(
+    () => (hasHeader ? parsed.slice(1) : parsed),
+    [hasHeader, parsed],
+  );
   const used = mapping.filter((m) => m !== SKIP);
   const duplicates = used.filter((m, i) => used.indexOf(m) !== i);
   const required = columns.filter(
@@ -256,16 +116,14 @@ function PasteBody({
   const missing = required.filter((c) => !used.includes(c.name));
   const [skipBad, setSkipBad] = useState(false);
 
-  // Every mapped, non-empty cell checked against its column's type
-  const byName = new Map(columns.map((c) => [c.name, c]));
-  const problems = rows.flatMap((r, ri) =>
-    mapping.flatMap((m, i) => {
-      const value = r[i] ?? "";
-      const column = byName.get(m);
-      if (m === SKIP || value === "" || !column) return [];
-      const reason = cellProblem(value, column, enums);
-      return reason ? [{ row: ri, col: i, column: m, value, reason }] : [];
-    }),
+  // One check per column, then every mapped, non-empty cell checked against its column's type
+  const checks = useMemo(
+    () => new Map(columns.map((c) => [c.name, cellCheck(c, enums)])),
+    [columns, enums],
+  );
+  const problems = useMemo(
+    () => findProblems(rows, mapping, checks),
+    [rows, mapping, checks],
   );
   const bad = new Set(problems.map((p) => `${p.row}:${p.col}`));
   const badRows = new Set(problems.map((p) => p.row));
@@ -276,17 +134,7 @@ function PasteBody({
     duplicates.length === 0 &&
     (problems.length === 0 || skipBad);
 
-  const insert = () =>
-    onInsert(
-      toInsert.map((r) =>
-        mapping.flatMap((column, i) =>
-          // Empty cells are left out, so the column's default (or NULL) applies
-          column === SKIP || (r[i] ?? "") === ""
-            ? []
-            : [{ column, value: r[i]! }],
-        ),
-      ),
-    );
+  const insert = () => onInsert(rowValues(toInsert, mapping));
 
   const options = [
     { value: SKIP, label: "Skip" },

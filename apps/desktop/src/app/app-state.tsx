@@ -1,8 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback } from "react";
 import type { AppInfo, AppState } from "../lib/bindings";
-import { commands, unwrap } from "../lib/ipc";
+import { commands, describeError, unwrap } from "../lib/ipc";
 import { queryKeys } from "../lib/query";
+
+// Shared by the gate and the hook, so both always read the same cache entries
+const appStateQuery = queryOptions({
+  queryKey: queryKeys.appState,
+  queryFn: () => commands.getState(),
+  staleTime: Infinity,
+});
+const appInfoQuery = queryOptions({
+  queryKey: queryKeys.appInfo,
+  queryFn: () => unwrap(commands.appInfo()),
+  staleTime: Infinity,
+});
 
 /** Blocks rendering until app state and info are loaded from Rust. */
 export function AppStateGate({
@@ -12,16 +24,8 @@ export function AppStateGate({
   children: ReactNode;
   fallback: ReactNode;
 }) {
-  const state = useQuery({
-    queryKey: queryKeys.appState,
-    queryFn: () => commands.getState(),
-    staleTime: Infinity,
-  });
-  const info = useQuery({
-    queryKey: queryKeys.appInfo,
-    queryFn: () => unwrap(commands.appInfo()),
-    staleTime: Infinity,
-  });
+  const state = useQuery(appStateQuery);
+  const info = useQuery(appInfoQuery);
 
   const error = state.error ?? info.error;
   if (error) {
@@ -32,7 +36,8 @@ export function AppStateGate({
             PostCompass couldn't start
           </p>
           <p className="mt-1 font-mono text-xs text-fg-muted">
-            {error.message}
+            {/* get_state rejects with a bare string, which has no `.message` */}
+            {describeError(error).message}
           </p>
         </div>
       </div>
@@ -48,16 +53,8 @@ export function AppStateGate({
  */
 export function useAppState() {
   const queryClient = useQueryClient();
-  const state = useQuery({
-    queryKey: queryKeys.appState,
-    queryFn: () => commands.getState(),
-    staleTime: Infinity,
-  });
-  const info = useQuery({
-    queryKey: queryKeys.appInfo,
-    queryFn: () => unwrap(commands.appInfo()),
-    staleTime: Infinity,
-  });
+  const state = useQuery(appStateQuery);
+  const info = useQuery(appInfoQuery);
 
   const setState = useCallback(
     (next: AppState) => queryClient.setQueryData(queryKeys.appState, next),

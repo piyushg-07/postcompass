@@ -56,6 +56,8 @@ interface RowAction {
 
 interface Row {
   key: string;
+  /** What screen readers call the row's actions button. */
+  name: string;
   cells: ReactNode[];
   search: string;
   /** Clicking the row: usually "edit". */
@@ -100,6 +102,7 @@ export function ObjectsTab({
       headers = ["Name", "Arguments", "Returns", "Language", "Kind"];
       rows = objects.data.functions.map((f) => ({
         key: f.id,
+        name: `${f.name}(${f.arguments})`,
         search: f.name,
         cells: [
           mono(f.name),
@@ -131,6 +134,12 @@ export function ObjectsTab({
               ]
             : []),
           {
+            // ALTER … RENAME keeps grants and dependent triggers, unlike re-creating it
+            label: "Rename…",
+            icon: <Pencil />,
+            run: () => setAction({ kind: "function-rename", item: f }),
+          },
+          {
             label: `Delete ${f.kind}…`,
             icon: <Trash2 />,
             danger: true,
@@ -144,6 +153,7 @@ export function ObjectsTab({
       headers = ["Name", "Table", "Function", "Status"];
       rows = objects.data.triggers.map((t) => ({
         key: `${t.table}.${t.name}`,
+        name: t.name,
         search: `${t.name} ${t.table} ${t.function}`,
         cells: [
           mono(t.name),
@@ -184,6 +194,7 @@ export function ObjectsTab({
       headers = ["Name", "Values"];
       rows = objects.data.enums.map((e) => ({
         key: e.name,
+        name: e.name,
         search: `${e.name} ${e.values.join(" ")}`,
         cells: [
           mono(e.name),
@@ -214,6 +225,7 @@ export function ObjectsTab({
       headers = ["Name", "Type", "Last value", "Step"];
       rows = objects.data.sequences.map((s) => ({
         key: s.name,
+        name: s.name,
         search: s.name,
         cells: [
           mono(s.name),
@@ -342,7 +354,7 @@ export function ObjectsTab({
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              aria-label={`Actions for ${r.key}`}
+                              aria-label={`Actions for ${r.name}`}
                               className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle opacity-0 group-hover:opacity-100 hover:bg-surface-raised hover:text-fg data-[state=open]:opacity-100 [&_svg]:size-4"
                             >
                               <MoreHorizontal />

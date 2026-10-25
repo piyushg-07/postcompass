@@ -3,7 +3,7 @@ import { LocalServerLogo, ProviderLogo } from "../servers/provider-logos";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Unplug } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useAppState } from "../../app/app-state";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
@@ -68,6 +68,12 @@ export function ExplorerPage({
     connection.data?.database ??
     "postgres";
   const schema = useWorkspaceStore((s) => s.workspaces[serverId]?.schema);
+  const connectionId = connection.data?.connectionId;
+  // Stable, so context consumers don't re-render whenever this page does
+  const explorer = useMemo(
+    () => (connectionId ? { serverId, connectionId } : null),
+    [serverId, connectionId],
+  );
 
   useHotkey(
     "Mod+T",
@@ -176,11 +182,9 @@ export function ExplorerPage({
     </header>
   );
 
-  if (connection.data)
+  if (connection.data && explorer)
     return (
-      <ExplorerProvider
-        value={{ serverId, connectionId: connection.data.connectionId }}
-      >
+      <ExplorerProvider value={explorer}>
         <div className="flex h-full flex-col overflow-clip">
           {header}
           <ConnectionBanner

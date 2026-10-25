@@ -25,7 +25,7 @@ import { createDatabase, dropDatabase, renameDatabase } from "../../lib/sql";
 import { useBackupDialogs } from "../backup/backup-store";
 import { useDatabases, useExplorer } from "./explorer-context";
 import { NameField, RunSqlDialog } from "./run-sql-dialog";
-import { useWorkspace } from "./workspace-store";
+import { useWorkspaceActions, useWorkspaceStore } from "./workspace-store";
 
 type DialogKind = "create" | "rename" | "drop";
 
@@ -39,8 +39,10 @@ export function DatabaseSwitcher({
   defaultDatabase: string;
 }) {
   const { serverId } = useExplorer();
-  const ws = useWorkspace(serverId);
-  const database = ws.database ?? defaultDatabase;
+  const ws = useWorkspaceActions(serverId);
+  const database =
+    useWorkspaceStore((s) => s.workspaces[serverId]?.database) ??
+    defaultDatabase;
   const databases = useDatabases();
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [name, setName] = useState("");
@@ -52,8 +54,14 @@ export function DatabaseSwitcher({
   const switchTo = (next: string) =>
     ws.setLocation({ database: next, schema: null });
   // A database can't be renamed or dropped while connected to it, so run that from another one
+  // that exists and accepts connections (managed servers often refuse template1)
   const maintenanceDb =
-    database === defaultDatabase ? "template1" : defaultDatabase;
+    [defaultDatabase, "postgres", "template1"].find(
+      (d) =>
+        d !== database &&
+        (!databases.data ||
+          databases.data.some((x) => x.name === d && x.allowConnections)),
+    ) ?? "template1";
 
   return (
     <>
@@ -174,7 +182,16 @@ export function DatabaseSwitcher({
           confirmLabel="Rename"
           successMessage={`Renamed to ${name.trim()}`}
           refreshAll
-          onDone={() => switchTo(name.trim())}
+          onDone={() => {
+            const renamed = name.trim();
+            // Tab ids name the database, so close those tabs; queries just follow the rename
+            ws.closeTabsFor((t) => t.type !== "query" && t.database === database);
+            for (const t of useWorkspaceStore.getState().workspaces[serverId]
+              ?.tabs ?? [])
+              if (t.type === "query" && t.database === database)
+                ws.updateTab(t.id, { database: renamed });
+            switchTo(renamed);
+          }}
         >
           <NameField value={name} onChange={setName} />
         </RunSqlDialog>
@@ -193,7 +210,8 @@ export function DatabaseSwitcher({
           refreshAll
           onDone={() => {
             ws.closeTabsFor((t) => t.database === database);
-            switchTo(defaultDatabase);
+            // Dropping the database the session started in leaves the one it ran from
+            switchTo(database === defaultDatabase ? maintenanceDb : defaultDatabase);
           }}
         />
       )}

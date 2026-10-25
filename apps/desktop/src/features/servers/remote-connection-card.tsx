@@ -17,8 +17,8 @@ import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
 import type { RemoteConnection } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
-import { queryKeys } from "../../lib/query";
 import { useWorkspaceStore } from "../explorer/workspace-store";
+import { forgetConnection } from "./connection-cache";
 import { PROVIDER_LOGOS, ProviderLogo } from "./provider-logos";
 
 // ── SSL labels ────────────────────────────────────────────────────────────────
@@ -48,11 +48,6 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
   const connectionId = `remote:${remote.id}`;
   const isOpen = !!useWorkspaceStore((s) => s.workspaces[connectionId]);
 
-  const forgetConnection = () => {
-    queryClient.removeQueries({ queryKey: queryKeys.connection(connectionId) });
-    queryClient.removeQueries({ queryKey: queryKeys.explorer.all(connectionId) });
-  };
-
   const copyConnectionString = () =>
     void navigator.clipboard
       .writeText(remoteConnectionString(remote))
@@ -60,7 +55,9 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
 
   const handleRemove = async () => {
     const newState = await unwrap(commands.removeRemoteConnection(remote.id));
-    forgetConnection();
+    // Rust closed its session; drop it from the sidebar's open list too
+    forgetConnection(queryClient, connectionId);
+    useNavigation.getState().closeServer(connectionId);
     setState(newState);
     toast.success(`${remote.name} removed`);
   };

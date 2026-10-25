@@ -1,34 +1,9 @@
-import {
-  cn,
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-  EmptyState,
-  Kbd,
-  Spinner,
-  toast,
-} from "@repo/ui";
-import {
-  Blocks,
-  Copy,
-  CopyPlus,
-  Eye,
-  FunctionSquare,
-  Hash,
-  List,
-  Network,
-  Plus,
-  ShieldCheck,
-  Table2,
-  TerminalSquare,
-  X,
-} from "lucide-react";
+import { cn, ContextMenu, ContextMenuTrigger, EmptyState, Kbd, Spinner } from "@repo/ui";
+import { Plus, Table2, TerminalSquare, X } from "lucide-react";
 import {
   lazy,
+  memo,
   type MouseEvent,
-  type ReactNode,
   Suspense,
   useEffect,
   useRef,
@@ -38,121 +13,19 @@ import { useExplorer } from "./explorer-context";
 import { PoliciesTab } from "./policies/policies-tab";
 import { QueryTab } from "./sql/query-tab";
 import { ExtensionsTab } from "./tabs/extensions-tab";
-import { OBJECT_GROUP_TITLES, ObjectsTab } from "./tabs/objects-tab";
+import { ObjectsTab } from "./tabs/objects-tab";
 import { DefinitionView, TableTab } from "./tabs/table-tab";
 import { type Tab, useWorkspace } from "./workspace-store";
+import { TabMenu, tabLabel } from "./workspace-ui/tab-menu";
+
+// Query tabs all stay mounted; an edit only replaces the edited tab's object, so the others
+// skip re-rendering while you type
+const KeptQueryTab = memo(QueryTab);
 
 // React Flow + dagre are only needed for diagrams
 const DiagramTab = lazy(() =>
   import("./tabs/diagram-tab").then((m) => ({ default: m.DiagramTab })),
 );
-
-function tabLabel(tab: Tab): { icon: ReactNode; label: string } {
-  switch (tab.type) {
-    case "table":
-      return {
-        icon:
-          tab.kind === "view" || tab.kind === "materialized_view" ? (
-            <Eye />
-          ) : (
-            <Table2 />
-          ),
-        label: tab.name,
-      };
-    case "query":
-      return { icon: <TerminalSquare />, label: tab.title };
-    case "definition":
-      return {
-        icon: tab.kind === "function" ? <FunctionSquare /> : <Hash />,
-        label: tab.title,
-      };
-    case "diagram":
-      return { icon: <Network />, label: `Diagram · ${tab.schema}` };
-    case "extensions":
-      return { icon: <Blocks />, label: `Extensions · ${tab.database}` };
-    case "policies":
-      return { icon: <ShieldCheck />, label: `Policies · ${tab.schema}` };
-    case "objects":
-      return {
-        icon: <List />,
-        label: `${OBJECT_GROUP_TITLES[tab.group]} · ${tab.schema}`,
-      };
-  }
-}
-
-/** Right-click menu of a tab. */
-function TabMenu({
-  tab,
-  onClose,
-  onCloseOthers,
-  onCloseRight,
-  onCloseAll,
-  onDuplicate,
-  onView,
-  isLast,
-  isOnly,
-}: {
-  tab: Tab;
-  onClose: () => void;
-  onCloseOthers: () => void;
-  onCloseRight: () => void;
-  onCloseAll: () => void;
-  onDuplicate?: () => void;
-  onView?: (view: "data" | "structure") => void;
-  isLast: boolean;
-  isOnly: boolean;
-}) {
-  const copy = (text: string) =>
-    void navigator.clipboard
-      .writeText(text)
-      .then(() => toast.success("Copied"));
-  return (
-    <ContextMenuContent>
-      {onView && (
-        <>
-          <ContextMenuItem icon={<Table2 />} onSelect={() => onView("data")}>
-            View data
-          </ContextMenuItem>
-          <ContextMenuItem icon={<List />} onSelect={() => onView("structure")}>
-            View structure
-          </ContextMenuItem>
-          {tab.type === "table" && (
-            <ContextMenuItem
-              icon={<Copy />}
-              onSelect={() => copy(`${tab.schema}.${tab.name}`)}
-            >
-              Copy name
-            </ContextMenuItem>
-          )}
-          <ContextMenuSeparator />
-        </>
-      )}
-      {onDuplicate && (
-        <>
-          <ContextMenuItem icon={<CopyPlus />} onSelect={onDuplicate}>
-            Duplicate query
-          </ContextMenuItem>
-          {tab.type === "query" && (
-            <ContextMenuItem icon={<Copy />} onSelect={() => copy(tab.sql)}>
-              Copy SQL
-            </ContextMenuItem>
-          )}
-          <ContextMenuSeparator />
-        </>
-      )}
-      <ContextMenuItem icon={<X />} shortcut="Ctrl W" onSelect={onClose}>
-        Close
-      </ContextMenuItem>
-      <ContextMenuItem disabled={isOnly} onSelect={onCloseOthers}>
-        Close others
-      </ContextMenuItem>
-      <ContextMenuItem disabled={isLast} onSelect={onCloseRight}>
-        Close tabs to the right
-      </ContextMenuItem>
-      <ContextMenuItem onSelect={onCloseAll}>Close all</ContextMenuItem>
-    </ContextMenuContent>
-  );
-}
 
 /** Tab bar plus the active tab. Inactive tabs stay mounted only for queries (to keep results). */
 export function Workspace() {
@@ -287,7 +160,7 @@ export function Workspace() {
                       e.stopPropagation();
                       closeTab(tab.id);
                     }}
-                    className="ml-0.5 cursor-pointer rounded p-0.5 text-fg-subtle opacity-0 group-hover:opacity-100 hover:bg-surface-hover hover:text-fg"
+                    className="ml-0.5 cursor-pointer rounded p-0.5 text-fg-subtle opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover hover:text-fg"
                   >
                     <X className="size-3" />
                   </button>
@@ -344,7 +217,7 @@ export function Workspace() {
                 t.id !== activeTabId && "hidden",
               )}
             >
-              <QueryTab tab={t as Extract<Tab, { type: "query" }>} />
+              <KeptQueryTab tab={t as Extract<Tab, { type: "query" }>} />
             </div>
           ))}
 

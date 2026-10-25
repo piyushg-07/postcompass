@@ -8,22 +8,30 @@ export function LogViewer({ lines, className, emptyText = "No output yet." }: { 
   const stickToBottom = useRef(true);
   const [copied, setCopied] = useState(false);
 
+  const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     const el = ref.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [lines]);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(lines.join("\n"));
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+    } catch {
+      return; // Clipboard unavailable: leave the icon as it is
+    }
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
   };
 
   return (
     <div className={cn("relative rounded-control border border-border bg-bg", className)}>
       <button
         type="button"
-        onClick={copy}
+        onClick={() => void copy()}
         aria-label="Copy log"
         className="absolute top-2 right-2 cursor-pointer rounded p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg"
       >

@@ -150,7 +150,7 @@ export function SortPopover({
                     type="button"
                     className="my-1 flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-border-strong px-2.5 text-xs text-fg hover:border-fg-subtle"
                   >
-                    Pick {draft.length > 1 ? "another" : "a"} column to sort by
+                    Pick {draft.length > 0 ? "another" : "a"} column to sort by
                     <ChevronDown className="size-3.5 text-fg-muted" />
                   </button>
                 </DropdownMenuTrigger>

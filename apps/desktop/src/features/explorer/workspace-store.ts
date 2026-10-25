@@ -1,150 +1,29 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FilterSpec, ObjectKind, TableKind } from "../../lib/bindings";
+import {
+  EMPTY_WORKSPACE,
+  type NewTab,
+  nextQueryNumber,
+  rekeyTabs,
+  rememberTable,
+  type ServerWorkspace,
+  type Tab,
+  tabId,
+} from "./store/workspace-tabs";
 
-export type TableView = "data" | "structure" | "definition";
-
-/** The list pages in the sidebar's "Database" section. */
-export type ObjectGroup = "functions" | "triggers" | "enums" | "sequences";
-
-export type Tab =
-  | {
-      id: string;
-      type: "table";
-      database: string;
-      schema: string;
-      name: string;
-      kind: TableKind;
-      view: TableView;
-      /** Filters to start with, e.g. when following a foreign key. */
-      filters?: FilterSpec[];
-    }
-  | {
-      id: string;
-      type: "query";
-      database: string;
-      title: string;
-      sql: string;
-      /** The saved snippet this tab edits; saving updates it in place. */
-      savedId?: string;
-    }
-  | {
-      id: string;
-      type: "definition";
-      database: string;
-      schema: string;
-      kind: ObjectKind;
-      name: string;
-      title: string;
-    }
-  | { id: string; type: "diagram"; database: string; schema: string }
-  | { id: string; type: "extensions"; database: string }
-  | {
-      id: string;
-      type: "policies";
-      database: string;
-      schema: string;
-      /** The table to scroll to, when opened from a table's structure. */
-      table?: string;
-    }
-  | {
-      id: string;
-      type: "objects";
-      database: string;
-      schema: string;
-      group: ObjectGroup;
-    };
-
-/** Tab without an id; ids are derived so opening the same object twice focuses the existing tab. */
-export type NewTab = Tab extends infer T
-  ? T extends Tab
-    ? Omit<T, "id">
-    : never
-  : never;
-
-export interface RecentTable {
-  database: string;
-  schema: string;
-  name: string;
-  kind: TableKind;
-  at: number;
-}
-
-interface ServerWorkspace {
-  database: string | null;
-  schema: string | null;
-  tabs: Tab[];
-  activeTabId: string | null;
-  /** Counter for "Query 1", "Query 2" … */
-  queryCount: number;
-  /** Recently opened tables, newest first; kept even after their tab is closed. */
-  recentTables?: RecentTable[];
-}
-
-const MAX_RECENT_TABLES = 10;
-
-const EMPTY: ServerWorkspace = {
-  database: null,
-  schema: null,
-  tabs: [],
-  activeTabId: null,
-  queryCount: 0,
-};
-
-function rememberTable(
-  ws: ServerWorkspace,
-  tab: NewTab,
-): RecentTable[] | undefined {
-  if (tab.type !== "table") return ws.recentTables;
-  const entry: RecentTable = {
-    database: tab.database,
-    schema: tab.schema,
-    name: tab.name,
-    kind: tab.kind,
-    at: Date.now(),
-  };
-  const rest = (ws.recentTables ?? []).filter(
-    (t) =>
-      !(
-        t.database === entry.database &&
-        t.schema === entry.schema &&
-        t.name === entry.name
-      ),
-  );
-  return [entry, ...rest].slice(0, MAX_RECENT_TABLES);
-}
-
-/** The lowest "Query N" not taken by an open tab, so closing tabs frees their numbers. */
-function nextQueryNumber(tabs: Tab[]) {
-  const taken = new Set(
-    tabs.flatMap((t) => {
-      const m = t.type === "query" ? /^Query (\d+)$/.exec(t.title) : null;
-      return m ? [Number(m[1])] : [];
-    }),
-  );
-  let n = 1;
-  while (taken.has(n)) n++;
-  return n;
-}
-
-function tabId(tab: NewTab, queryCount: number) {
-  switch (tab.type) {
-    case "table":
-      return `table:${tab.database}.${tab.schema}.${tab.name}`;
-    case "definition":
-      return `def:${tab.database}.${tab.schema}.${tab.kind}.${tab.name}`;
-    case "diagram":
-      return `diagram:${tab.database}.${tab.schema}`;
-    case "extensions":
-      return `extensions:${tab.database}`;
-    case "policies":
-      return `policies:${tab.database}.${tab.schema}`;
-    case "objects":
-      return `objects:${tab.database}.${tab.schema}.${tab.group}`;
-    case "query":
-      return `query:${queryCount}:${Date.now()}`;
-  }
-}
+export type {
+  NewTab,
+  ObjectGroup,
+  RecentTable,
+  Tab,
+  TableView,
+} from "./store/workspace-tabs";
+export {
+  type HistoryEntry,
+  type SavedQuery,
+  useQueryLibrary,
+} from "./store/query-library";
 
 interface WorkspaceState {
   workspaces: Record<string, ServerWorkspace>;
@@ -179,11 +58,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         change: (ws: ServerWorkspace) => Partial<ServerWorkspace>,
       ) =>
         set((state) => {
-          const ws = state.workspaces[serverId] ?? EMPTY;
+          const ws = state.workspaces[serverId] ?? EMPTY_WORKSPACE;
+          const patch = change(ws);
+          // Nothing changed: keep the state object so subscribers don't re-render
+          if (Object.keys(patch).length === 0) return state;
           return {
             workspaces: {
               ...state.workspaces,
-              [serverId]: { ...ws, ...change(ws) },
+              [serverId]: { ...ws, ...patch },
             },
           };
         });
@@ -276,15 +158,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }),
 
         updateTab: (serverId, id, patch) =>
-          update(serverId, (ws) => ({
-            tabs: ws.tabs.map((t) =>
-              t.id === id ? ({ ...t, ...patch } as Tab) : t,
-            ),
-          })),
+          update(serverId, (ws) =>
+            // A late update (e.g. an autosave) for a closed tab changes nothing
+            ws.tabs.some((t) => t.id === id)
+              ? {
+                  tabs: ws.tabs.map((t) =>
+                    t.id === id ? ({ ...t, ...patch } as Tab) : t,
+                  ),
+                }
+              : {},
+          ),
 
         closeTab: (serverId, id) =>
           update(serverId, (ws) => {
             const index = ws.tabs.findIndex((t) => t.id === id);
+            if (index === -1) return {};
             const tabs = ws.tabs.filter((t) => t.id !== id);
             const activeTabId =
               ws.activeTabId === id
@@ -294,10 +182,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }),
 
         closeOtherTabs: (serverId, id) =>
-          update(serverId, (ws) => ({
-            tabs: ws.tabs.filter((t) => t.id === id),
-            activeTabId: id,
-          })),
+          update(serverId, (ws) => {
+            const tabs = ws.tabs.filter((t) => t.id === id);
+            return { tabs, activeTabId: tabs[0]?.id ?? null };
+          }),
 
         moveTab: (serverId, id, index) =>
           update(serverId, (ws) => {
@@ -311,6 +199,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         closeTabsFor: (serverId, predicate) =>
           update(serverId, (ws) => {
             const tabs = ws.tabs.filter((t) => !predicate(t));
+            if (tabs.length === ws.tabs.length) return {};
             return {
               tabs,
               activeTabId: tabs.some((t) => t.id === ws.activeTabId)
@@ -320,23 +209,27 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }),
 
         setActive: (serverId, id) =>
-          update(serverId, () => ({ activeTabId: id })),
+          update(serverId, (ws) =>
+            ws.tabs.some((t) => t.id === id) ? { activeTabId: id } : {},
+          ),
       };
     },
     {
       name: "postcompass-workspaces",
-      version: 2,
-      // v2: "New table" became a side panel, so drop old create-table tabs
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Pick<WorkspaceState, "workspaces">;
-        if (version < 2) {
-          for (const ws of Object.values(state.workspaces ?? {})) {
+        for (const ws of Object.values(state.workspaces ?? {})) {
+          // v2: "New table" became a side panel, so drop old create-table tabs
+          if (version < 2) {
             ws.tabs = ws.tabs.filter(
               (t) => (t.type as string) !== "create-table",
             );
             if (!ws.tabs.some((t) => t.id === ws.activeTabId))
               ws.activeTabId = ws.tabs.at(-1)?.id ?? null;
           }
+          // v3: tab ids no longer join names with dots (they could collide)
+          if (version < 3) rekeyTabs(ws);
         }
         return state as WorkspaceState;
       },
@@ -346,176 +239,48 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
 const EMPTY_TABS: Tab[] = [];
 
+/**
+ * The actions of one server's workspace, bound to it. Stable between renders and subscribes to
+ * nothing, so components that only open or close tabs don't re-render on every keystroke in a
+ * query tab (prefer this over `useWorkspace` for them).
+ */
+export function useWorkspaceActions(serverId: string) {
+  return useMemo(() => {
+    const actions = useWorkspaceStore.getState();
+    return {
+      setLocation: (location: {
+        database?: string | null;
+        schema?: string | null;
+      }) => actions.setLocation(serverId, location),
+      openTab: (tab: NewTab) => actions.openTab(serverId, tab),
+      newQuery: (database: string, sql?: string) =>
+        actions.newQuery(serverId, database, sql),
+      openSnippet: (
+        database: string,
+        snippet: { id: string; name: string; sql: string },
+      ) => actions.openSnippet(serverId, database, snippet),
+      updateTab: (id: string, patch: Partial<Tab>) =>
+        actions.updateTab(serverId, id, patch),
+      closeTab: (id: string) => actions.closeTab(serverId, id),
+      closeOtherTabs: (id: string) => actions.closeOtherTabs(serverId, id),
+      moveTab: (id: string, index: number) =>
+        actions.moveTab(serverId, id, index),
+      closeTabsFor: (predicate: (tab: Tab) => boolean) =>
+        actions.closeTabsFor(serverId, predicate),
+      setActive: (id: string) => actions.setActive(serverId, id),
+    };
+  }, [serverId]);
+}
+
 /** The workspace for one server, with actions bound to it. */
 export function useWorkspace(serverId: string) {
   const ws = useWorkspaceStore((s) => s.workspaces[serverId]);
-  const actions = useWorkspaceStore.getState();
+  const actions = useWorkspaceActions(serverId);
   return {
     database: ws?.database ?? null,
     schema: ws?.schema ?? null,
     tabs: ws?.tabs ?? EMPTY_TABS,
     activeTabId: ws?.activeTabId ?? null,
-    setLocation: (location: {
-      database?: string | null;
-      schema?: string | null;
-    }) => actions.setLocation(serverId, location),
-    openTab: (tab: NewTab) => actions.openTab(serverId, tab),
-    newQuery: (database: string, sql?: string) =>
-      actions.newQuery(serverId, database, sql),
-    openSnippet: (
-      database: string,
-      snippet: { id: string; name: string; sql: string },
-    ) => actions.openSnippet(serverId, database, snippet),
-    updateTab: (id: string, patch: Partial<Tab>) =>
-      actions.updateTab(serverId, id, patch),
-    closeTab: (id: string) => actions.closeTab(serverId, id),
-    closeOtherTabs: (id: string) => actions.closeOtherTabs(serverId, id),
-    moveTab: (id: string, index: number) =>
-      actions.moveTab(serverId, id, index),
-    closeTabsFor: (predicate: (tab: Tab) => boolean) =>
-      actions.closeTabsFor(serverId, predicate),
-    setActive: (id: string) => actions.setActive(serverId, id),
+    ...actions,
   };
 }
-
-export interface HistoryEntry {
-  sql: string;
-  database: string;
-  at: number;
-  durationMs: number;
-  ok: boolean;
-}
-
-export interface SavedQuery {
-  id: string;
-  name: string;
-  sql: string;
-  /** Folder name; none means it sits at the top level. */
-  folder?: string;
-  favorite?: boolean;
-}
-
-interface QueryLibraryState {
-  history: Record<string, HistoryEntry[]>;
-  saved: Record<string, SavedQuery[]>;
-  /** Folders per server, including empty ones. */
-  folders: Record<string, string[]>;
-  addHistory: (serverId: string, entry: HistoryEntry) => void;
-  clearHistory: (serverId: string) => void;
-  saveQuery: (
-    serverId: string,
-    name: string,
-    sql: string,
-    folder?: string,
-  ) => string;
-  updateSaved: (
-    serverId: string,
-    id: string,
-    patch: Partial<Omit<SavedQuery, "id">>,
-  ) => void;
-  deleteSaved: (serverId: string, id: string) => void;
-  addFolder: (serverId: string, name: string) => void;
-  renameFolder: (serverId: string, from: string, to: string) => void;
-  /** Deletes the folder; its queries move to the top level. */
-  deleteFolder: (serverId: string, name: string) => void;
-}
-
-const MAX_HISTORY = 200;
-
-/** Query history and saved queries per server. Persisted. */
-export const useQueryLibrary = create<QueryLibraryState>()(
-  persist(
-    (set) => ({
-      history: {},
-      saved: {},
-      folders: {},
-      addHistory: (serverId, entry) =>
-        set((s) => {
-          const list = s.history[serverId] ?? [];
-          // Re-running the same SQL moves it to the top instead of duplicating it
-          const rest = list.filter(
-            (h) => h.sql !== entry.sql || h.database !== entry.database,
-          );
-          return {
-            history: {
-              ...s.history,
-              [serverId]: [entry, ...rest].slice(0, MAX_HISTORY),
-            },
-          };
-        }),
-      clearHistory: (serverId) =>
-        set((s) => ({ history: { ...s.history, [serverId]: [] } })),
-      saveQuery: (serverId, name, sql, folder) => {
-        const id = `${Date.now()}`;
-        set((s) => ({
-          saved: {
-            ...s.saved,
-            [serverId]: [
-              { id, name, sql, folder: folder || undefined },
-              ...(s.saved[serverId] ?? []),
-            ],
-          },
-        }));
-        return id;
-      },
-      updateSaved: (serverId, id, patch) =>
-        set((s) => ({
-          saved: {
-            ...s.saved,
-            [serverId]: (s.saved[serverId] ?? []).map((q) =>
-              q.id === id ? { ...q, ...patch } : q,
-            ),
-          },
-        })),
-      addFolder: (serverId, name) =>
-        set((s) => {
-          const list = s.folders[serverId] ?? [];
-          return list.includes(name)
-            ? s
-            : { folders: { ...s.folders, [serverId]: [...list, name] } };
-        }),
-      renameFolder: (serverId, from, to) =>
-        set((s) => ({
-          folders: {
-            ...s.folders,
-            [serverId]: (s.folders[serverId] ?? []).map((f) =>
-              f === from ? to : f,
-            ),
-          },
-          saved: {
-            ...s.saved,
-            [serverId]: (s.saved[serverId] ?? []).map((q) =>
-              q.folder === from ? { ...q, folder: to } : q,
-            ),
-          },
-        })),
-      deleteFolder: (serverId, name) =>
-        set((s) => ({
-          folders: {
-            ...s.folders,
-            [serverId]: (s.folders[serverId] ?? []).filter((f) => f !== name),
-          },
-          saved: {
-            ...s.saved,
-            [serverId]: (s.saved[serverId] ?? []).map((q) =>
-              q.folder === name ? { ...q, folder: undefined } : q,
-            ),
-          },
-        })),
-      deleteSaved: (serverId, id) =>
-        set((s) => ({
-          saved: {
-            ...s.saved,
-            [serverId]: (s.saved[serverId] ?? []).filter((q) => q.id !== id),
-          },
-        })),
-    }),
-    {
-      name: "postcompass-queries",
-      version: 2,
-      // v1 had no folders; saved queries stay as they were
-      migrate: (state) =>
-        ({ folders: {}, ...(state as object) }) as QueryLibraryState,
-    },
-  ),
-);

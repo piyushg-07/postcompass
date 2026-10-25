@@ -9,7 +9,7 @@ import {
 } from "../../../lib/sql";
 import { useExplorer } from "../explorer-context";
 import { RunSqlDialog } from "../run-sql-dialog";
-import { useWorkspace } from "../workspace-store";
+import { useWorkspaceActions } from "../workspace-store";
 
 export type TableAction = "rename" | "truncate" | "drop" | "refresh";
 
@@ -31,7 +31,7 @@ export function TableActionDialog({
   onClose: () => void;
 }) {
   const { serverId } = useExplorer();
-  const { closeTabsFor } = useWorkspace(serverId);
+  const { closeTabsFor } = useWorkspaceActions(serverId);
   const [newName, setNewName] = useState(target.name);
   const [cascade, setCascade] = useState(false);
   const kindLabel =
@@ -58,7 +58,8 @@ export function TableActionDialog({
         onOpenChange={onOpenChange}
         title={`Rename ${target.name}`}
         sql={
-          newName.trim() && newName !== target.name
+          // Compare trimmed: "name " would rename it to itself and fail
+          newName.trim() && newName.trim() !== target.name
             ? renameTable(target.schema, target.name, newName.trim())
             : "-- type a new name"
         }

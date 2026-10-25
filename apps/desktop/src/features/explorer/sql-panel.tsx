@@ -200,7 +200,12 @@ export function SqlPanel({ database }: { database: string }) {
         <Section
           title="Snippets"
           count={saved.length}
-          empty="Save a query from its tab to keep it here."
+          // Empty folders still show (with "No snippets yet.")
+          empty={
+            folders.length
+              ? undefined
+              : "Save a query from its tab to keep it here."
+          }
           closed={closed.has("Snippets")}
           onToggle={() => toggle("Snippets")}
         >
@@ -328,9 +333,10 @@ export function SqlPanel({ database }: { database: string }) {
           closed={closed.has("Recent")}
           onToggle={() => toggle("Recent")}
         >
-          {history.slice(0, MAX_RECENT).map((h) => (
+          {history.slice(0, MAX_RECENT).map((h, i) => (
             <Row
-              key={`${h.at}`}
+              // Two runs can finish in the same millisecond
+              key={`${h.at}:${i}`}
               icon={<History className={h.ok ? undefined : "text-danger"} />}
               label={h.sql.replace(/\s+/g, " ").trim()}
               meta={h.database === database ? undefined : h.database}

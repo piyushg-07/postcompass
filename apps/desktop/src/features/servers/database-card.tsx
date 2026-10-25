@@ -29,8 +29,8 @@ import type { ManagedServer, ServerStatus } from "../../lib/bindings";
 import { connectionString } from "../../lib/format";
 import { LocalServerLogo } from "./provider-logos";
 import { commands, describeError, unwrap } from "../../lib/ipc";
-import { queryKeys } from "../../lib/query";
 import { useWorkspaceStore } from "../explorer/workspace-store";
+import { forgetConnection } from "./connection-cache";
 import { DatabaseList } from "./database-list";
 
 const STATUS_TEXT: Record<Status, string> = {
@@ -56,15 +56,9 @@ function useDatabaseActions(
   const { refresh } = useAppState();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [password] = useState<string | null>(null);
   const running = status === "running";
   const database =
     useWorkspaceStore((s) => s.workspaces[server.id]?.database) ?? "postgres";
-
-  const forgetConnection = () => {
-    queryClient.removeQueries({ queryKey: queryKeys.connection(server.id) });
-    queryClient.removeQueries({ queryKey: queryKeys.explorer.all(`server:${server.id}`) });
-  };
 
   const toggle = async () => {
     setBusy(true);
@@ -72,7 +66,7 @@ function useDatabaseActions(
       const next = await unwrap(running ? commands.stopServer(server.id) : commands.startServer(server.id));
       onStatus(next);
       if (!running) toast.success(`${server.name} is running`);
-      else { forgetConnection(); toast.success(`${server.name} stopped`); }
+      else { forgetConnection(queryClient, server.id); toast.success(`${server.name} stopped`); }
     } catch (e) {
       const { title, message, hint } = describeError(e);
       toast.error(title, { description: hint ? `${message}\n${hint}` : message });
@@ -81,8 +75,8 @@ function useDatabaseActions(
     }
   };
 
-  const withPassword = async (use: (pw: string) => void) => {
-    try { use(password ?? (await unwrap(commands.serverPassword(server.id)))); }
+  const withPassword = async (apply: (pw: string) => void) => {
+    try { apply(await unwrap(commands.serverPassword(server.id))); }
     catch (e) { toast.error("Couldn't read the password", { description: describeError(e).message }); }
   };
 
@@ -94,13 +88,15 @@ function useDatabaseActions(
 
   const remove = async () => {
     await unwrap(commands.uninstallServer(server.id, false));
-    forgetConnection();
+    forgetConnection(queryClient, server.id);
+    // Rust closed its session; drop it from the sidebar's open list too
+    useNavigation.getState().closeServer(server.id);
     toast.success(`${server.name} was removed`);
     await refresh();
   };
 
   const displayStatus: Status = busy && !running ? "starting" : (status ?? "stopped");
-  return { busy, running, password, database, displayStatus, toggle, copyConnectionString, remove };
+  return { busy, running, database, displayStatus, toggle, copyConnectionString, remove };
 }
 
 // ── DatabaseCard (grid tile) ──────────────────────────────────────────────────

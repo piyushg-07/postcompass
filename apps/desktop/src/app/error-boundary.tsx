@@ -29,8 +29,14 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ componentStack: info.componentStack ?? "" });
   }
 
-  componentDidUpdate(prev: Props) {
-    if (this.state.error && prev.resetKey !== this.props.resetKey) {
+  componentDidUpdate(prev: Props, prevState: State) {
+    // Only an error from before this update: when the new page itself crashed while rendering,
+    // resetting here would render it again and crash a second time.
+    if (
+      prevState.error &&
+      this.state.error &&
+      prev.resetKey !== this.props.resetKey
+    ) {
       this.setState({ error: null, componentStack: "" });
     }
   }
@@ -66,7 +72,9 @@ export class ErrorBoundary extends Component<Props, State> {
               size="sm"
               variant="ghost"
               iconLeft={<Copy />}
-              onClick={() => void navigator.clipboard.writeText(details)}
+              onClick={() =>
+                void navigator.clipboard.writeText(details).catch(() => {})
+              }
             >
               Copy details
             </Button>

@@ -9,7 +9,7 @@ import {
   Table2,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PolicyInfo, PolicyTable } from "../../../lib/bindings";
 import { qualified } from "../../../lib/sql";
 import { usePolicies } from "../explorer-context";
@@ -47,6 +47,17 @@ export function PoliciesTab({
     policy?: PolicyInfo;
   } | null>(null);
   const [pending, setPending] = useState<PendingSql | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const loaded = policies.data !== undefined;
+
+  // Scroll to the focused table once it's on screen. (A ref callback here ran on every render,
+  // so typing in the filter or refetching kept jumping back to it.)
+  useEffect(() => {
+    if (!loaded || !focusTable) return;
+    list.current
+      ?.querySelector(`[data-table="${CSS.escape(focusTable)}"]`)
+      ?.scrollIntoView({ block: "start" });
+  }, [loaded, focusTable]);
 
   if (policies.isPending) {
     return (
@@ -89,7 +100,7 @@ export function PoliciesTab({
     );
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div ref={list} className="flex h-full flex-col overflow-y-auto">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-base font-medium text-fg">Policies</h2>
@@ -113,10 +124,7 @@ export function PoliciesTab({
         {tables.map((t) => (
           <section
             key={t.name}
-            ref={(el) => {
-              if (el && t.name === focusTable)
-                el.scrollIntoView({ block: "start" });
-            }}
+            data-table={t.name}
             className={
               t.name === focusTable
                 ? "overflow-hidden rounded-card border border-accent/50 bg-surface/40"
@@ -217,7 +225,7 @@ export function PoliciesTab({
                       )}
                     </span>
                     <div
-                      className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <IconButton
