@@ -19,5 +19,5 @@
 - [ ] Checks pass: `pnpm check-types && pnpm lint && pnpm rust:check && pnpm rust:test`
 - [ ] Rust code formatted with `pnpm rust:fmt`
 - [ ] `apps/desktop/src/lib/bindings.ts` is committed if Tauri commands changed
-- [ ] Tested in the running app (`pnpm dev`)
+- [ ] Tested in the running app (`pnpm dev:desktop`)
 - [ ] I've read [CONTRIBUTING.md](../CONTRIBUTING.md)
