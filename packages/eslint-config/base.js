@@ -29,6 +29,28 @@ export const config = [
       "turbo/no-undeclared-env-vars": "warn",
     },
   },
+  // Flat config only lints .js/.mjs/.cjs by default, so without this every TypeScript file was skipped.
+  // TypeScript itself checks undefined names and unused variables (and knows about types), so those rules are off.
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": "off",
+    },
+  },
+  // Babel 8's TypeScript preset doesn't enable JSX for .tsx on its own, so turn the syntax on for those files
+  {
+    files: ["**/*.tsx"],
+    languageOptions: {
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ["@babel/preset-typescript"],
+          parserOpts: { plugins: ["jsx"] },
+        },
+      },
+    },
+  },
   {
     plugins: {
       onlyWarn,
