@@ -5,8 +5,9 @@
  * click the trigger → floating panel with provider tiles → click to select.
  *
  * Supports every cloud Postgres flavour:
- *   AWS RDS / Aurora, GCP Cloud SQL, Azure, Cloudflare Hyperdrive,
- *   Supabase, Neon, Railway, Render, and any self-hosted endpoint.
+ *   AWS RDS / Aurora, GCP Cloud SQL, Azure, Cloudflare Hyperdrive, Alibaba Cloud,
+ *   Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, and any
+ *   self-hosted endpoint.
  */
 
 import {
@@ -41,18 +42,23 @@ type Provider = {
   shortLabel: string;
   defaultSsl: SslMode;
   hostHint?: string;
+  /** When the provider doesn't listen on 5432. */
+  defaultPort?: number;
 };
 
 const PROVIDERS: Provider[] = [
-  { id: "aws",        label: "AWS RDS / Aurora",              shortLabel: "AWS RDS",    defaultSsl: "require",  hostHint: "e.g. mydb.us-east-1.rds.amazonaws.com" },
-  { id: "gcp",        label: "Google Cloud SQL",              shortLabel: "Cloud SQL",  defaultSsl: "require",  hostHint: "e.g. 34.xx.xx.xx (Cloud SQL public IP)" },
-  { id: "azure",      label: "Azure Database for PostgreSQL", shortLabel: "Azure DB",   defaultSsl: "require",  hostHint: "e.g. myserver.postgres.database.azure.com" },
-  { id: "cloudflare", label: "Cloudflare Hyperdrive",         shortLabel: "Hyperdrive", defaultSsl: "require",  hostHint: "e.g. <UUID>.hyperdrive.io" },
-  { id: "supabase",   label: "Supabase",                      shortLabel: "Supabase",   defaultSsl: "require",  hostHint: "e.g. db.<ref>.supabase.co" },
-  { id: "neon",       label: "Neon",                          shortLabel: "Neon",       defaultSsl: "require",  hostHint: "e.g. ep-xxxx.us-east-2.aws.neon.tech" },
-  { id: "railway",    label: "Railway",                       shortLabel: "Railway",    defaultSsl: "require",  hostHint: "e.g. roundhouse.proxy.rlwy.net" },
-  { id: "render",     label: "Render",                        shortLabel: "Render",     defaultSsl: "require",  hostHint: "e.g. dpg-xxx.render.com" },
-  { id: "other",      label: "Other / Self-hosted",           shortLabel: "PostgreSQL", defaultSsl: "prefer" },
+  { id: "aws",          label: "AWS RDS / Aurora",              shortLabel: "AWS RDS",      defaultSsl: "require",  hostHint: "e.g. mydb.us-east-1.rds.amazonaws.com" },
+  { id: "gcp",          label: "Google Cloud SQL",              shortLabel: "Cloud SQL",    defaultSsl: "require",  hostHint: "e.g. 34.xx.xx.xx (Cloud SQL public IP)" },
+  { id: "azure",        label: "Azure Database for PostgreSQL", shortLabel: "Azure DB",     defaultSsl: "require",  hostHint: "e.g. myserver.postgres.database.azure.com" },
+  { id: "cloudflare",   label: "Cloudflare Hyperdrive",         shortLabel: "Hyperdrive",   defaultSsl: "require",  hostHint: "e.g. <UUID>.hyperdrive.io" },
+  { id: "alibaba",      label: "Alibaba Cloud (RDS / PolarDB)", shortLabel: "Alibaba",      defaultSsl: "require",  hostHint: "e.g. pgm-xxxx.pg.rds.aliyuncs.com" },
+  { id: "oracle",       label: "Oracle Cloud (OCI)",            shortLabel: "Oracle",       defaultSsl: "require",  hostHint: "e.g. your DB system's endpoint or private IP" },
+  { id: "digitalocean", label: "DigitalOcean",                  shortLabel: "DigitalOcean", defaultSsl: "require",  hostHint: "e.g. db-postgresql-nyc3-12345-do-user-0.db.ondigitalocean.com", defaultPort: 25060 },
+  { id: "heroku",       label: "Heroku Postgres",               shortLabel: "Heroku",       defaultSsl: "require",  hostHint: "e.g. ec2-xx-xx-xx-xx.compute-1.amazonaws.com" },
+  { id: "neon",         label: "Neon",                          shortLabel: "Neon",         defaultSsl: "require",  hostHint: "e.g. ep-xxxx.us-east-2.aws.neon.tech" },
+  { id: "railway",      label: "Railway",                       shortLabel: "Railway",      defaultSsl: "require",  hostHint: "e.g. roundhouse.proxy.rlwy.net" },
+  { id: "render",       label: "Render",                        shortLabel: "Render",       defaultSsl: "require",  hostHint: "e.g. dpg-xxx.render.com" },
+  { id: "other",        label: "Other / Self-hosted",           shortLabel: "PostgreSQL",   defaultSsl: "prefer" },
 ];
 
 
@@ -204,7 +210,7 @@ function ProviderPicker({
           <ChevronDown className={`size-3.5 shrink-0 text-fg-subtle transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[460px] p-3" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-3" align="start">
         <p className="mb-2.5 px-0.5 text-[11px] font-medium tracking-wide text-fg-subtle uppercase">
           Select a provider
         </p>
@@ -263,7 +269,7 @@ function empty(provider = PROVIDERS[0]): FormState {
     name: "",
     provider: provider.id,
     host: "",
-    port: "5432",
+    port: String(provider.defaultPort ?? 5432),
     user: "postgres",
     password: "",
     database: "postgres",
@@ -316,7 +322,12 @@ export function RemoteConnectionDialog() {
 
   const onProviderChange = (id: string) => {
     const p = PROVIDERS.find((pr) => pr.id === id) ?? PROVIDERS[PROVIDERS.length - 1];
-    setForm((f) => ({ ...f, provider: id, sslMode: p.defaultSsl }));
+    setForm((f) => {
+      // Follow the provider's port unless the user typed their own
+      const previousDefault = String(PROVIDERS.find((pr) => pr.id === f.provider)?.defaultPort ?? 5432);
+      const port = f.port === previousDefault ? String(p.defaultPort ?? 5432) : f.port;
+      return { ...f, provider: id, sslMode: p.defaultSsl, port };
+    });
   };
 
   const queryClient = useQueryClient();
@@ -493,7 +504,7 @@ export function RemoteConnectionDialog() {
           {form.sslMode === "verify_full" && (
             <Field
               label="CA certificate (optional)"
-              hint="Your provider's certificate bundle, e.g. AWS RDS global-bundle.pem or Supabase's prod-ca.crt. Leave empty to trust only certificates your system already trusts."
+              hint="Your provider's certificate bundle, e.g. AWS RDS global-bundle.pem or DigitalOcean's ca-certificate.crt. Leave empty to trust only certificates your system already trusts."
             >
               {(fp) => (
                 <div className="flex gap-2">

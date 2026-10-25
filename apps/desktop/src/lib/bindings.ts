@@ -447,7 +447,10 @@ export type RemoteConnection = {
 	sslMode: SslMode,
 	/**  PEM file with the provider's CA certificate, for `verify_full`. */
 	caCert?: string | null,
-	/**  Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other". */
+	/**
+	 *  Short provider tag shown in the UI, e.g. "aws", "digitalocean", "neon", or "other" for
+	 *  self-hosted. The UI owns the list (`PROVIDERS` in remote-connection-dialog.tsx).
+	 */
 	provider: string,
 	createdAt: number | null,
 };

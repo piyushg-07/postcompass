@@ -4,14 +4,19 @@ import { type Status, StatusDot } from "@repo/ui";
  *
  * Files in `src/assets/providers/`, downloaded from the Iconify "logos" set (svg-logos, CC0), which
  * keeps each brand's official colours. Railway and Render come from Simple Icons (CC0), recoloured
- * light because their marks are black. Rendered as <img> so gradient ids in different logos can't
- * clash.
+ * light because their marks are black; Heroku's deep purple is lightened for the same reason.
+ * Alibaba Cloud and Oracle also come from Simple Icons, filled with their brand colours.
+ * Rendered as <img> so gradient ids in different logos can't clash.
  */
+import alibaba from "../../assets/providers/alibaba.svg";
 import aws from "../../assets/providers/aws.svg";
 import azure from "../../assets/providers/azure.svg";
 import cloudflare from "../../assets/providers/cloudflare.svg";
+import digitalocean from "../../assets/providers/digitalocean.svg";
 import gcp from "../../assets/providers/gcp.svg";
+import heroku from "../../assets/providers/heroku.svg";
 import neon from "../../assets/providers/neon.svg";
+import oracle from "../../assets/providers/oracle.svg";
 import postgresql from "../../assets/providers/postgresql.svg";
 import railway from "../../assets/providers/railway.svg";
 import render from "../../assets/providers/render.svg";
@@ -21,11 +26,16 @@ export const PROVIDER_LOGOS: Record<string, { label: string; src: string }> = {
   aws: { label: "AWS RDS", src: aws },
   gcp: { label: "Cloud SQL", src: gcp },
   azure: { label: "Azure", src: azure },
+  alibaba: { label: "Alibaba Cloud", src: alibaba },
+  oracle: { label: "Oracle Cloud", src: oracle },
   cloudflare: { label: "Hyperdrive", src: cloudflare },
-  supabase: { label: "Supabase", src: supabase },
+  digitalocean: { label: "DigitalOcean", src: digitalocean },
+  heroku: { label: "Heroku Postgres", src: heroku },
   neon: { label: "Neon", src: neon },
   railway: { label: "Railway", src: railway },
   render: { label: "Render", src: render },
+  // No longer offered in the picker; kept so connections saved with it keep their logo
+  supabase: { label: "Supabase", src: supabase },
   other: { label: "PostgreSQL", src: postgresql },
 };
 

@@ -90,7 +90,8 @@ pub struct RemoteConnection {
     /// PEM file with the provider's CA certificate, for `verify_full`.
     #[serde(default)]
     pub ca_cert: Option<String>,
-    /// Short provider tag shown in the UI: "aws", "gcp", "azure", "cloudflare", "supabase", "neon", "other".
+    /// Short provider tag shown in the UI, e.g. "aws", "digitalocean", "neon", or "other" for
+    /// self-hosted. The UI owns the list (`PROVIDERS` in remote-connection-dialog.tsx).
     pub provider: String,
     pub created_at: f64,
 }
