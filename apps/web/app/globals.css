@@ -27,17 +27,21 @@
   --color-fg-faint: #52525b;
   --color-fg-disabled: #3f3f46;
 
-  /* Brand */
-  --color-accent: #10b981;
-  --color-accent-hover: #34d399;
-  --color-accent-muted: rgba(16, 185, 129, 0.15);
-  --color-accent-subtle: rgba(16, 185, 129, 0.08);
-  --color-accent-glow: rgba(16, 185, 129, 0.25);
+  /* Brand: Burgundy. Change the accent here (and in app/config/theme.ts for WebGL / OG image) */
+  --color-accent: #b8325a;
+  --color-accent-hover: #d24b72;
+  --color-accent-strong: #8f1f42; /* deeper shade for gradients */
+  --color-accent-light: #e0708f; /* bright shade for text and highlights on dark */
+  --color-accent-pale: #f0a6bb; /* softest shade for badge text */
+  --color-accent-fg: #ffffff; /* text on accent-filled buttons */
+  --color-accent-muted: rgba(184, 50, 90, 0.15);
+  --color-accent-subtle: rgba(184, 50, 90, 0.08);
+  --color-accent-glow: rgba(184, 50, 90, 0.25);
 
   /* Borders */
   --color-line: rgba(255, 255, 255, 0.08);
   --color-line-subtle: rgba(255, 255, 255, 0.04);
-  --color-line-accent: rgba(16, 185, 129, 0.35);
+  --color-line-accent: rgba(184, 50, 90, 0.35);
   --color-line-hover: rgba(255, 255, 255, 0.16);
 
   /* Fonts (self-hosted by next/font, see layout.tsx) */
@@ -55,6 +59,13 @@
    Base
    ============================================================ */
 @layer base {
+  /* Accent channels for translucent glows and shadows: rgb(var(--accent-rgb) / 0.2) */
+  :root {
+    --accent-rgb: 184 50 90;
+    --accent-light-rgb: 224 112 143;
+    --accent-pale-rgb: 240 166 187;
+  }
+
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
@@ -234,14 +245,14 @@
 
 /* ============================================================
    Demo video timeline (DemoVideo.tsx): the range input's vendor parts.
-   Played part in green, buffered part in light grey.
+   Played part in the accent color, buffered part in light grey.
    ============================================================ */
 .dv-timeline::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    #34d399 var(--progress),
+    var(--color-accent-light) var(--progress),
     rgba(255, 255, 255, 0.35) var(--progress) var(--buffered),
     rgba(255, 255, 255, 0.15) var(--buffered)
   );
@@ -252,7 +263,7 @@
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    #34d399 var(--progress),
+    var(--color-accent-light) var(--progress),
     rgba(255, 255, 255, 0.35) var(--progress) var(--buffered),
     rgba(255, 255, 255, 0.15) var(--buffered)
   );
@@ -265,7 +276,7 @@
   border: 0;
   border-radius: 50%;
   background: #fafafa;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25);
+  box-shadow: 0 0 0 4px rgb(var(--accent-light-rgb) / 0.25);
   appearance: none;
   -webkit-appearance: none;
 }
@@ -276,11 +287,11 @@
   border: 0;
   border-radius: 50%;
   background: #fafafa;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25);
+  box-shadow: 0 0 0 4px rgb(var(--accent-light-rgb) / 0.25);
 }
 
 .dv-timeline:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 0 4px rgb(var(--accent-light-rgb) / 0.6);
 }
 
 /* Phones, held either way: the demo modal fills the screen so the video gets all of it.

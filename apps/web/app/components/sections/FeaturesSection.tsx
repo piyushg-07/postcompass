@@ -278,7 +278,7 @@ export default function FeaturesSection() {
                   className="absolute top-[18px] bottom-[18px] left-[6px] w-[2px] rounded-[2px] bg-[rgba(255,255,255,0.08)] [--p:0] max-[961px]:hidden"
                   aria-hidden="true"
                 >
-                  <span className="absolute inset-0 origin-top rounded-[2px] bg-[linear-gradient(180deg,#34d399,#10b981)] shadow-[0_0_10px_rgba(52,211,153,0.6)] [transform:scaleY(var(--p))]" />
+                  <span className="absolute inset-0 origin-top rounded-[2px] bg-[linear-gradient(180deg,var(--color-accent-light),var(--color-accent))] shadow-[0_0_10px_rgb(var(--accent-light-rgb)/0.6)] [transform:scaleY(var(--p))]" />
                 </div>
                 <div className="relative">
                 <div
@@ -313,7 +313,7 @@ export default function FeaturesSection() {
                         key={f.id}
                         data-active={selected || undefined}
                         data-done={done || undefined}
-                        className="group relative rounded-[12px] border border-transparent [transition:background_0.3s_ease,border-color_0.3s_ease] before:absolute before:top-[19px] before:left-[-21px] before:box-content before:size-2 before:rounded-full before:border-2 before:border-[#26262b] before:bg-root before:content-[''] before:[transition:border-color_0.3s_ease,background_0.3s_ease,box-shadow_0.3s_ease] data-done:before:border-accent data-done:before:bg-accent data-active:border-[rgba(255,255,255,0.08)] data-active:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] data-active:before:border-accent-hover data-active:before:bg-accent-hover data-active:before:shadow-[0_0_0_4px_rgba(52,211,153,0.18),0_0_12px_rgba(52,211,153,0.8)] max-[961px]:flex-[0_0_auto] max-[961px]:rounded-full max-[961px]:border-[rgba(255,255,255,0.07)] max-[961px]:before:hidden"
+                        className="group relative rounded-[12px] border border-transparent [transition:background_0.3s_ease,border-color_0.3s_ease] before:absolute before:top-[19px] before:left-[-21px] before:box-content before:size-2 before:rounded-full before:border-2 before:border-[#26262b] before:bg-root before:content-[''] before:[transition:border-color_0.3s_ease,background_0.3s_ease,box-shadow_0.3s_ease] data-done:before:border-accent data-done:before:bg-accent data-active:border-[rgba(255,255,255,0.08)] data-active:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] data-active:before:border-accent-hover data-active:before:bg-accent-hover data-active:before:shadow-[0_0_0_4px_rgb(var(--accent-light-rgb)/0.18),0_0_12px_rgb(var(--accent-light-rgb)/0.8)] max-[961px]:flex-[0_0_auto] max-[961px]:rounded-full max-[961px]:border-[rgba(255,255,255,0.07)] max-[961px]:before:hidden"
                       >
                         <button
                           ref={(el) => {
@@ -424,7 +424,7 @@ export default function FeaturesSection() {
             const Icon = m.icon;
             return (
               <div key={m.title} className="flex gap-[0.9rem] bg-root px-[1.4rem] py-6 [transition:background_0.2s_ease] hover:bg-[#0d0e10]">
-                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-[rgba(16,185,129,0.2)] bg-accent-subtle text-accent-hover">
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-[rgb(var(--accent-rgb)/0.2)] bg-accent-subtle text-accent-hover">
                   <Icon size={16} />
                 </span>
                 <div>

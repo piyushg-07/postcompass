@@ -185,7 +185,7 @@ export default function Navbar() {
 
         <div className="relative flex min-w-0 items-center gap-3 max-[560px]:ml-2" role="search">
           <label
-            className="group/stmt inline-flex h-[36px] cursor-text items-baseline gap-2 rounded-[9px] border border-transparent px-[0.8rem] text-[0.9rem] leading-[34px] text-[#d4d4d8] [transition:border-color_0.2s_ease,background_0.2s_ease] hover:border-[rgba(255,255,255,0.08)] focus-within:border-[rgba(52,211,153,0.45)]! focus-within:bg-[rgba(16,185,129,0.05)] max-[560px]:h-[32px] max-[560px]:gap-[0.35rem] max-[560px]:px-2 max-[560px]:text-[0.75rem] max-[560px]:leading-[30px]"
+            className="group/stmt inline-flex h-[36px] cursor-text items-baseline gap-2 rounded-[9px] border border-transparent px-[0.8rem] text-[0.9rem] leading-[34px] text-[#d4d4d8] [transition:border-color_0.2s_ease,background_0.2s_ease] hover:border-[rgba(255,255,255,0.08)] focus-within:border-[rgb(var(--accent-light-rgb)/0.45)]! focus-within:bg-[rgb(var(--accent-rgb)/0.05)] max-[560px]:h-[32px] max-[560px]:gap-[0.35rem] max-[560px]:px-2 max-[560px]:text-[0.75rem] max-[560px]:leading-[30px]"
             htmlFor="nav-query"
           >
             <span className={KW}>SELECT</span>
@@ -237,7 +237,7 @@ export default function Navbar() {
 
           {result && (
             <span
-              className={`absolute top-[calc(100%_+_8px)] left-0 flex w-max max-w-[min(560px,calc(100vw_-_2rem))] animate-[nav-result-in_0.25s_ease] flex-col gap-[0.2rem] rounded-[10px] border px-[0.8rem] py-[0.55rem] text-[0.78rem] shadow-[0_16px_40px_rgba(0,0,0,0.5)] ${result.kind === "error" ? "border-[rgba(248,113,113,0.35)] bg-[#161010] text-[#f87171]" : "border-[rgba(52,211,153,0.3)] bg-[#0f1412] text-accent-hover"}`}
+              className={`absolute top-[calc(100%_+_8px)] left-0 flex w-max max-w-[min(560px,calc(100vw_-_2rem))] animate-[nav-result-in_0.25s_ease] flex-col gap-[0.2rem] rounded-[10px] border px-[0.8rem] py-[0.55rem] text-[0.78rem] shadow-[0_16px_40px_rgba(0,0,0,0.5)] ${result.kind === "error" ? "border-[rgba(248,113,113,0.35)] bg-[#161010] text-[#f87171]" : "border-[rgb(var(--accent-light-rgb)/0.3)] bg-[#0f1412] text-accent-hover"}`}
               role="status"
             >
               {result.text}
@@ -291,7 +291,7 @@ export default function Navbar() {
           </a>
           <a
             href="/download"
-            className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-[#03130c] shadow-[inset_0_0_0_1px_rgba(110,231,183,0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6ee7b7] active:[transform:scale(0.97)] max-[560px]:h-[32px] max-[560px]:px-[0.7rem] max-[560px]:text-[0.75rem]"
+            className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-accent-fg shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-pale)] active:[transform:scale(0.97)] max-[560px]:h-[32px] max-[560px]:px-[0.7rem] max-[560px]:text-[0.75rem]"
             title="Download PostCompass"
           >
             <span className="mr-px opacity-55">\</span>download
