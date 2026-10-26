@@ -3,6 +3,11 @@ import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import turboPlugin from "eslint-plugin-turbo";
 import onlyWarn from "eslint-plugin-only-warn";
+import { fileURLToPath } from "node:url";
+
+// Babel resolves preset names from the folder ESLint runs in, which fails in editors and from the repo root
+// (pnpm only links the preset into this package), so hand it the full path instead.
+const tsPreset = fileURLToPath(import.meta.resolve("@babel/preset-typescript"));
 
 /**
  * A shared ESLint configuration for the repository.
@@ -18,7 +23,7 @@ export const config = [
       parserOptions: {
         requireConfigFile: false,
         babelOptions: {
-          presets: ["@babel/preset-typescript"],
+          presets: [tsPreset],
         },
       },
     },
@@ -45,7 +50,7 @@ export const config = [
       parserOptions: {
         requireConfigFile: false,
         babelOptions: {
-          presets: ["@babel/preset-typescript"],
+          presets: [tsPreset],
           parserOpts: { plugins: ["jsx"] },
         },
       },
