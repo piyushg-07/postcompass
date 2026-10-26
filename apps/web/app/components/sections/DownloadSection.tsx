@@ -20,7 +20,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 
 const ICONS: Record<
   Platform,
-  React.ComponentType<{ size?: number; className?: string }>
+  React.ComponentType<{ size?: number; className?: string; brand?: boolean }>
 > = {
   windows: WindowsIcon,
   macos: AppleIcon,
@@ -94,7 +94,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                         : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] text-fg"
                     }`}
                   >
-                    <Icon size={20} />
+                    <Icon size={20} brand />
                   </span>
                   <div>
                     <h3 className="m-0 text-[1.1rem] font-[650] text-fg">

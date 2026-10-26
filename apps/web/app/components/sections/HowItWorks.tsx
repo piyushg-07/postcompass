@@ -33,7 +33,7 @@ function DownloadVisual() {
           className={`flex min-w-[4.6rem] flex-col items-center gap-[0.45rem] rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(10,12,11,0.8)] px-[0.6rem] pt-[0.8rem] pb-[0.7rem] text-fg opacity-0 [transform:translateY(8px)] [transition:opacity_0.4s_ease_calc(var(--s)+0.3s+var(--d)),transform_0.4s_ease_calc(var(--s)+0.3s+var(--d)),border-color_0.2s_ease] group-hover/step:border-[rgb(var(--accent-rgb)/0.3)] ${SHOW_IN}`}
           style={{ ["--d" as string]: `${i * 0.12}s` }}
         >
-          <Icon size={18} />
+          <Icon size={18} brand />
           <span className="font-mono text-[0.68rem] text-fg-muted">{name}</span>
         </div>
       ))}

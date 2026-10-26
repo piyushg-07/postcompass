@@ -42,6 +42,11 @@
   --color-success: #3ecf8e;
   --color-key-primary: #f5b544;
 
+  /* Platform brand colors for the Windows / macOS / Linux icons */
+  --color-os-windows: #0078d4;
+  --color-os-macos: #f5f5f7;
+  --color-os-linux: #fcc624;
+
   /* Borders */
   --color-line: rgba(255, 255, 255, 0.08);
   --color-line-subtle: rgba(255, 255, 255, 0.04);
