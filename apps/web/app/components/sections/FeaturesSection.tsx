@@ -31,6 +31,8 @@ const TONE = {
   orange: "#fb923c",
   rose: "#fb7185",
   cyan: "#22d3ee",
+  teal: "#2dd4bf",
+  indigo: "#818cf8",
 } as const;
 
 interface Showcase {
@@ -58,7 +60,7 @@ const SHOWCASE: Showcase[] = [
       "No admin rights, no Docker",
     ],
     image: "/screens/create-server.webp",
-    alt: "A new local PostgreSQL 18 server finishing setup",
+    alt: "Setting up a new local PostgreSQL server",
   },
   {
     id: "table",
@@ -72,7 +74,21 @@ const SHOWCASE: Showcase[] = [
       "Paste from Excel or import CSV",
     ],
     image: "/screens/table-editor.webp",
-    alt: "The orders table filtered to refunded orders",
+    alt: "Browsing the orders table",
+  },
+  {
+    id: "create-table",
+    tone: TONE.teal,
+    icon: Columns,
+    label: "Create tables",
+    title: "Design tables without writing DDL",
+    description: "Name it, add columns, pick types and defaults. PostCompass writes the SQL.",
+    points: [
+      "Primary keys, defaults and foreign keys",
+      "Row Level Security on by default",
+    ],
+    image: "/screens/create-table.webp",
+    alt: "Designing a new invoices table",
   },
   {
     id: "relations",
@@ -129,6 +145,20 @@ const SHOWCASE: Showcase[] = [
     ],
     image: "/screens/er-diagram.webp",
     alt: "ER diagram highlighting the relationships of the orders table",
+  },
+  {
+    id: "database",
+    tone: TONE.indigo,
+    icon: Database,
+    label: "Database objects",
+    title: "Everything beyond tables",
+    description: "Functions, triggers, enums, sequences, policies and extensions in one panel.",
+    points: [
+      "Install extensions in one click",
+      "Create and edit objects with forms",
+    ],
+    image: "/screens/database-objects.webp",
+    alt: "Browsing the extensions available in a database",
   },
   {
     id: "cloud",
