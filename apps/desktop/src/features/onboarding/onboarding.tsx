@@ -1,7 +1,7 @@
 import { Input, RadioCard, RadioCardGroup, RadioChip, Stepper, toast } from "@repo/ui";
 import { useState } from "react";
-import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
+import { Logo } from "../../app/logo";
 import { type RemoteDraft, useNavigation } from "../../app/navigation";
 import type { Experience, ManagedServer, Role, UseCase } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
@@ -57,10 +57,10 @@ export function Onboarding() {
       {step > 0 && (
         <aside className="flex w-60 shrink-0 flex-col gap-10 border-r border-border bg-surface px-8 py-12">
           <div className="flex items-center gap-2.5">
-            <img src={appIcon} alt="" width={32} height={32} draggable={false} />
+            <Logo size={32} />
             <span className="flex items-baseline gap-px text-xl text-fg">
               <span className="font-brand font-bold tracking-tighter">Post</span>
-              <span className="bg-linear-to-r from-accent to-[#7ee7b8] bg-clip-text pr-0.5 font-serif text-[1.4rem] leading-none text-transparent italic">
+              <span className="bg-linear-to-r from-accent to-[color-mix(in_srgb,var(--color-accent),white_45%)] bg-clip-text pr-0.5 font-serif text-[1.4rem] leading-none text-transparent italic">
                 Compass
               </span>
             </span>

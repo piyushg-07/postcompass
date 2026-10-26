@@ -26,7 +26,7 @@ const COLUMNS = [
 export default async function Footer() {
   const { version } = getDownloads(await getLatestRelease());
   return (
-    <footer className="mt-16 border-t border-[rgba(255,255,255,0.07)] bg-[linear-gradient(180deg,rgba(16,185,129,0.03),transparent_40%)] pt-14 pb-8">
+    <footer className="mt-16 border-t border-[rgba(255,255,255,0.07)] bg-[linear-gradient(180deg,rgb(var(--accent-rgb)/0.03),transparent_40%)] pt-14 pb-8">
       <div className="mx-auto w-full max-w-[1200px] px-6 max-md:px-4">
         <div className="flex flex-wrap justify-between gap-12 max-[640px]:flex-col max-[640px]:items-center max-[640px]:text-center">
           <div className="max-w-[320px] max-[640px]:flex max-[640px]:flex-col max-[640px]:items-center">

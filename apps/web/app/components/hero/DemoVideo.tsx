@@ -10,7 +10,7 @@ const HIDE_CONTROLS_MS = 2500;
 
 // A button in the control bar
 const CTRL =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border-0 bg-transparent p-0 text-[#fafafa] cursor-pointer [transition:background_0.15s_ease,color_0.15s_ease] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#34d399] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent-hover";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border-0 bg-transparent p-0 text-[#fafafa] cursor-pointer [transition:background_0.15s_ease,color_0.15s_ease] hover:bg-[rgba(255,255,255,0.12)] hover:text-accent-light focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent-hover";
 
 // iPhone Safari can't put an element in full screen, only a <video> through its own API
 type IOSVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
@@ -230,12 +230,12 @@ export default function DemoVideo() {
       >
         {/* A slowly spinning gradient ring around a dark core with the play icon */}
         <span
-          className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_22px_rgba(16,185,129,0.22)] [transition:box-shadow_0.25s_ease] group-hover:shadow-[0_0_32px_rgba(16,185,129,0.45)] before:absolute before:inset-[-50%] before:animate-[spin-360_3.2s_linear_infinite] before:bg-[conic-gradient(from_0deg,#10b981,#38bdf8,transparent_38%,transparent_62%,#34d399,#10b981)] before:content-[''] motion-reduce:before:animate-none"
+          className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_22px_rgb(var(--accent-rgb)/0.22)] [transition:box-shadow_0.25s_ease] group-hover:shadow-[0_0_32px_rgb(var(--accent-rgb)/0.45)] before:absolute before:inset-[-50%] before:animate-[spin-360_3.2s_linear_infinite] before:bg-[conic-gradient(from_0deg,var(--color-accent),#38bdf8,transparent_38%,transparent_62%,var(--color-accent-light),var(--color-accent))] before:content-[''] motion-reduce:before:animate-none"
           aria-hidden="true"
         />
         {/* The triangle is nudged right so it looks optically centred */}
         <span
-          className="absolute inset-[1.5px] flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_50%_30%,#1c201e,#0a0c0b_70%)] text-[#fafafa] [transition:color_0.2s_ease] group-hover:text-[#34d399] [&_svg]:ml-[2px]"
+          className="absolute inset-[1.5px] flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_50%_30%,#1c201e,#0a0c0b_70%)] text-[#fafafa] [transition:color_0.2s_ease] group-hover:text-accent-light [&_svg]:ml-[2px]"
           aria-hidden="true"
         >
           <PlayIcon size={15} />
@@ -296,7 +296,7 @@ export default function DemoVideo() {
 
           {buffering && (
             <span
-              className="absolute top-1/2 left-1/2 z-[2] -mt-[17px] -ml-[17px] h-[34px] w-[34px] animate-[spin-360_0.8s_linear_infinite] rounded-full border-[3px] border-solid border-[rgba(255,255,255,0.12)] border-t-[#34d399]"
+              className="absolute top-1/2 left-1/2 z-[2] -mt-[17px] -ml-[17px] h-[34px] w-[34px] animate-[spin-360_0.8s_linear_infinite] rounded-full border-[3px] border-solid border-[rgba(255,255,255,0.12)] border-t-accent-light"
               role="status"
               aria-label="Loading video"
             />
@@ -305,7 +305,7 @@ export default function DemoVideo() {
           {!playing && !buffering && (
             <button
               type="button"
-              className="absolute top-1/2 left-1/2 z-[2] -mt-[36px] -ml-[36px] inline-flex h-[72px] w-[72px] cursor-pointer items-center justify-center rounded-full border-0 bg-accent p-0 pl-[4px] text-[#03130c] shadow-[0_10px_40px_rgba(16,185,129,0.45)] [transition:transform_0.2s_ease,background_0.2s_ease] hover:bg-accent-hover hover:[transform:scale(1.06)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#6ee7b7]"
+              className="absolute top-1/2 left-1/2 z-[2] -mt-[36px] -ml-[36px] inline-flex h-[72px] w-[72px] cursor-pointer items-center justify-center rounded-full border-0 bg-accent p-0 pl-[4px] text-accent-fg shadow-[0_10px_40px_rgb(var(--accent-rgb)/0.45)] [transition:transform_0.2s_ease,background_0.2s_ease] hover:bg-accent-hover hover:[transform:scale(1.06)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--color-accent-pale)]"
               aria-label="Play"
               onClick={togglePlay}
             >
@@ -315,7 +315,7 @@ export default function DemoVideo() {
 
           <button
             type="button"
-            className={`dv-player-close absolute top-[10px] right-[10px] z-[3] inline-flex h-[40px] w-[40px] cursor-pointer items-center justify-center rounded-full border border-solid border-[rgba(255,255,255,0.16)] bg-[rgba(9,9,11,0.7)] p-0 text-[#fafafa] backdrop-blur-[8px] [transition:opacity_0.25s_ease,background_0.15s_ease,color_0.15s_ease] group-focus-within/player:opacity-100 hover:bg-[#18181b] hover:text-[#34d399] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-hover ${controlsOn ? "opacity-100" : "opacity-0"}`}
+            className={`dv-player-close absolute top-[10px] right-[10px] z-[3] inline-flex h-[40px] w-[40px] cursor-pointer items-center justify-center rounded-full border border-solid border-[rgba(255,255,255,0.16)] bg-[rgba(9,9,11,0.7)] p-0 text-[#fafafa] backdrop-blur-[8px] [transition:opacity_0.25s_ease,background_0.15s_ease,color_0.15s_ease] group-focus-within/player:opacity-100 hover:bg-[#18181b] hover:text-accent-light focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-hover ${controlsOn ? "opacity-100" : "opacity-0"}`}
             aria-label="Close video"
             onClick={close}
           >

@@ -253,7 +253,7 @@ function Hero() {
               <span className="font-brand font-bold tracking-tighter">
                 Post
               </span>
-              <span className="bg-gradient-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[3.4rem] leading-none text-transparent italic">
+              <span className="bg-gradient-to-r from-accent to-[color-mix(in_srgb,var(--color-accent),white_45%)] bg-clip-text pr-1 font-serif text-[3.4rem] leading-none text-transparent italic">
                 Compass
               </span>
             </span>

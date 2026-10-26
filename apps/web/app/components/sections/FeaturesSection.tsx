@@ -22,9 +22,23 @@ import SectionHeader from "@/components/ui/SectionHeader";
 
 type IconType = React.FC<{ size?: number; className?: string }>;
 
+/** Vivid icon colors so each feature is easy to tell apart at a glance (icons only; tiles stay neutral) */
+const TONE = {
+  emerald: "#34d399",
+  blue: "#60a5fa",
+  violet: "#a78bfa",
+  amber: "#fbbf24",
+  orange: "#fb923c",
+  rose: "#fb7185",
+  cyan: "#22d3ee",
+  teal: "#2dd4bf",
+  indigo: "#818cf8",
+} as const;
+
 interface Showcase {
   id: string;
   icon: IconType;
+  tone: string;
   label: string;
   title: string;
   description: string;
@@ -36,6 +50,7 @@ interface Showcase {
 const SHOWCASE: Showcase[] = [
   {
     id: "local",
+    tone: TONE.emerald,
     icon: Server,
     label: "Local PostgreSQL",
     title: "PostgreSQL in one click",
@@ -45,10 +60,11 @@ const SHOWCASE: Showcase[] = [
       "No admin rights, no Docker",
     ],
     image: "/screens/create-server.webp",
-    alt: "A new local PostgreSQL 18 server finishing setup",
+    alt: "Setting up a new local PostgreSQL server",
   },
   {
     id: "table",
+    tone: TONE.blue,
     icon: Table,
     label: "Table editor",
     title: "A table editor you already know",
@@ -58,10 +74,25 @@ const SHOWCASE: Showcase[] = [
       "Paste from Excel or import CSV",
     ],
     image: "/screens/table-editor.webp",
-    alt: "The orders table filtered to refunded orders",
+    alt: "Browsing the orders table",
+  },
+  {
+    id: "create-table",
+    tone: TONE.teal,
+    icon: Columns,
+    label: "Create tables",
+    title: "Design tables without writing DDL",
+    description: "Name it, add columns, pick types and defaults. PostCompass writes the SQL.",
+    points: [
+      "Primary keys, defaults and foreign keys",
+      "Row Level Security on by default",
+    ],
+    image: "/screens/create-table.webp",
+    alt: "Designing a new invoices table",
   },
   {
     id: "relations",
+    tone: TONE.violet,
     icon: ArrowRightLeft,
     label: "Foreign keys",
     title: "Follow your foreign keys",
@@ -75,6 +106,7 @@ const SHOWCASE: Showcase[] = [
   },
   {
     id: "sql",
+    tone: TONE.amber,
     icon: Code,
     label: "SQL editor",
     title: "SQL that knows your schema",
@@ -88,6 +120,7 @@ const SHOWCASE: Showcase[] = [
   },
   {
     id: "explain",
+    tone: TONE.orange,
     icon: Activity,
     label: "Visual EXPLAIN",
     title: "See why a query is slow",
@@ -101,6 +134,7 @@ const SHOWCASE: Showcase[] = [
   },
   {
     id: "diagram",
+    tone: TONE.rose,
     icon: Layers,
     label: "ER diagram",
     title: "Your schema, mapped",
@@ -113,7 +147,22 @@ const SHOWCASE: Showcase[] = [
     alt: "ER diagram highlighting the relationships of the orders table",
   },
   {
+    id: "database",
+    tone: TONE.indigo,
+    icon: Database,
+    label: "Database objects",
+    title: "Everything beyond tables",
+    description: "Functions, triggers, enums, sequences, policies and extensions in one panel.",
+    points: [
+      "Install extensions in one click",
+      "Create and edit objects with forms",
+    ],
+    image: "/screens/database-objects.webp",
+    alt: "Browsing the extensions available in a database",
+  },
+  {
     id: "cloud",
+    tone: TONE.cyan,
     icon: Cloud,
     label: "Cloud connections",
     title: "Every cloud, one place",
@@ -128,12 +177,12 @@ const SHOWCASE: Showcase[] = [
 ];
 
 const MORE = [
-  { icon: Search, title: "Command palette", text: "Ctrl+K to jump anywhere." },
-  { icon: Database, title: "Backup and restore", text: "pg_dump and pg_restore built in." },
-  { icon: Columns, title: "Schema designer", text: "Tables, indexes and triggers, visually." },
-  { icon: Shield, title: "Row Level Security", text: "Policies from ready-made templates." },
-  { icon: Terminal, title: "Connect snippets", text: "Prisma, Drizzle, Node, Python and Go." },
-  { icon: Lock, title: "Private by default", text: "No account. No telemetry." },
+  { icon: Search, tone: TONE.violet, title: "Command palette", text: "Ctrl+K to jump anywhere." },
+  { icon: Database, tone: TONE.blue, title: "Backup and restore", text: "pg_dump and pg_restore built in." },
+  { icon: Columns, tone: TONE.emerald, title: "Schema designer", text: "Tables, indexes and triggers, visually." },
+  { icon: Shield, tone: TONE.amber, title: "Row Level Security", text: "Policies from ready-made templates." },
+  { icon: Terminal, tone: TONE.cyan, title: "Connect snippets", text: "Prisma, Drizzle, Node, Python and Go." },
+  { icon: Lock, tone: TONE.rose, title: "Private by default", text: "No account. No telemetry." },
 ];
 
 const STICKY_TOP = 96; // px below the fixed navbar
@@ -278,7 +327,7 @@ export default function FeaturesSection() {
                   className="absolute top-[18px] bottom-[18px] left-[6px] w-[2px] rounded-[2px] bg-[rgba(255,255,255,0.08)] [--p:0] max-[961px]:hidden"
                   aria-hidden="true"
                 >
-                  <span className="absolute inset-0 origin-top rounded-[2px] bg-[linear-gradient(180deg,#34d399,#10b981)] shadow-[0_0_10px_rgba(52,211,153,0.6)] [transform:scaleY(var(--p))]" />
+                  <span className="absolute inset-0 origin-top rounded-[2px] bg-[linear-gradient(180deg,var(--color-accent-light),var(--color-accent))] shadow-[0_0_10px_rgb(var(--accent-light-rgb)/0.6)] [transform:scaleY(var(--p))]" />
                 </div>
                 <div className="relative">
                 <div
@@ -313,7 +362,7 @@ export default function FeaturesSection() {
                         key={f.id}
                         data-active={selected || undefined}
                         data-done={done || undefined}
-                        className="group relative rounded-[12px] border border-transparent [transition:background_0.3s_ease,border-color_0.3s_ease] before:absolute before:top-[19px] before:left-[-21px] before:box-content before:size-2 before:rounded-full before:border-2 before:border-[#26262b] before:bg-root before:content-[''] before:[transition:border-color_0.3s_ease,background_0.3s_ease,box-shadow_0.3s_ease] data-done:before:border-accent data-done:before:bg-accent data-active:border-[rgba(255,255,255,0.08)] data-active:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] data-active:before:border-accent-hover data-active:before:bg-accent-hover data-active:before:shadow-[0_0_0_4px_rgba(52,211,153,0.18),0_0_12px_rgba(52,211,153,0.8)] max-[961px]:flex-[0_0_auto] max-[961px]:rounded-full max-[961px]:border-[rgba(255,255,255,0.07)] max-[961px]:before:hidden"
+                        className="group relative rounded-[12px] border border-transparent [transition:background_0.3s_ease,border-color_0.3s_ease] before:absolute before:top-[19px] before:left-[-21px] before:box-content before:size-2 before:rounded-full before:border-2 before:border-[#26262b] before:bg-root before:content-[''] before:[transition:border-color_0.3s_ease,background_0.3s_ease,box-shadow_0.3s_ease] data-done:before:border-accent data-done:before:bg-accent data-active:border-[rgba(255,255,255,0.08)] data-active:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] data-active:before:border-accent-hover data-active:before:bg-accent-hover data-active:before:shadow-[0_0_0_4px_rgb(var(--accent-light-rgb)/0.18),0_0_12px_rgb(var(--accent-light-rgb)/0.8)] max-[961px]:flex-[0_0_auto] max-[961px]:rounded-full max-[961px]:border-[rgba(255,255,255,0.07)] max-[961px]:before:hidden"
                       >
                         <button
                           ref={(el) => {
@@ -329,8 +378,10 @@ export default function FeaturesSection() {
                           onClick={() => select(i)}
                           onKeyDown={(e) => onKeyDown(e, i)}
                         >
-                          <span className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.04)] [transition:color_0.25s_ease,background_0.25s_ease,border-color_0.25s_ease] group-data-active:border-line-accent group-data-active:bg-accent-muted group-data-active:text-accent-hover max-[961px]:size-[26px] max-[961px]:rounded-full">
-                            <Icon size={16} />
+                          <span className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.04)] [transition:color_0.25s_ease,background_0.25s_ease,border-color_0.25s_ease] group-data-active:border-line-accent group-data-active:bg-accent-muted max-[961px]:size-[26px] max-[961px]:rounded-full">
+                            <span className="inline-flex" style={{ color: f.tone }}>
+                              <Icon size={16} />
+                            </span>
                           </span>
                           <span className="flex-1 text-[0.95rem] font-semibold tracking-[-0.01em] max-[961px]:text-[0.875rem] max-[961px]:whitespace-nowrap">
                             {f.label}
@@ -424,8 +475,10 @@ export default function FeaturesSection() {
             const Icon = m.icon;
             return (
               <div key={m.title} className="flex gap-[0.9rem] bg-root px-[1.4rem] py-6 [transition:background_0.2s_ease] hover:bg-[#0d0e10]">
-                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-[rgba(16,185,129,0.2)] bg-accent-subtle text-accent-hover">
-                  <Icon size={16} />
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-[rgb(var(--accent-rgb)/0.2)] bg-accent-subtle">
+                  <span className="inline-flex" style={{ color: m.tone }}>
+                    <Icon size={16} />
+                  </span>
                 </span>
                 <div>
                   <h3 className="my-[0.3rem] text-[0.95rem] font-semibold text-fg">{m.title}</h3>

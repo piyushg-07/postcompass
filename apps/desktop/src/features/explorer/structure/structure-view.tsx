@@ -149,11 +149,11 @@ export function StructureView({
                     <span className="flex w-3.5 justify-center">
                       {c.isPrimaryKey ? (
                         <Tooltip content="Primary key">
-                          <KeyRound className="size-3.5 text-warning" />
+                          <KeyRound className="size-3.5 text-key-primary" />
                         </Tooltip>
                       ) : fk ? (
                         <Tooltip content="Foreign key">
-                          <Link2 className="size-3.5 text-info" />
+                          <Link2 className="size-3.5 text-key-foreign" />
                         </Tooltip>
                       ) : null}
                     </span>

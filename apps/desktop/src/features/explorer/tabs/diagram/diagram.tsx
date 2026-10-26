@@ -236,10 +236,10 @@ function Diagram({
   return (
     <div
       className="relative h-full w-full"
-      // Soft charcoal canvas with an emerald glow in the middle, darker towards the edges
+      // Soft charcoal canvas with an accent glow in the middle, darker towards the edges
       style={{
         background:
-          "radial-gradient(ellipse 60% 55% at 50% 45%, rgb(62 207 142 / 0.07), transparent 70%), radial-gradient(ellipse 100% 100% at 50% 50%, #141416 40%, #0a0a0b 100%)",
+          "radial-gradient(ellipse 60% 55% at 50% 45%, color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 70%), radial-gradient(ellipse 100% 100% at 50% 50%, #141416 40%, #0a0a0b 100%)",
       }}
     >
       <ReactFlow
@@ -281,10 +281,10 @@ function Diagram({
             </span>
             <span className="h-3 w-px bg-border" />
             <span className="flex items-center gap-1.5">
-              <KeyRound className="size-3 text-warning" /> Primary key
+              <KeyRound className="size-3 text-key-primary" /> Primary key
             </span>
             <span className="flex items-center gap-1.5">
-              <Link2 className="size-3 text-info" /> Foreign key
+              <Link2 className="size-3 text-key-foreign" /> Foreign key
             </span>
             <span className="flex items-center gap-1.5">
               <span className="font-mono text-fg-subtle">?</span> Nullable
@@ -384,7 +384,7 @@ function Diagram({
                     background: "transparent",
                   }}
                   maskColor="rgb(10 10 11 / 0.7)"
-                  maskStrokeColor="#3ecf8e"
+                  maskStrokeColor="var(--color-accent)"
                   maskStrokeWidth={1.5}
                   // The colour carries the node's state; MiniTable draws it
                   nodeColor={(n) =>

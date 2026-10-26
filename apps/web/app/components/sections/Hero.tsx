@@ -6,6 +6,7 @@ import type HyperspeedComponent from "@/components/hero/Hyperspeed";
 import { WindowsIcon, AppleIcon, LinuxIcon } from "@/components/ui/Icons";
 import AppPreview from "@/components/hero/AppPreview";
 import DemoVideo from "@/components/hero/DemoVideo";
+import { ACCENT } from "@/config/theme";
 
 // three.js is large: load it separately so it doesn't hold up the page or the headline animation
 const Hyperspeed = dynamic<ComponentProps<typeof HyperspeedComponent>>(
@@ -124,9 +125,9 @@ export default function Hero({ version }: { version: string }) {
           steer={0.3}
           cameraYOffset={-1.5}
           lookAtYOffset={1.8}
-          tailColors={["#10b981", "#059669", "#34d399"]}
+          tailColors={[ACCENT.base, ACCENT.strong, ACCENT.light]}
           headColors={["#06b6d4", "#0284c7", "#38bdf8"]}
-          poleColors={["#10b981"]}
+          poleColors={[ACCENT.base]}
           interactive
         />}
       </div>
@@ -148,7 +149,7 @@ export default function Hero({ version }: { version: string }) {
             className="m-0 inline-flex items-center gap-[0.6rem] font-mono text-[0.875rem] text-[#a1a1aa] [text-shadow:0_1px_10px_rgba(0,0,0,0.95)] max-[640px]:text-[0.75rem]"
             aria-hidden="true"
           >
-            <span className="font-semibold text-[#34d399]">=#</span>
+            <span className="font-semibold text-accent-light">=#</span>
             <span
               key={queryIndex}
               className="inline-block w-[calc(var(--len)*1ch)] animate-[hero-type-query_0.6s_steps(var(--len),end)_var(--type-delay,0.4s)_both] overflow-hidden whitespace-nowrap motion-reduce:animate-none"
@@ -156,7 +157,7 @@ export default function Hero({ version }: { version: string }) {
             >
               <span className="text-[#c792ea]">SELECT</span> {query.column} <span className="text-[#c792ea]">FROM</span> {query.table};
             </span>
-            <span className="-ml-[0.45rem] h-[15px] w-[7px] animate-[caret-blink_1s_steps(1)_infinite] rounded-[1px] bg-[#34d399] motion-reduce:animate-none" />
+            <span className="-ml-[0.45rem] h-[15px] w-[7px] animate-[caret-blink_1s_steps(1)_infinite] rounded-[1px] bg-accent-light motion-reduce:animate-none" />
           </p>
           <div className="mt-[1.1rem] grid w-full [&>*]:[grid-area:1/1]" aria-hidden="true">
             {QUERIES.map((q, i) => (
@@ -170,7 +171,7 @@ export default function Hero({ version }: { version: string }) {
                   </span>
                 ))}
                 <em
-                  className={`${WORD} bg-[linear-gradient(100deg,#34d399_0%,#10b981_45%,#2dd4bf_100%)] bg-clip-text pr-[0.06em] font-display font-medium tracking-[-0.02em] text-transparent italic [-webkit-background-clip:text]`}
+                  className={`${WORD} bg-[linear-gradient(100deg,var(--color-accent-light)_0%,var(--color-accent)_45%,var(--color-accent-pale)_100%)] bg-clip-text pr-[0.06em] font-display font-medium tracking-[-0.02em] text-transparent italic [-webkit-background-clip:text]`}
                   style={{ ["--i" as string]: q.lead.length }}
                 >
                   {q.accent}
@@ -197,7 +198,7 @@ export default function Hero({ version }: { version: string }) {
         <div className="mt-[2.25rem] flex animate-[hero-fade-up_0.6s_ease_1.45s_both] flex-wrap justify-center gap-3 motion-reduce:animate-none max-[640px]:w-full max-[640px]:flex-nowrap">
           <a
             href="#download"
-            className="inline-flex h-[2.9rem] items-center gap-[0.55rem] rounded-[10px] bg-accent px-[1.4rem] text-[0.9375rem] font-semibold text-[#03130c] no-underline shadow-[inset_0_0_0_1px_rgba(52,211,153,0.5),0_8px_28px_rgba(16,185,129,0.28)] [transition:transform_0.15s_ease,background_0.2s_ease,border-color_0.2s_ease,box-shadow_0.2s_ease] hover:bg-accent-hover hover:shadow-[inset_0_0_0_1px_rgba(110,231,183,0.6),0_12px_34px_rgba(16,185,129,0.38)] hover:[transform:translateY(-1px)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover max-[640px]:flex-1 max-[640px]:justify-center"
+            className="inline-flex h-[2.9rem] items-center gap-[0.55rem] rounded-[10px] bg-accent px-[1.4rem] text-[0.9375rem] font-semibold text-accent-fg no-underline shadow-[inset_0_0_0_1px_rgb(var(--accent-light-rgb)/0.5),0_8px_28px_rgb(var(--accent-rgb)/0.28)] [transition:transform_0.15s_ease,background_0.2s_ease,border-color_0.2s_ease,box-shadow_0.2s_ease] hover:bg-accent-hover hover:shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.6),0_12px_34px_rgb(var(--accent-rgb)/0.38)] hover:[transform:translateY(-1px)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover max-[640px]:flex-1 max-[640px]:justify-center"
             aria-label={`Download for ${OS_LABEL[os]}`}
             suppressHydrationWarning
           >
@@ -218,14 +219,14 @@ export default function Hero({ version }: { version: string }) {
           ref={previewRef}
         >
           <div
-            className="pointer-events-none absolute [inset:-6%_8%_auto] h-[70%] bg-[radial-gradient(ellipse_at_50%_30%,rgba(16,185,129,0.2),transparent_70%)] blur-[70px]"
+            className="pointer-events-none absolute [inset:-6%_8%_auto] h-[70%] bg-[radial-gradient(ellipse_at_50%_30%,rgb(var(--accent-rgb)/0.2),transparent_70%)] blur-[70px]"
             aria-hidden="true"
           />
           <div className="relative origin-top rounded-[16px] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] p-[6px] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.04)] will-change-transform [transform:rotateX(calc((1_-_var(--lift,1))_*_24deg))_scale(calc(0.9_+_var(--lift,1)_*_0.1))] motion-reduce:[transform:none] max-[640px]:rounded-[12px] max-[640px]:p-[4px]">
             <AppPreview />
           </div>
           <p className="mt-[1.1rem] flex flex-wrap items-center justify-center gap-[0.4rem_0.6rem] text-[0.8125rem] text-fg-muted [&_code]:font-mono [&_code]:text-fg-secondary [&_kbd]:inline-block [&_kbd]:rounded-[4px] [&_kbd]:border [&_kbd]:border-solid [&_kbd]:border-line-hover [&_kbd]:px-[0.35rem] [&_kbd]:py-0 [&_kbd]:font-mono [&_kbd]:text-[0.72rem] [&_kbd]:text-fg-secondary">
-            <span className="h-[7px] w-[7px] rounded-full bg-accent shadow-[0_0_0_3px_rgba(16,185,129,0.2)]" aria-hidden="true" />
+            <span className="h-[7px] w-[7px] rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.2)]" aria-hidden="true" />
             <span>Interactive preview with sample data.</span>
             <span className="text-fg-faint max-[640px]:hidden">
               Try: open a table, filter by <code>status</code>, double-click a cell, run a query, or press <kbd>Ctrl</kbd> <kbd>K</kbd>

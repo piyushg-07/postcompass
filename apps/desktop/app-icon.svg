@@ -9,9 +9,13 @@
       <stop offset="1" stop-color="#050505"/>
     </linearGradient>
     <radialGradient id="glow" cx="50%" cy="45%" r="55%">
-      <stop offset="0" stop-color="#3ecf8e" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#3ecf8e" stop-opacity="0"/>
+      <stop offset="0" stop-color="#b8bcc4" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#b8bcc4" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="north" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f5f7"/>
+      <stop offset="1" stop-color="#b8bcc4"/>
+    </linearGradient>
   </defs>
 
   <!-- Rounded tile -->
@@ -28,8 +32,8 @@
     <line x1="774" y1="512" x2="810" y2="512"/>
   </g>
 
-  <!-- Needle: emerald north half, white south half -->
-  <path d="M512 196 L604 512 L420 512 Z" fill="#3ecf8e"/>
-  <path d="M420 512 L604 512 L512 828 Z" fill="#ededed"/>
+  <!-- Needle: polished silver north half, dark steel south half -->
+  <path d="M512 196 L604 512 L420 512 Z" fill="url(#north)"/>
+  <path d="M420 512 L604 512 L512 828 Z" fill="#5c6068"/>
   <circle cx="512" cy="512" r="38" fill="#0a0a0a"/>
 </svg>

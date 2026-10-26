@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { ACCENT } from "@/config/theme";
 
 // The preview shown when a PostCompass link is shared (Slack, X, LinkedIn, Discord…), built at build time
 export const alt = "PostCompass: free PostgreSQL GUI for Windows, macOS and Linux";
@@ -20,7 +21,7 @@ export default async function Image() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "0 96px",
-          background: "radial-gradient(circle at 80% 20%, rgba(16,185,129,0.22), transparent 55%), #09090b",
+          background: `radial-gradient(circle at 80% 20%, rgba(${ACCENT.rgb},0.22), transparent 55%), #09090b`,
           color: "#fafafa",
         }}
       >
@@ -28,7 +29,7 @@ export default async function Image() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} width={112} height={112} alt="" style={{ borderRadius: 24 }} />
           <div style={{ display: "flex", fontSize: 88, fontWeight: 700, letterSpacing: -3 }}>
-            Post<span style={{ color: "#34d399" }}>Compass</span>
+            Post<span style={{ color: ACCENT.light }}>Compass</span>
           </div>
         </div>
         <div style={{ marginTop: 44, fontSize: 44, fontWeight: 600, lineHeight: 1.25, maxWidth: 960 }}>

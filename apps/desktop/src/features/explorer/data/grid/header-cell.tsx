@@ -62,12 +62,12 @@ export function HeaderCell({
             </span>
           }
         >
-          <Link2 className="size-3.5 shrink-0 -rotate-45 text-accent" />
+          <Link2 className="size-3.5 shrink-0 -rotate-45 text-key-foreign" />
         </Tooltip>
       )}
       {column.isKey && (
         <Tooltip content="Primary key">
-          <Key className="size-3 shrink-0 rotate-45 text-accent" />
+          <Key className="size-3 shrink-0 rotate-45 text-key-primary" />
         </Tooltip>
       )}
       {column.comment ? (

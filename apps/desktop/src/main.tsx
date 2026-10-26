@@ -5,6 +5,8 @@ import "@fontsource-variable/source-code-pro";
 import "@fontsource-variable/space-grotesk";
 import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
+// Applies the saved accent color before the first render
+import "./app/theme";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

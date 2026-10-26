@@ -20,7 +20,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 
 const ICONS: Record<
   Platform,
-  React.ComponentType<{ size?: number; className?: string }>
+  React.ComponentType<{ size?: number; className?: string; brand?: boolean }>
 > = {
   windows: WindowsIcon,
   macos: AppleIcon,
@@ -82,7 +82,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                 key={d.platform}
                 className={`relative flex h-full flex-col gap-5 rounded-[16px] border px-6 pt-7 pb-5 [transition:border-color_0.2s_ease,transform_0.2s_ease] hover:[transform:translateY(-2px)] ${
                   isDetected
-                    ? "border-[rgba(16,185,129,0.4)] bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(16,185,129,0.015))] shadow-[0_0_60px_-30px_rgba(16,185,129,0.6)] before:absolute before:-top-px before:right-[18%] before:left-[18%] before:h-px before:bg-[linear-gradient(90deg,transparent,#34d399,transparent)] before:content-['']"
+                    ? "border-[rgb(var(--accent-rgb)/0.4)] bg-[linear-gradient(180deg,rgb(var(--accent-rgb)/0.08),rgb(var(--accent-rgb)/0.015))] shadow-[0_0_60px_-30px_rgb(var(--accent-rgb)/0.6)] before:absolute before:-top-px before:right-[18%] before:left-[18%] before:h-px before:bg-[linear-gradient(90deg,transparent,var(--color-accent-light),transparent)] before:content-['']"
                     : "border-[rgba(255,255,255,0.07)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.01))] hover:border-[rgba(255,255,255,0.14)]"
                 }`}
               >
@@ -90,11 +90,11 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                   <span
                     className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] border ${
                       isDetected
-                        ? "border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.12)] text-[#6ee7b7]"
+                        ? "border-[rgb(var(--accent-rgb)/0.35)] bg-[rgb(var(--accent-rgb)/0.12)] text-accent-pale"
                         : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] text-fg"
                     }`}
                   >
-                    <Icon size={20} />
+                    <Icon size={20} brand />
                   </span>
                   <div>
                     <h3 className="m-0 text-[1.1rem] font-[650] text-fg">
@@ -116,7 +116,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                     href={primary.url}
                     className={`flex h-[2.9rem] items-center gap-[0.55rem] rounded-[10px] px-4 text-[0.9rem] font-semibold [transition:background_0.2s_ease,border-color_0.2s_ease] ${
                       isDetected
-                        ? "border-none bg-accent text-[#03130c] hover:bg-accent-hover"
+                        ? "border-none bg-accent text-accent-fg hover:bg-accent-hover"
                         : "border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-fg hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.08)]"
                     }`}
                   >
@@ -198,7 +198,7 @@ function InstallCommand({ detected, recommended = false }: { detected: Platform 
     <div
       className={`rounded-[14px] border px-6 py-5 max-md:px-4 ${
         recommended
-          ? "border-[rgba(16,185,129,0.4)] bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(16,185,129,0.015))] shadow-[0_0_60px_-30px_rgba(16,185,129,0.6)]"
+          ? "border-[rgb(var(--accent-rgb)/0.4)] bg-[linear-gradient(180deg,rgb(var(--accent-rgb)/0.08),rgb(var(--accent-rgb)/0.015))] shadow-[0_0_60px_-30px_rgb(var(--accent-rgb)/0.6)]"
           : "mt-7 border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)]"
       }`}
       data-reveal
@@ -230,7 +230,7 @@ function InstallCommand({ detected, recommended = false }: { detected: Platform 
               // The selected system is highlighted in the brand green, so it's clear which command is shown
               className={`inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[0.85rem] font-medium [transition:background_0.15s_ease,color_0.15s_ease] ${
                 shown === id
-                  ? "bg-accent-muted text-accent-hover shadow-[inset_0_0_0_1px_rgba(52,211,153,0.4)]"
+                  ? "bg-accent-muted text-accent-hover shadow-[inset_0_0_0_1px_rgb(var(--accent-light-rgb)/0.4)]"
                   : "text-fg-muted hover:text-fg"
               }`}
             >
@@ -494,7 +494,7 @@ function Steps({ steps }: { steps: Step[] }) {
           key={i}
           className="flex gap-3 text-[0.925rem] leading-relaxed text-fg-secondary"
         >
-          <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.1)] text-[0.75rem] font-semibold text-accent-hover">
+          <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-[rgb(var(--accent-rgb)/0.35)] bg-[rgb(var(--accent-rgb)/0.1)] text-[0.75rem] font-semibold text-accent-hover">
             {i + 1}
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">

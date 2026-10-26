@@ -30,10 +30,10 @@ function DownloadVisual() {
       {files.map(({ Icon, name }, i) => (
         <div
           key={name}
-          className={`flex min-w-[4.6rem] flex-col items-center gap-[0.45rem] rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(10,12,11,0.8)] px-[0.6rem] pt-[0.8rem] pb-[0.7rem] text-fg opacity-0 [transform:translateY(8px)] [transition:opacity_0.4s_ease_calc(var(--s)+0.3s+var(--d)),transform_0.4s_ease_calc(var(--s)+0.3s+var(--d)),border-color_0.2s_ease] group-hover/step:border-[rgba(16,185,129,0.3)] ${SHOW_IN}`}
+          className={`flex min-w-[4.6rem] flex-col items-center gap-[0.45rem] rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(10,12,11,0.8)] px-[0.6rem] pt-[0.8rem] pb-[0.7rem] text-fg opacity-0 [transform:translateY(8px)] [transition:opacity_0.4s_ease_calc(var(--s)+0.3s+var(--d)),transform_0.4s_ease_calc(var(--s)+0.3s+var(--d)),border-color_0.2s_ease] group-hover/step:border-[rgb(var(--accent-rgb)/0.3)] ${SHOW_IN}`}
           style={{ ["--d" as string]: `${i * 0.12}s` }}
         >
-          <Icon size={18} />
+          <Icon size={18} brand />
           <span className="font-mono text-[0.68rem] text-fg-muted">{name}</span>
         </div>
       ))}
@@ -56,10 +56,10 @@ function InstallVisual() {
         </span>
       </div>
       <div className="h-[6px] overflow-hidden rounded-[3px] bg-[rgba(255,255,255,0.07)]">
-        <span className="block h-full origin-left rounded-[inherit] bg-[linear-gradient(90deg,#059669,#34d399)] [transform:scaleX(0)] [transition:transform_1.3s_cubic-bezier(0.4,0,0.2,1)_calc(var(--s)+0.3s)] group-data-shown:[transform:scaleX(1)] motion-reduce:opacity-100 motion-reduce:[transform:none] motion-reduce:transition-none" />
+        <span className="block h-full origin-left rounded-[inherit] bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-light))] [transform:scaleX(0)] [transition:transform_1.3s_cubic-bezier(0.4,0,0.2,1)_calc(var(--s)+0.3s)] group-data-shown:[transform:scaleX(1)] motion-reduce:opacity-100 motion-reduce:[transform:none] motion-reduce:transition-none" />
       </div>
       <div className={`mt-[0.85rem] flex items-center gap-[0.45rem] text-fg opacity-0 [transition:opacity_0.4s_ease_calc(var(--s)+1.7s)] ${SHOW_IN}`}>
-        <span className="size-[7px] rounded-full bg-accent-hover shadow-[0_0_0_3px_rgba(52,211,153,0.2)]" />
+        <span className="size-[7px] rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.2)]" />
         <span>running</span>
         <span className="ml-auto text-fg-muted">127.0.0.1:5432</span>
       </div>
@@ -75,7 +75,7 @@ function TableVisual() {
   ];
   return (
     <div className="w-full max-w-[15rem] font-mono text-[0.72rem]">
-      <span className="mb-[0.55rem] inline-block rounded-full border border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.1)] px-2 py-[0.15rem] text-[#6ee7b7]">
+      <span className="mb-[0.55rem] inline-block rounded-full border border-[rgb(var(--accent-rgb)/0.35)] bg-[rgb(var(--accent-rgb)/0.1)] px-2 py-[0.15rem] text-accent-pale">
         status <b className="font-normal text-fg-muted">=</b> paid
       </span>
       <div className="overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.07)]">
@@ -83,7 +83,7 @@ function TableVisual() {
           <div
             key={r[0]}
             className={`grid grid-cols-[2.6rem_1fr_auto] gap-2 px-[0.6rem] py-[0.35rem] opacity-0 [transform:translateX(-6px)] [transition:opacity_0.35s_ease_calc(var(--s)+0.4s+var(--d)),transform_0.35s_ease_calc(var(--s)+0.4s+var(--d)),background_0.2s_ease] not-first:border-t not-first:border-[rgba(255,255,255,0.05)] [&_span:first-child]:text-fg-faint ${SHOW_IN} ${
-              i === 1 ? "bg-[rgba(16,185,129,0.08)] text-fg shadow-[inset_2px_0_0_#34d399]" : "text-fg-secondary"
+              i === 1 ? "bg-[rgb(var(--accent-rgb)/0.08)] text-fg shadow-[inset_2px_0_0_var(--color-accent-light)]" : "text-fg-secondary"
             }`}
             style={{ ["--d" as string]: `${i * 0.1}s` }}
           >
@@ -135,18 +135,18 @@ export default function HowItWorks() {
             role="presentation"
             aria-hidden="true"
           >
-            <span className="absolute inset-0 origin-left bg-[linear-gradient(90deg,transparent,#10b981_20%,#34d399_80%,transparent)] [transform:scaleX(0)] [transition:transform_1.4s_cubic-bezier(0.65,0,0.35,1)_0.2s] group-data-shown:[transform:scaleX(1)] motion-reduce:opacity-100 motion-reduce:[transform:none] motion-reduce:transition-none" />
+            <span className="absolute inset-0 origin-left bg-[linear-gradient(90deg,transparent,var(--color-accent)_20%,var(--color-accent-light)_80%,transparent)] [transform:scaleX(0)] [transition:transform_1.4s_cubic-bezier(0.65,0,0.35,1)_0.2s] group-data-shown:[transform:scaleX(1)] motion-reduce:opacity-100 motion-reduce:[transform:none] motion-reduce:transition-none" />
           </li>
           {STEPS.map((s, i) => {
             const Visual = VISUALS[i]!;
             return (
               <li
                 key={s.title}
-                className={`group/step relative flex flex-col overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-root bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.01))] opacity-0 [transform:translateY(14px)] [transition:opacity_0.6s_ease_var(--s),transform_0.6s_ease_var(--s),border-color_0.2s_ease] hover:border-[rgba(16,185,129,0.3)] ${SHOW_IN}`}
+                className={`group/step relative flex flex-col overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-root bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.01))] opacity-0 [transform:translateY(14px)] [transition:opacity_0.6s_ease_var(--s),transform_0.6s_ease_var(--s),border-color_0.2s_ease] hover:border-[rgb(var(--accent-rgb)/0.3)] ${SHOW_IN}`}
                 style={{ ["--s" as string]: `${i * 0.35}s` }}
               >
                 <div
-                  className="flex h-36 items-center justify-center border-b border-[rgba(255,255,255,0.06)] bg-[radial-gradient(ellipse_80%_90%_at_50%_0%,rgba(16,185,129,0.1),transparent_70%)] px-5 py-4"
+                  className="flex h-36 items-center justify-center border-b border-[rgba(255,255,255,0.06)] bg-[radial-gradient(ellipse_80%_90%_at_50%_0%,rgb(var(--accent-rgb)/0.1),transparent_70%)] px-5 py-4"
                   aria-hidden="true"
                 >
                   <Visual />

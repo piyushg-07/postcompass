@@ -35,7 +35,7 @@ export function LogViewer({ lines, className, emptyText = "No output yet." }: { 
         aria-label="Copy log"
         className="absolute top-2 right-2 cursor-pointer rounded p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg"
       >
-        {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
+        {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
       </button>
       <pre
         ref={ref}

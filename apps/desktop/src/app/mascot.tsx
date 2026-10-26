@@ -22,6 +22,7 @@ export function Mascot({
       height={size}
       viewBox="0 0 200 200"
       fill="none"
+      className="text-accent"
       role="img"
       aria-label="Compi, the PostCompass mascot"
     >
@@ -29,10 +30,10 @@ export function Mascot({
         <radialGradient id={glow} cx="50%" cy="50%" r="50%">
           <stop
             offset="0%"
-            stopColor="#3ecf8e"
+            stopColor="currentColor"
             stopOpacity={sleepy ? 0.12 : 0.28}
           />
-          <stop offset="100%" stopColor="#3ecf8e" stopOpacity="0" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={body} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1c1c1c" />
@@ -40,7 +41,7 @@ export function Mascot({
         </linearGradient>
       </defs>
 
-      {/* Soft emerald glow */}
+      {/* Soft accent glow */}
       <circle
         className="pc-glow"
         cx="100"
@@ -51,7 +52,7 @@ export function Mascot({
 
       {/* Twinkles */}
       {!sleepy && (
-        <g fill="#3ecf8e">
+        <g fill="currentColor">
           <path
             className="pc-twinkle"
             d="M34 52l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"
@@ -82,7 +83,7 @@ export function Mascot({
       <g className="pc-float">
         {/* Needle on top, swaying like an antenna */}
         <g className="pc-sway">
-          <path d="M100 18 L108 44 L92 44 Z" fill="#3ecf8e" />
+          <path d="M100 18 L108 44 L92 44 Z" fill="currentColor" />
           <path d="M92 44 L108 44 L100 52 Z" fill="#ededed" />
         </g>
 
@@ -136,7 +137,7 @@ export function Mascot({
           textAnchor="middle"
           fontSize="9"
           fontWeight="700"
-          fill="#3ecf8e"
+          fill="currentColor"
           fontFamily="var(--font-sans)"
         >
           N
@@ -157,8 +158,8 @@ export function Mascot({
           </g>
         )}
         {/* Cheeks */}
-        <circle cx="70" cy="118" r="6" fill="#3ecf8e" opacity="0.22" />
-        <circle cx="130" cy="118" r="6" fill="#3ecf8e" opacity="0.22" />
+        <circle cx="70" cy="118" r="6" fill="currentColor" opacity="0.22" />
+        <circle cx="130" cy="118" r="6" fill="currentColor" opacity="0.22" />
         {/* Mouth */}
         {sleepy ? (
           <ellipse cx="100" cy="126" rx="4" ry="3" fill="#2e2e2e" />
@@ -202,11 +203,11 @@ export function Mascot({
   );
 }
 
-/** Emerald data streams flowing towards the mascot (decorative). */
+/** Accent-colored data streams flowing towards the mascot (decorative). */
 export function DataStreams({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
+      className={`text-accent ${className ?? ""}`}
       viewBox="0 0 400 220"
       fill="none"
       preserveAspectRatio="none"
@@ -218,12 +219,12 @@ export function DataStreams({ className }: { className?: string }) {
         "M0 180 C 120 180, 200 130, 330 114",
       ].map((d, i) => (
         <g key={d}>
-          <path d={d} stroke="#3ecf8e" strokeOpacity="0.07" strokeWidth="1.5" />
+          <path d={d} stroke="currentColor" strokeOpacity="0.07" strokeWidth="1.5" />
           <path
             className="pc-stream"
             style={{ animationDelay: `${i * 0.5}s` }}
             d={d}
-            stroke="#3ecf8e"
+            stroke="currentColor"
             strokeOpacity="0.6"
             strokeWidth="2.5"
             strokeLinecap="round"

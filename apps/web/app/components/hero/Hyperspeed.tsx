@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { ACCENT } from '@/config/theme';
 
 const TRAVEL = 400;
 const MAX_CARS = 160;
@@ -15,18 +16,18 @@ const THEMES = {
     background: 'transparent',
     road: '#08080a',
     lines: '#25252d',
-    tail: ['#10b981', '#059669', '#34d399'],
+    tail: [ACCENT.base, ACCENT.strong, ACCENT.light],
     head: ['#06b6d4', '#0284c7', '#38bdf8'],
-    poles: ['#10b981'],
+    poles: [ACCENT.base],
     dust: '#ffffff'
   },
   light: {
     background: 'transparent',
     road: '#efeff2',
     lines: '#d0d0d7',
-    tail: ['#10b981', '#059669', '#34d399'],
+    tail: [ACCENT.base, ACCENT.strong, ACCENT.light],
     head: ['#06b6d4', '#0284c7', '#38bdf8'],
-    poles: ['#10b981'],
+    poles: [ACCENT.base],
     dust: '#18181b'
   }
 };

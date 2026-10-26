@@ -1,10 +1,11 @@
-import { Badge, Button, Card, Switch, toast } from "@repo/ui";
+import { Badge, Button, Card, Switch, toast, Tooltip } from "@repo/ui";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { User } from "lucide-react";
+import { Check, User } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-import appIcon from "../../../app-icon.svg";
 import { useAppState } from "../../app/app-state";
+import { Logo } from "../../app/logo";
 import { PageHeader } from "../../app/page";
+import { ACCENTS, useAccent } from "../../app/theme";
 import { checkForUpdate, installUpdate } from "../../app/updates";
 import type { Profile, Role } from "../../lib/bindings";
 import { platformLabel } from "../../lib/format";
@@ -46,6 +47,10 @@ export function SettingsPage() {
         </Section>
       )}
 
+      <Section title="Appearance">
+        <AccentPicker />
+      </Section>
+
       <Section title="General">
         <ToggleRow
           title="Stop databases when PostCompass quits"
@@ -73,11 +78,11 @@ export function SettingsPage() {
 
       <Section title="About">
         <div className="flex items-center gap-4 px-6 py-5">
-          <img src={appIcon} alt="" width={44} height={44} draggable={false} />
+          <Logo size={44} />
           <div className="flex flex-col gap-1">
             <span className="flex items-baseline gap-px text-lg text-fg">
               <span className="font-brand font-bold tracking-tighter">Post</span>
-              <span className="bg-linear-to-r from-accent to-[#7ee7b8] bg-clip-text pr-0.5 font-serif text-[1.3rem] leading-none text-transparent italic">
+              <span className="bg-linear-to-r from-accent to-[color-mix(in_srgb,var(--color-accent),white_45%)] bg-clip-text pr-0.5 font-serif text-[1.3rem] leading-none text-transparent italic">
                 Compass
               </span>
             </span>
@@ -108,6 +113,84 @@ function ProfileCard({ profile }: { profile: Profile }) {
           {ROLE_LABELS[profile.role]}
           {since && ` · Set up ${since}`}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/** Accent color swatches; the choice applies instantly and is remembered. */
+function AccentPicker() {
+  const { accent, setAccent } = useAccent();
+  const current = ACCENTS.find((a) => a.id === accent) ?? ACCENTS[0];
+  return (
+    <div className="flex flex-col gap-5 px-6 py-5">
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-fg">Accent color</span>
+          <span className="text-xs text-fg-muted">
+            Used for buttons, links, focus rings and the selected item. Everything else stays black and gray.
+          </span>
+        </div>
+        <span className="shrink-0 font-mono text-xs text-fg-subtle">{current.name}</span>
+      </div>
+
+      <div role="radiogroup" aria-label="Accent color" className="flex flex-wrap gap-3">
+        {ACCENTS.map((a) => {
+          const selected = a.id === accent;
+          return (
+            <Tooltip key={a.id} content={a.name}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={a.name}
+                onClick={() => setAccent(a.id)}
+                className="flex size-7 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 [&_svg]:size-3.5"
+                style={{
+                  backgroundColor: a.color,
+                  color: a.fg,
+                  boxShadow: selected ? `0 0 0 2px var(--color-surface), 0 0 0 4px ${a.color}` : "inset 0 0 0 1px rgb(255 255 255 / 0.08)",
+                }}
+              >
+                {selected && <Check strokeWidth={3} />}
+              </button>
+            </Tooltip>
+          );
+        })}
+      </div>
+
+      {/* Live preview built from the real components, so it shows exactly what the app will look like */}
+      <div inert aria-hidden className="flex overflow-hidden rounded-control border border-border bg-bg">
+        <div className="flex w-40 shrink-0 flex-col gap-0.5 border-r border-border bg-surface p-2 text-xs">
+          <span className="px-2 pb-1 text-[10px] tracking-wider text-fg-subtle uppercase">public</span>
+          <span className="rounded-sm px-2 py-1 font-mono text-fg-muted">customers</span>
+          <span className="rounded-sm bg-accent-muted px-2 py-1 font-mono text-fg shadow-[inset_2px_0_0_var(--color-accent)]">
+            orders
+          </span>
+          <span className="rounded-sm px-2 py-1 font-mono text-fg-muted">invoices</span>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <span className="truncate font-mono text-xs text-fg-muted">
+              <span className="text-accent">select</span> * <span className="text-accent">from</span> orders
+            </span>
+            <span className="flex items-center gap-2 text-xs text-fg-muted">
+              Auto-run
+              <Switch checked aria-label="Auto-run" />
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Button size="sm" variant="link">
+              View query history
+            </Button>
+            <span className="flex gap-2">
+              <Button size="sm">Format</Button>
+              <Button size="sm" variant="primary">
+                Run query
+              </Button>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

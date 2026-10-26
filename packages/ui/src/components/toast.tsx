@@ -93,7 +93,7 @@ function subscribe(listener: () => void) {
 }
 
 const icons: Record<ToastVariant, ReactNode> = {
-  success: <CheckCircle2 className="size-4 text-accent" />,
+  success: <CheckCircle2 className="size-4 text-success" />,
   error: <XCircle className="size-4 text-danger" />,
   warning: <AlertTriangle className="size-4 text-warning" />,
   info: <Info className="size-4 text-info" />,

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { accentRgb, useAccent } from "./theme";
 
 interface Node {
   x: number;
@@ -22,10 +23,9 @@ interface Pulse {
 
 const LINK_DISTANCE = 140;
 const CURSOR_RADIUS = 180;
-const ACCENT = "62, 207, 142"; // #3ecf8e
 
 /**
- * Animated, interactive network: drifting database nodes, links between nearby ones, and emerald
+ * Animated, interactive network: drifting database nodes, links between nearby ones, and accent-colored
  * pulses travelling along the links like queries. Nodes lean towards the cursor and link to it;
  * clicking sends a burst of pulses from the nearest database node.
  * Canvas-based, DPI-aware, paused when hidden, static for people who prefer reduced motion.
@@ -49,6 +49,9 @@ export function DataNetwork({ className }: { className?: string }) {
     let last = performance.now();
     let sinceSpawn = 0;
     const cursor = { x: 0, y: 0, active: false, glow: 0 };
+    // "r, g, b" of the accent; follows the color picked in Settings
+    let accent = accentRgb();
+    const unsubscribeAccent = useAccent.subscribe((s) => (accent = accentRgb(s.accent)));
 
     const seed = () => {
       const count = Math.round(
@@ -133,8 +136,8 @@ export function DataNetwork({ className }: { className?: string }) {
           cursor.y,
           CURSOR_RADIUS * 1.4,
         );
-        light.addColorStop(0, `rgba(${ACCENT}, ${0.12 * cursor.glow})`);
-        light.addColorStop(1, `rgba(${ACCENT}, 0)`);
+        light.addColorStop(0, `rgba(${accent}, ${0.12 * cursor.glow})`);
+        light.addColorStop(1, `rgba(${accent}, 0)`);
         ctx.fillStyle = light;
         ctx.fillRect(0, 0, width, height);
       }
@@ -190,7 +193,7 @@ export function DataNetwork({ className }: { className?: string }) {
                 ) /
                   CURSOR_RADIUS,
             );
-          ctx.strokeStyle = `rgba(${ACCENT}, ${(1 - d / LINK_DISTANCE) * (0.22 + near * 0.5)})`;
+          ctx.strokeStyle = `rgba(${accent}, ${(1 - d / LINK_DISTANCE) * (0.22 + near * 0.5)})`;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
@@ -203,13 +206,13 @@ export function DataNetwork({ className }: { className?: string }) {
         for (const n of nodes) {
           const d = Math.hypot(n.x - cursor.x, n.y - cursor.y);
           if (d > CURSOR_RADIUS * 0.75) continue;
-          ctx.strokeStyle = `rgba(${ACCENT}, ${(1 - d / (CURSOR_RADIUS * 0.75)) * 0.55 * cursor.glow})`;
+          ctx.strokeStyle = `rgba(${accent}, ${(1 - d / (CURSOR_RADIUS * 0.75)) * 0.55 * cursor.glow})`;
           ctx.beginPath();
           ctx.moveTo(cursor.x, cursor.y);
           ctx.lineTo(n.x, n.y);
           ctx.stroke();
         }
-        ctx.fillStyle = `rgba(${ACCENT}, ${0.9 * cursor.glow})`;
+        ctx.fillStyle = `rgba(${accent}, ${0.9 * cursor.glow})`;
         ctx.beginPath();
         ctx.arc(cursor.x, cursor.y, 2.6, 0, Math.PI * 2);
         ctx.fill();
@@ -222,7 +225,7 @@ export function DataNetwork({ className }: { className?: string }) {
         p.t += p.speed * dt;
         for (let k = 0; k < 7; k++) {
           const t = Math.max(0, Math.min(1, p.t) - k * 0.03);
-          ctx.fillStyle = `rgba(${ACCENT}, ${(1 - k / 7) * 0.95})`;
+          ctx.fillStyle = `rgba(${accent}, ${(1 - k / 7) * 0.95})`;
           ctx.beginPath();
           ctx.arc(
             a.x + (b.x - a.x) * t,
@@ -261,14 +264,14 @@ export function DataNetwork({ className }: { className?: string }) {
           const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 22);
           glow.addColorStop(
             0,
-            `rgba(${ACCENT}, ${0.2 + breathe * 0.15 + flash * 0.35})`,
+            `rgba(${accent}, ${0.2 + breathe * 0.15 + flash * 0.35})`,
           );
-          glow.addColorStop(1, `rgba(${ACCENT}, 0)`);
+          glow.addColorStop(1, `rgba(${accent}, 0)`);
           ctx.fillStyle = glow;
           ctx.beginPath();
           ctx.arc(n.x, n.y, 22, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = `rgba(${ACCENT}, ${0.6 + flash * 0.4})`;
+          ctx.strokeStyle = `rgba(${accent}, ${0.6 + flash * 0.4})`;
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.r + 4 + breathe, 0, Math.PI * 2);
@@ -277,7 +280,7 @@ export function DataNetwork({ className }: { className?: string }) {
         }
         ctx.fillStyle =
           n.hub || flash > 0
-            ? `rgba(${ACCENT}, ${0.8 + flash * 0.2})`
+            ? `rgba(${accent}, ${0.8 + flash * 0.2})`
             : "rgba(237, 237, 237, 0.55)";
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r + flash * 1.4, 0, Math.PI * 2);
@@ -346,6 +349,7 @@ export function DataNetwork({ className }: { className?: string }) {
 
     return () => {
       stop();
+      unsubscribeAccent();
       observer.disconnect();
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);

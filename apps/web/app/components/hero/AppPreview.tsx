@@ -20,7 +20,7 @@ import {
    CSS variables set on the root element (APP_VARS).
    ============================================================ */
 const APP_VARS =
-  "[--line:rgba(255,255,255,0.075)] [--line-strong:rgba(255,255,255,0.12)] [--panel:#0b0b0c] [--raised:#141416] [--hover:rgba(255,255,255,0.045)] [--text:#ededef] [--muted:#8d8d95] [--faint:#5c5c64] [--green:#3ecf8e] [--green-soft:rgba(62,207,142,0.12)] [--blue:#60a5fa]";
+  "[--line:rgba(255,255,255,0.075)] [--line-strong:rgba(255,255,255,0.12)] [--panel:#0b0b0c] [--raised:#141416] [--hover:rgba(255,255,255,0.045)] [--text:#ededef] [--muted:#8d8d95] [--faint:#5c5c64] [--green:var(--color-accent)] [--blue:#60a5fa]";
 const KBD = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-(--line-strong) bg-[rgba(255,255,255,0.04)] font-mono text-[10px] text-(--muted)";
 const KBD_ON_GREEN = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-[rgba(5,46,28,0.3)] bg-[rgba(5,46,28,0.12)] font-mono text-[10px] text-[#0b3b26]";
 const DOCK_BTN = "inline-flex items-center justify-center w-8 h-8 rounded-[7px] text-(--muted) hover:bg-(--hover) hover:text-(--text)";
@@ -48,7 +48,8 @@ const FK_CELL = "py-[7px] px-3 border-t border-(--line) text-left whitespace-now
 const PK = "inline-flex text-[#f5c451]";
 const FK_ICON = "inline-flex text-(--blue)";
 const BADGE = "py-0.5 px-[7px] rounded-[5px] border font-mono text-[10.5px]";
-const BADGE_GREEN = `${BADGE} border-[rgba(62,207,142,0.4)] text-(--green)`;
+const BADGE_GREEN = `${BADGE} border-[rgb(var(--accent-rgb)/0.4)] text-(--green)`;
+const BADGE_KEY = `${BADGE} border-key-primary/40 text-key-primary`;
 const BADGE_BLUE = `${BADGE} border-[rgba(96,165,250,0.35)] text-(--blue)`;
 const BADGE_MUTED = `${BADGE} border-(--line-strong) text-(--muted)`;
 const CHIP = "inline-flex items-center h-6 px-[9px] rounded-[6px] border border-(--line-strong) text-(--text)";
@@ -611,7 +612,7 @@ export default function AppPreview() {
           <span>{String(v)}</span>
           <button
             type="button"
-            className="inline-flex items-center justify-center w-5 h-5 rounded-[5px] border border-(--line-strong) text-(--muted) hover:border-[rgba(62,207,142,0.6)] hover:text-(--green)"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-[5px] border border-(--line-strong) text-(--muted) hover:border-[rgb(var(--accent-rgb)/0.6)] hover:text-(--green)"
             aria-label="View referencing record"
             onClick={(e) => {
               const box = (e.currentTarget.closest(".ap-canvas") as HTMLElement).getBoundingClientRect();
@@ -651,7 +652,7 @@ export default function AppPreview() {
         {/* Top bar */}
         <div className="flex items-center justify-between h-[42px] pr-3 pl-4 border-b border-(--line) shrink-0">
           <div className="flex items-center gap-2 text-(--muted)">
-            <span className="w-2 h-2 rounded-full bg-(--green) shadow-[0_0_0_3px_rgba(62,207,142,0.15)]" />
+            <span className="w-2 h-2 rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.15)]" />
             <span className="text-(--text) font-medium">Acme Store</span>
             <span className="text-(--faint)">›</span>
             {I.db(13)}
@@ -703,11 +704,11 @@ export default function AppPreview() {
                   <span className="inline-flex text-(--faint)">{I.chevron(12)}</span>
                 </div>
                 <div className="flex gap-1.5">
-                  <label className="flex-1 flex items-center gap-[7px] h-[30px] px-[9px] rounded-[7px] border border-(--line-strong) text-(--faint) focus-within:border-[rgba(62,207,142,0.5)]">
+                  <label className="flex-1 flex items-center gap-[7px] h-[30px] px-[9px] rounded-[7px] border border-(--line-strong) text-(--faint) focus-within:border-[rgb(var(--accent-rgb)/0.5)]">
                     {I.search(12)}
                     <input className="w-full text-(--text) placeholder:text-(--faint)" placeholder="Search tables" value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} />
                   </label>
-                  <button type="button" className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px] bg-(--green) text-[#052e1c]" aria-label="New table" onClick={() => flash("The table designer is in the full app")}>{I.plus(14)}</button>
+                  <button type="button" className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px] bg-(--green) text-accent-fg" aria-label="New table" onClick={() => flash("The table designer is in the full app")}>{I.plus(14)}</button>
                 </div>
                 <div className="flex flex-col gap-px overflow-auto">
                   {SIDEBAR_TABLES.filter((t) => t.includes(tableSearch.trim().toLowerCase())).map((t) => {
@@ -813,9 +814,9 @@ export default function AppPreview() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {toast && <span className="inline-flex items-center gap-1.5 mr-1.5 py-1 px-[9px] rounded-[6px] bg-(--green-soft) text-(--green) text-[11.5px] whitespace-nowrap animate-[ap-toast-in_0.2s_ease]">{I.check(12)} {toast}</span>}
+                    {toast && <span className="inline-flex items-center gap-1.5 mr-1.5 py-1 px-[9px] rounded-[6px] bg-[rgb(var(--success-rgb)/0.12)] text-success text-[11.5px] whitespace-nowrap animate-[ap-toast-in_0.2s_ease]">{I.check(12)} {toast}</span>}
                     <button type="button" className={GHOST_BTN} onClick={() => flash("Multi-column sort is in the full app")}>{I.sort(13)} Sort</button>
-                    <button type="button" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] bg-(--green) text-[#052e1c] font-semibold" onClick={() => flash("Insert row, paste rows and CSV import are in the full app")}>{I.plus(13)} Insert {I.down(12)}</button>
+                    <button type="button" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] bg-(--green) text-accent-fg font-semibold" onClick={() => flash("Insert row, paste rows and CSV import are in the full app")}>{I.plus(13)} Insert {I.down(12)}</button>
                     <button type="button" className={ICON_BTN} aria-label="Undo" disabled={!undo.length} onClick={doUndo}>{I.undo(14)}</button>
                     <button type="button" className={ICON_BTN} aria-label="Redo" disabled={!redo.length} onClick={doRedo}>{I.redo(14)}</button>
                   </div>
@@ -861,7 +862,7 @@ export default function AppPreview() {
                           const id = Number(row.id);
                           const sel = selected.includes(id);
                           return (
-                            <tr key={id} className={sel ? "[&>td]:bg-[rgba(62,207,142,0.06)]" : "hover:[&>td]:bg-[rgba(255,255,255,0.025)]"}>
+                            <tr key={id} className={sel ? "[&>td]:bg-[rgb(var(--accent-rgb)/0.06)]" : "hover:[&>td]:bg-[rgba(255,255,255,0.025)]"}>
                               <td className={`${GRID_TD} ${CHECK_COL}`}>
                                 <input type="checkbox" aria-label={`Select row ${id}`} checked={sel} onChange={() => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))} />
                               </td>
@@ -899,7 +900,7 @@ export default function AppPreview() {
                         </span>
                         <span className="font-mono text-(--muted)">{c.type}</span>
                         <span className="flex gap-1.5">
-                          {c.pk ? <span className={BADGE_GREEN}>PRIMARY KEY</span> : null}
+                          {c.pk ? <span className={BADGE_KEY}>PRIMARY KEY</span> : null}
                           {c.fk ? <span className={BADGE_BLUE}>→ {c.fk}.id</span> : null}
                           {c.nullable ? <span className={BADGE_MUTED}>nullable</span> : !c.pk ? <span className={BADGE_MUTED}>not null</span> : null}
                         </span>
@@ -932,11 +933,11 @@ export default function AppPreview() {
                       </button>
                     ))}
                   </span>
-                  <button type="button" className="inline-flex items-center gap-[7px] h-7 ml-auto px-2.5 rounded-[7px] bg-(--green) text-[#052e1c] font-semibold disabled:opacity-70" onClick={run} disabled={ran?.running}>
+                  <button type="button" className="inline-flex items-center gap-[7px] h-7 ml-auto px-2.5 rounded-[7px] bg-(--green) text-accent-fg font-semibold disabled:opacity-70" onClick={run} disabled={ran?.running}>
                     {I.play(11)} {ran?.running ? "Running…" : "Run"} <kbd className={KBD_ON_GREEN}>Ctrl ↵</kbd>
                   </button>
                 </div>
-                <pre className="flex gap-4 m-0 py-3 px-[14px] h-[232px] overflow-auto border-b border-(--line) font-mono text-[12.5px] leading-[20px] text-[#e4e4e7] bg-[rgba(62,207,142,0.025)] select-text shrink-0">
+                <pre className="flex gap-4 m-0 py-3 px-[14px] h-[232px] overflow-auto border-b border-(--line) font-mono text-[12.5px] leading-[20px] text-[#e4e4e7] bg-[rgb(var(--accent-rgb)/0.025)] select-text shrink-0">
                   <span className="flex flex-col items-end min-w-[18px] text-(--faint) select-none" aria-hidden="true">
                     {query.sql.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}
                   </span>
@@ -954,7 +955,7 @@ export default function AppPreview() {
                   </div>
                   {!result ? (
                     <div className="flex flex-1 items-center justify-center gap-2.5 text-(--muted)">
-                      {ran?.running ? <span className="w-[14px] h-[14px] rounded-full border-2 border-[rgba(62,207,142,0.25)] border-t-(--green) animate-[spin-360_0.7s_linear_infinite]" /> : null}
+                      {ran?.running ? <span className="w-[14px] h-[14px] rounded-full border-2 border-[rgb(var(--accent-rgb)/0.25)] border-t-(--green) animate-[spin-360_0.7s_linear_infinite]" /> : null}
                       <span>{ran?.running ? "Running query…" : <>Press <kbd className={KBD}>Ctrl ↵</kbd> or <strong>Run</strong> to see results</>}</span>
                     </div>
                   ) : resultTab === "results" ? (
@@ -1031,7 +1032,7 @@ export default function AppPreview() {
                     return (
                       <div
                         key={t}
-                        className={`absolute rounded-[9px] border bg-[#0c0c0e] cursor-grab active:cursor-grabbing touch-none [transition:border-color_0.15s_ease,opacity_0.15s_ease,box-shadow_0.15s_ease] ${hoverNode === t ? "border-[rgba(62,207,142,0.7)] shadow-[0_0_0_3px_rgba(62,207,142,0.12),0_10px_30px_rgba(0,0,0,0.5)]" : "border-(--line-strong) shadow-[0_10px_30px_rgba(0,0,0,0.45)]"} ${hoverNode && !related ? "opacity-35" : ""}`}
+                        className={`absolute rounded-[9px] border bg-[#0c0c0e] cursor-grab active:cursor-grabbing touch-none [transition:border-color_0.15s_ease,opacity_0.15s_ease,box-shadow_0.15s_ease] ${hoverNode === t ? "border-[rgb(var(--accent-rgb)/0.7)] shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.12),0_10px_30px_rgba(0,0,0,0.5)]" : "border-(--line-strong) shadow-[0_10px_30px_rgba(0,0,0,0.45)]"} ${hoverNode && !related ? "opacity-35" : ""}`}
                         style={{ left: p.x, top: p.y, width: NODE_W }}
                         onPointerDown={(e) => onNodeDown(e, t)}
                         onPointerEnter={() => setHoverNode(t)}
@@ -1156,7 +1157,7 @@ function BarChart({ labels, values, xName, metric }: { labels: string[]; values:
       <div className="flex items-end gap-2.5 flex-1 min-h-0 pt-[14px]">
         {values.map((v, i) => (
           <div key={i} className="flex flex-col items-center justify-end flex-1 h-full gap-1.5 cursor-default" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-            <div className={`w-full rounded-t-[4px] [transition:background_0.15s_ease,height_0.4s_ease] ${hover === i ? "bg-(--green)" : "bg-[#22895e]"}`} style={{ height: `${(v / max) * 100}%` }} />
+            <div className={`w-full rounded-t-[4px] [transition:background_0.15s_ease,height_0.4s_ease] ${hover === i ? "bg-(--green)" : "bg-accent-strong"}`} style={{ height: `${(v / max) * 100}%` }} />
             <span className="font-mono text-[10.5px] text-(--faint) whitespace-nowrap">{labels[i]}</span>
           </div>
         ))}

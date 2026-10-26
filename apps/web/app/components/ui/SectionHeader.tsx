@@ -13,7 +13,7 @@ export default function SectionHeader({ badge, title, description, as: Heading =
   return (
     // "section-header" has no styles; ScrollReveal uses it to find section headers
     <div className="section-header mx-auto mb-16 max-w-[720px] text-center max-md:mb-10">
-      <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-line-accent bg-accent-muted px-3 py-1 text-xs font-semibold tracking-[0.05em] text-accent uppercase shadow-[0_0_16px_rgba(16,185,129,0.15)]">
+      <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-line-accent bg-accent-muted px-3 py-1 text-xs font-semibold tracking-[0.05em] text-accent uppercase shadow-[0_0_16px_rgb(var(--accent-rgb)/0.15)]">
         {badge}
       </span>
       <Heading className="mb-4 font-display text-4xl leading-tight font-bold tracking-[-0.02em] text-fg max-lg:text-3xl max-md:text-2xl max-[480px]:text-xl">

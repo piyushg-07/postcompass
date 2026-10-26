@@ -61,7 +61,7 @@ export function ForeignKeyRow({
           {status && (
             <Badge
               className={cn(
-                status === "ADD" && "border-accent/40 text-accent",
+                status === "ADD" && "border-success/40 text-success",
                 status === "UPDATE" && "border-warning/40 text-warning",
                 status === "REMOVE" && "border-danger/40 text-danger",
               )}
