@@ -3,10 +3,10 @@
  *
  * The accent (--color-accent) is used ONLY for:
  *   1. the primary action on a screen   2. focus rings
- *   3. success / running status         4. the active / selected indicator
+ *   3. the active / selected indicator  4. progress (spinners)
  *   5. inline links
  * Everything else stays neutral.
- * The desktop app swaps the accent at runtime (apps/desktop/src/app/theme.ts); these are its defaults (Burgundy).
+ * The desktop app swaps the accent at runtime (apps/desktop/src/app/theme.ts); these are its defaults (Silver).
  *
  * Consumed with Tailwind v4: `bg-bg`, `bg-surface`, `text-fg-muted`, `border-border`, `bg-accent` …
  */
@@ -26,16 +26,21 @@
   --color-fg-muted: #a1a1a1;
   --color-fg-subtle: #6b6b6b;
 
-  /* Accent (default Burgundy; the user can pick another in Settings) */
-  --color-accent: #b8325a;
-  --color-accent-hover: #c94469;
-  --color-accent-muted: rgb(184 50 90 / 0.1);
-  --color-accent-fg: #ffffff;
+  /* Accent (default Silver; the user can pick another in Settings) */
+  --color-accent: #b8bcc4;
+  --color-accent-hover: #cdd0d6;
+  --color-accent-muted: rgb(184 188 196 / 0.1);
+  --color-accent-fg: #020202;
 
-  /* Status */
+  /* Status: these keep their meaning whatever accent the user picks */
+  --color-success: #3ecf8e;
   --color-danger: #f0616d;
   --color-warning: #f5b544;
   --color-info: #5ea8f0;
+
+  /* Keys: the same in the grid, structure and diagram, whatever the accent */
+  --color-key-primary: #f5b544;
+  --color-key-foreign: #5ea8f0;
 
   /* Type */
   /* Same type system as Supabase: Inter for text, Manrope for headings, Source Code Pro for code */

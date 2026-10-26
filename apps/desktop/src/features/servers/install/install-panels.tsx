@@ -99,7 +99,7 @@ export function DonePanel({
   return (
     <div className="flex flex-col gap-3 rounded-card border border-accent/30 bg-accent-muted p-3">
       <div className="flex items-start gap-2">
-        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-medium text-fg">
             PostgreSQL {server.version} is running

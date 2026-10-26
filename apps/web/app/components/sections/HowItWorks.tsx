@@ -59,7 +59,7 @@ function InstallVisual() {
         <span className="block h-full origin-left rounded-[inherit] bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-light))] [transform:scaleX(0)] [transition:transform_1.3s_cubic-bezier(0.4,0,0.2,1)_calc(var(--s)+0.3s)] group-data-shown:[transform:scaleX(1)] motion-reduce:opacity-100 motion-reduce:[transform:none] motion-reduce:transition-none" />
       </div>
       <div className={`mt-[0.85rem] flex items-center gap-[0.45rem] text-fg opacity-0 [transition:opacity_0.4s_ease_calc(var(--s)+1.7s)] ${SHOW_IN}`}>
-        <span className="size-[7px] rounded-full bg-accent-hover shadow-[0_0_0_3px_rgb(var(--accent-light-rgb)/0.2)]" />
+        <span className="size-[7px] rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.2)]" />
         <span>running</span>
         <span className="ml-auto text-fg-muted">127.0.0.1:5432</span>
       </div>

@@ -226,7 +226,7 @@ export default function Hero({ version }: { version: string }) {
             <AppPreview />
           </div>
           <p className="mt-[1.1rem] flex flex-wrap items-center justify-center gap-[0.4rem_0.6rem] text-[0.8125rem] text-fg-muted [&_code]:font-mono [&_code]:text-fg-secondary [&_kbd]:inline-block [&_kbd]:rounded-[4px] [&_kbd]:border [&_kbd]:border-solid [&_kbd]:border-line-hover [&_kbd]:px-[0.35rem] [&_kbd]:py-0 [&_kbd]:font-mono [&_kbd]:text-[0.72rem] [&_kbd]:text-fg-secondary">
-            <span className="h-[7px] w-[7px] rounded-full bg-accent shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]" aria-hidden="true" />
+            <span className="h-[7px] w-[7px] rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.2)]" aria-hidden="true" />
             <span>Interactive preview with sample data.</span>
             <span className="text-fg-faint max-[640px]:hidden">
               Try: open a table, filter by <code>status</code>, double-click a cell, run a query, or press <kbd>Ctrl</kbd> <kbd>K</kbd>

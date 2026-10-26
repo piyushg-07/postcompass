@@ -241,7 +241,7 @@ export function FieldRow({
       <label htmlFor={id} className="flex min-w-0 flex-col gap-0.5 pt-1">
         <span className="flex items-center gap-1.5 truncate font-mono text-[13px] text-fg">
           {c.isPrimaryKey && (
-            <Key className="size-3 shrink-0 rotate-45 text-accent" />
+            <Key className="size-3 shrink-0 rotate-45 text-key-primary" />
           )}
           {c.name}
         </span>

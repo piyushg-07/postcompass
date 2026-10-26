@@ -52,7 +52,7 @@ export function Badge({ className, variant, ...props }: ComponentProps<"span"> &
 export type Status = "running" | "stopped" | "starting" | "error";
 
 const statusStyles: Record<Status, string> = {
-  running: "bg-accent shadow-[0_0_0_3px] shadow-accent/15",
+  running: "bg-success shadow-[0_0_0_3px] shadow-success/15",
   stopped: "bg-fg-subtle",
   starting: "bg-warning animate-pulse",
   error: "bg-danger",

@@ -45,7 +45,7 @@ export function ConnectionButton({
       <span className="relative inline-flex shrink-0">
         <ProviderLogo provider={provider} className="size-4" />
         {connected && (
-          <span className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-accent ring-2 ring-surface" />
+          <span className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-success ring-2 ring-surface" />
         )}
       </span>
     );

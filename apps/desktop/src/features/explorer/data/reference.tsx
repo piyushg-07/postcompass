@@ -67,7 +67,7 @@ function ColumnHead({ column }: { column: ColumnInfo }) {
   return (
     <span className="flex items-center gap-1.5 whitespace-nowrap">
       {column.isPrimaryKey && (
-        <Key className="size-3 shrink-0 rotate-45 text-accent" />
+        <Key className="size-3 shrink-0 rotate-45 text-key-primary" />
       )}
       <span className="font-medium text-fg">{column.name}</span>
       <span className="text-fg-subtle">{shortType(column.dataType)}</span>

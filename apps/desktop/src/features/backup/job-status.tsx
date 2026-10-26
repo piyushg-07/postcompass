@@ -25,8 +25,8 @@ export function JobStatus({
         </div>
       )}
       {job.state === "done" && (
-        <div className="flex flex-col items-center gap-2 rounded-card border border-accent/30 bg-accent-muted px-4 py-5 text-center">
-          <CheckCircle2 className="size-7 text-accent" />
+        <div className="flex flex-col items-center gap-2 rounded-card border border-success/30 bg-success/10 px-4 py-5 text-center">
+          <CheckCircle2 className="size-7 text-success" />
           <span className="text-sm font-medium text-fg">{job.message}</span>
           {job.path && (
             <span className="max-w-full truncate font-mono text-xs text-fg-muted">

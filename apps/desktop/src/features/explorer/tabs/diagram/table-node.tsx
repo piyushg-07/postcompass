@@ -81,9 +81,9 @@ const TableNodeView = memo(function TableNodeView({
               )}
             />
             {c.isPrimaryKey ? (
-              <KeyRound className="size-3 shrink-0 text-warning" />
+              <KeyRound className="size-3 shrink-0 text-key-primary" />
             ) : c.isForeignKey ? (
-              <Link2 className="size-3 shrink-0 text-info" />
+              <Link2 className="size-3 shrink-0 text-key-foreign" />
             ) : (
               <span className="size-3 shrink-0" />
             )}
@@ -105,9 +105,9 @@ const TableNodeView = memo(function TableNodeView({
                 <span className="truncate text-fg-subtle">{c.dataType}</span>
               )}
               {c.isPrimaryKey && (
-                <Tag className="bg-warning/15 text-warning">PK</Tag>
+                <Tag className="bg-key-primary/15 text-key-primary">PK</Tag>
               )}
-              {c.isForeignKey && <Tag className="bg-info/15 text-info">FK</Tag>}
+              {c.isForeignKey && <Tag className="bg-key-foreign/15 text-key-foreign">FK</Tag>}
             </span>
           </div>
         );

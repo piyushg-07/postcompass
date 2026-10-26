@@ -38,6 +38,10 @@
   --color-accent-subtle: rgba(184, 188, 196, 0.07);
   --color-accent-glow: rgba(184, 188, 196, 0.22);
 
+  /* Status and keys: same meaning as in the desktop app, whatever the accent */
+  --color-success: #3ecf8e;
+  --color-key-primary: #f5b544;
+
   /* Borders */
   --color-line: rgba(255, 255, 255, 0.08);
   --color-line-subtle: rgba(255, 255, 255, 0.04);
@@ -64,6 +68,7 @@
     --accent-rgb: 184 188 196;
     --accent-light-rgb: 226 229 234;
     --accent-pale-rgb: 241 243 245;
+    --success-rgb: 62 207 142;
   }
 
   html {

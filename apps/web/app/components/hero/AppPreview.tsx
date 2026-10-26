@@ -20,7 +20,7 @@ import {
    CSS variables set on the root element (APP_VARS).
    ============================================================ */
 const APP_VARS =
-  "[--line:rgba(255,255,255,0.075)] [--line-strong:rgba(255,255,255,0.12)] [--panel:#0b0b0c] [--raised:#141416] [--hover:rgba(255,255,255,0.045)] [--text:#ededef] [--muted:#8d8d95] [--faint:#5c5c64] [--green:var(--color-accent)] [--green-soft:rgb(var(--accent-rgb)/0.12)] [--blue:#60a5fa]";
+  "[--line:rgba(255,255,255,0.075)] [--line-strong:rgba(255,255,255,0.12)] [--panel:#0b0b0c] [--raised:#141416] [--hover:rgba(255,255,255,0.045)] [--text:#ededef] [--muted:#8d8d95] [--faint:#5c5c64] [--green:var(--color-accent)] [--blue:#60a5fa]";
 const KBD = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-(--line-strong) bg-[rgba(255,255,255,0.04)] font-mono text-[10px] text-(--muted)";
 const KBD_ON_GREEN = "inline-flex items-center h-[17px] px-[5px] rounded-[4px] border border-[rgba(5,46,28,0.3)] bg-[rgba(5,46,28,0.12)] font-mono text-[10px] text-[#0b3b26]";
 const DOCK_BTN = "inline-flex items-center justify-center w-8 h-8 rounded-[7px] text-(--muted) hover:bg-(--hover) hover:text-(--text)";
@@ -49,6 +49,7 @@ const PK = "inline-flex text-[#f5c451]";
 const FK_ICON = "inline-flex text-(--blue)";
 const BADGE = "py-0.5 px-[7px] rounded-[5px] border font-mono text-[10.5px]";
 const BADGE_GREEN = `${BADGE} border-[rgb(var(--accent-rgb)/0.4)] text-(--green)`;
+const BADGE_KEY = `${BADGE} border-key-primary/40 text-key-primary`;
 const BADGE_BLUE = `${BADGE} border-[rgba(96,165,250,0.35)] text-(--blue)`;
 const BADGE_MUTED = `${BADGE} border-(--line-strong) text-(--muted)`;
 const CHIP = "inline-flex items-center h-6 px-[9px] rounded-[6px] border border-(--line-strong) text-(--text)";
@@ -651,7 +652,7 @@ export default function AppPreview() {
         {/* Top bar */}
         <div className="flex items-center justify-between h-[42px] pr-3 pl-4 border-b border-(--line) shrink-0">
           <div className="flex items-center gap-2 text-(--muted)">
-            <span className="w-2 h-2 rounded-full bg-(--green) shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.15)]" />
+            <span className="w-2 h-2 rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--success-rgb)/0.15)]" />
             <span className="text-(--text) font-medium">Acme Store</span>
             <span className="text-(--faint)">›</span>
             {I.db(13)}
@@ -813,7 +814,7 @@ export default function AppPreview() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {toast && <span className="inline-flex items-center gap-1.5 mr-1.5 py-1 px-[9px] rounded-[6px] bg-(--green-soft) text-(--green) text-[11.5px] whitespace-nowrap animate-[ap-toast-in_0.2s_ease]">{I.check(12)} {toast}</span>}
+                    {toast && <span className="inline-flex items-center gap-1.5 mr-1.5 py-1 px-[9px] rounded-[6px] bg-[rgb(var(--success-rgb)/0.12)] text-success text-[11.5px] whitespace-nowrap animate-[ap-toast-in_0.2s_ease]">{I.check(12)} {toast}</span>}
                     <button type="button" className={GHOST_BTN} onClick={() => flash("Multi-column sort is in the full app")}>{I.sort(13)} Sort</button>
                     <button type="button" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] bg-(--green) text-accent-fg font-semibold" onClick={() => flash("Insert row, paste rows and CSV import are in the full app")}>{I.plus(13)} Insert {I.down(12)}</button>
                     <button type="button" className={ICON_BTN} aria-label="Undo" disabled={!undo.length} onClick={doUndo}>{I.undo(14)}</button>
@@ -899,7 +900,7 @@ export default function AppPreview() {
                         </span>
                         <span className="font-mono text-(--muted)">{c.type}</span>
                         <span className="flex gap-1.5">
-                          {c.pk ? <span className={BADGE_GREEN}>PRIMARY KEY</span> : null}
+                          {c.pk ? <span className={BADGE_KEY}>PRIMARY KEY</span> : null}
                           {c.fk ? <span className={BADGE_BLUE}>→ {c.fk}.id</span> : null}
                           {c.nullable ? <span className={BADGE_MUTED}>nullable</span> : !c.pk ? <span className={BADGE_MUTED}>not null</span> : null}
                         </span>

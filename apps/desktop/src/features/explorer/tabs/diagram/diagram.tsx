@@ -281,10 +281,10 @@ function Diagram({
             </span>
             <span className="h-3 w-px bg-border" />
             <span className="flex items-center gap-1.5">
-              <KeyRound className="size-3 text-warning" /> Primary key
+              <KeyRound className="size-3 text-key-primary" /> Primary key
             </span>
             <span className="flex items-center gap-1.5">
-              <Link2 className="size-3 text-info" /> Foreign key
+              <Link2 className="size-3 text-key-foreign" /> Foreign key
             </span>
             <span className="flex items-center gap-1.5">
               <span className="font-mono text-fg-subtle">?</span> Nullable

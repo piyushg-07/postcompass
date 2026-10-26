@@ -363,7 +363,7 @@ function CopyButton({ onCopy }: { onCopy: () => void }) {
       }}
       className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-border px-2 text-xs text-fg hover:border-border-strong hover:bg-surface-hover [&_svg]:size-3.5"
     >
-      {done ? <Check className="text-accent" /> : <Copy />}
+      {done ? <Check className="text-success" /> : <Copy />}
       {done ? "Copied" : "Copy"}
     </button>
   );
@@ -413,7 +413,7 @@ function Param({
           }}
           className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-surface-hover hover:text-fg disabled:opacity-40 [&_svg]:size-3.5"
         >
-          {done ? <Check className="text-accent" /> : <Copy />}
+          {done ? <Check className="text-success" /> : <Copy />}
         </button>
       </div>
     </div>

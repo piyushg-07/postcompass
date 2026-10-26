@@ -95,7 +95,7 @@ export function TaskSteps({
       {steps.map((step) => (
         <li key={step.id} className="flex items-start gap-3">
           <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-            {step.state === "done" && <Check className="size-4 text-accent" strokeWidth={2.5} />}
+            {step.state === "done" && <Check className="size-4 text-success" strokeWidth={2.5} />}
             {step.state === "active" && (
               <span className="size-3.5 animate-spin rounded-full border-2 border-accent/25 border-t-accent" />
             )}
