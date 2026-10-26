@@ -1,0 +1,105 @@
+# PostCompass: full reference
+
+> PostCompass is a free, open-source (MIT) desktop GUI for PostgreSQL on Windows, macOS and Linux, built with Rust and Tauri by Piyush Gupta.
+
+- Website: https://www.postcompass.cloud
+- Download: https://www.postcompass.cloud/download
+- Source code: https://github.com/piyushg-07/postcompass
+- License: MIT. Free, with no account and no paid tier.
+- Current version: 0.1.0
+
+## What it is for
+
+PostCompass is for developers who work with PostgreSQL day to day. It does two jobs in one app:
+
+1. Running PostgreSQL locally. It downloads the official PostgreSQL binaries for the user's system, verifies them and runs a server as the current user, with no Docker and no admin rights.
+2. Working with any PostgreSQL database. It connects to local and cloud servers and provides a table editor, SQL editor, visual query plans and an ER diagram.
+
+## Local PostgreSQL
+
+- Versions: PostgreSQL 14, 15, 16, 17 and 18, side by side.
+- Binaries come from the theseus-rs/postgresql-binaries project and are verified against their published SHA-256 checksums.
+- PostCompass picks the right PostgreSQL build for the system it runs on automatically.
+- Servers listen only on 127.0.0.1 and use scram-sha-256 password authentication.
+- Start, stop and remove servers; create, rename and drop databases and schemas.
+- Backup and restore with bundled pg_dump and pg_restore.
+- Detects PostgreSQL already installed or running on the computer (system installers, Homebrew, Postgres.app, Docker) and offers to connect to it.
+
+## Cloud and remote connections
+
+- Presets for AWS RDS / Aurora, Google Cloud SQL, Azure Database for PostgreSQL, Alibaba Cloud (RDS and PolarDB), Oracle Cloud (OCI), DigitalOcean, Heroku Postgres, Neon, Railway, Render and Cloudflare Hyperdrive, plus any self-hosted PostgreSQL server.
+- Encryption modes: Off, Prefer, Require, and Verify certificate with a CA bundle.
+- Test a connection before saving it. Several connections can be open at once.
+
+## Table editor
+
+- Spreadsheet-style grid; edits save immediately, with undo.
+- Filters, multi-column sort and pagination.
+- Insert and edit rows in a side panel; follow foreign keys to the referenced record.
+- Freeze, hide and reorder columns; per-column statistics.
+- Paste rows from a spreadsheet, import CSV, and export selections as CSV, JSON or SQL.
+
+## SQL editor
+
+- Autocomplete for tables and columns; run the whole script or the selection.
+- Warns before statements that can lose data: DROP, TRUNCATE, DELETE, and UPDATE without WHERE.
+- Query history, saved queries, snippets and charts of results.
+- Visual EXPLAIN / EXPLAIN ANALYZE as a tree with timing bars; flags the slowest step and estimate-versus-actual row mismatches. EXPLAIN ANALYZE runs inside a transaction that is rolled back, so it is safe on writes.
+
+## Schema tools
+
+- Create and edit tables and columns visually: types, defaults, primary keys, identity, foreign keys.
+- Indexes (B-tree, Hash, GIN, GiST, BRIN), constraints and triggers, with SQL preview.
+- Functions, enums, sequences and extensions.
+- Row Level Security policies.
+- Interactive ER diagram with relationship lines.
+
+## Privacy and security
+
+- No telemetry, analytics or crash reporting.
+- Passwords are stored in the OS keychain (Windows Credential Manager, macOS Keychain, Linux Secret Service), never in plain files.
+- The only network requests the app makes on its own are downloading PostgreSQL binaries when installing a local server.
+
+## Platforms and installers
+
+| Platform | Files |
+| --- | --- |
+| Windows 10 / 11 (x64) | .exe installer, .msi |
+| macOS Apple Silicon | .dmg |
+| macOS Intel | .dmg |
+| Linux x86_64 | .AppImage, .deb, .rpm |
+
+Installers are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper show a warning on first launch.
+
+## When PostCompass is a good fit
+
+- You want a local PostgreSQL for development without Docker or admin rights.
+- You want a free, open-source PostgreSQL GUI with a modern, spreadsheet-like table editor.
+- You connect to PostgreSQL on AWS, Google Cloud, Azure, DigitalOcean, Neon and similar providers.
+- You want visual query plans to find slow queries.
+
+## When something else may fit better
+
+- You need databases other than PostgreSQL (MySQL, SQL Server, SQLite): PostCompass supports PostgreSQL only.
+- You need deep server administration features that pgAdmin has, such as a job scheduler (pgAgent).
+- You need SSH tunnels or code-signed installers; PostCompass doesn't offer them yet.
+
+## Guides
+
+- How to run PostgreSQL locally without Docker: https://www.postcompass.cloud/guides/run-postgresql-locally-without-docker
+- How to connect to AWS RDS PostgreSQL with a GUI: https://www.postcompass.cloud/guides/connect-to-aws-rds-postgresql
+- How to read PostgreSQL EXPLAIN ANALYZE output: https://www.postcompass.cloud/guides/read-postgresql-explain-analyze
+
+## FAQ
+
+Is PostCompass free?
+Yes. It is open source under the MIT license, with no account, no paid tier and no sign-up.
+
+Do I need Docker or PostgreSQL installed first?
+No. PostCompass downloads the official PostgreSQL binaries, verifies them and runs the server for you, with no admin rights. If PostgreSQL is already running on the computer, it can connect to that instead.
+
+Is it safe on a production database?
+The SQL editor warns before destructive statements, EXPLAIN ANALYZE is rolled back, and connections can require TLS with certificate verification. As with any tool, use a read-only user when you only need to look.
+
+Does it collect data?
+No. There is no telemetry, and passwords stay in the OS keychain.

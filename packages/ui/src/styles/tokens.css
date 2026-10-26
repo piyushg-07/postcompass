@@ -1,0 +1,156 @@
+/*
+ * PostCompass design tokens: pure black + emerald.
+ *
+ * Emerald (--color-accent) is used ONLY for:
+ *   1. the primary action on a screen   2. focus rings
+ *   3. success / running status         4. the active / selected indicator
+ *   5. inline links
+ * Everything else stays neutral.
+ *
+ * Consumed with Tailwind v4: `bg-bg`, `bg-surface`, `text-fg-muted`, `border-border`, `bg-accent` …
+ */
+@theme {
+  /* Surfaces */
+  --color-bg: #020202;
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #111111;
+  --color-surface-hover: #171717;
+
+  /* Borders */
+  --color-border: #1f1f1f;
+  --color-border-strong: #2e2e2e;
+
+  /* Text */
+  --color-fg: #ededed;
+  --color-fg-muted: #a1a1a1;
+  --color-fg-subtle: #6b6b6b;
+
+  /* Accent (emerald) */
+  --color-accent: #3ecf8e;
+  --color-accent-hover: #36b97e;
+  --color-accent-muted: rgb(62 207 142 / 0.1);
+  --color-accent-fg: #020202;
+
+  /* Status */
+  --color-danger: #f0616d;
+  --color-warning: #f5b544;
+  --color-info: #5ea8f0;
+
+  /* Type */
+  /* Same type system as Supabase: Inter for text, Manrope for headings, Source Code Pro for code */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: "Manrope Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* The PostCompass wordmark only */
+  --font-brand: "Space Grotesk Variable", "Manrope Variable", ui-sans-serif, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "Source Code Pro Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* Shape */
+  --radius-control: 6px;
+  --radius-card: 10px;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-dialog-in: dialog-in 180ms var(--ease-out-soft);
+  --animate-sheet-in: sheet-in 220ms var(--ease-out-soft);
+  --animate-toast-in: toast-in 200ms var(--ease-out-soft);
+  --animate-toast-out: toast-out 150ms ease-in forwards;
+  --animate-indeterminate: indeterminate 1.2s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      scale: 0.95;
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+  @keyframes sheet-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes indeterminate {
+    from {
+      left: -33%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow: hidden; /* desktop app: panels scroll, the window never does */
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

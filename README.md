@@ -1,159 +1,144 @@
-# Turborepo starter
+<div align="center">
 
-This Turborepo starter is maintained by the Turborepo core team.
+<img src="docs/assets/banner.png" alt="PostCompass" width="100%" />
 
-## Using this example
+<h1>PostCompass</h1>
 
-Run the following command:
+<p><strong>A fast, modern desktop app for PostgreSQL.</strong><br />
+Run a local database in one click, connect to any cloud, and browse, edit and query your data in one place.</p>
 
-```sh
-npx create-turbo@latest
+<p>
+  <a href="https://github.com/piyushg-07/postcompass/releases/latest"><img src="https://img.shields.io/github/v/release/piyushg-07/postcompass?style=flat-square&color=3ecf8e&label=download" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111?style=flat-square" alt="Platforms" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3ecf8e?style=flat-square" alt="MIT License" /></a>
+</p>
+
+<a href="docs/assets/demo.mp4"><img src="docs/assets/demo.gif" alt="PostCompass in action" width="100%" /></a>
+
+</div>
+
+## Why PostCompass
+
+- **Zero setup.** No PostgreSQL on your machine? PostCompass downloads, verifies and runs one for you. No admin rights, no Docker.
+- **Local and cloud together.** Your local servers and cloud databases live side by side.
+- **Small and fast.** Built with Rust and Tauri; the Windows installer is about 3 MB.
+- **Private.** Passwords stay in your system keychain, local servers listen only on `127.0.0.1`, and there's no telemetry.
+
+## Features
+
+- **PostgreSQL in one click:** install versions 14 to 18, start and stop servers, back up and restore.
+- **Every cloud:** AWS RDS / Aurora, Google Cloud SQL, Azure, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, Cloudflare Hyperdrive, or any PostgreSQL server.
+- **Table editor:** inline edits that save instantly, filters, sorting, CSV import and export, and foreign-key navigation.
+- **SQL editor:** autocomplete for your schema, query history, saved queries and charts.
+- **Visual EXPLAIN:** see your query plan as a tree, with the slowest step highlighted.
+- **ER diagram:** your tables and relationships, draggable and interactive.
+- **Schema tools:** tables, indexes, constraints, triggers, functions, enums, extensions and Row Level Security.
+- **Command palette:** press `Ctrl+K` to jump to any table, query or action.
+
+<table>
+  <tr>
+    <td><img src="docs/assets/table-editor.png" alt="Table editor" /></td>
+    <td><img src="docs/assets/sql-editor.png" alt="SQL editor" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/explain-plan.png" alt="Visual EXPLAIN ANALYZE" /></td>
+    <td><img src="docs/assets/er-diagram.png" alt="ER diagram" /></td>
+  </tr>
+</table>
+
+## Download
+
+The quickest way is one command, which installs the latest version with no security prompts:
+
+```bash
+# macOS and Linux (Terminal)
+curl -fsSL https://www.postcompass.cloud/install.sh | sh
 ```
 
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```powershell
+# Windows (PowerShell)
+irm https://www.postcompass.cloud/install.ps1 | iex
 ```
 
-Without global `turbo`, use your package manager:
+Or get an installer from the **[Releases page](https://github.com/piyushg-07/postcompass/releases/latest)**.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+| Platform | File |
+| --- | --- |
+| Windows 10 / 11 | `PostCompass_x.y.z_x64-setup.exe`, or the `.msi` |
+| macOS (Apple Silicon) | `PostCompass_x.y.z_aarch64.dmg` |
+| macOS (Intel) | `PostCompass_x.y.z_x64.dmg` |
+| Linux | `.AppImage`, `.deb` or `.rpm` |
+
+<details>
+<summary><b>First launch: the installers aren't code-signed yet</b></summary>
+
+- **Windows:** on the SmartScreen prompt, click **More info → Run anyway**.
+- **macOS:** open the app, then go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app "is damaged", run `xattr -cr /Applications/PostCompass.app`.
+- **Linux AppImage:** `chmod +x PostCompass_*.AppImage && ./PostCompass_*.AppImage` (on Ubuntu 22.04+ you may need `sudo apt install libfuse2`).
+- **Debian / Ubuntu:** `sudo apt install ./PostCompass_*_amd64.deb`
+- **Fedora / RHEL:** `sudo dnf install ./PostCompass-*.x86_64.rpm`
+
+</details>
+
+## Contributing
+
+Contributions of every size are welcome, from a typo fix to a new feature.
+
+### Ways to help
+
+- **Report a bug:** [open a bug report](https://github.com/piyushg-07/postcompass/issues/new?template=bug_report.yml) with your OS, PostCompass version and steps to reproduce.
+- **Suggest a feature:** [open a feature request](https://github.com/piyushg-07/postcompass/issues/new?template=feature_request.yml) or start a thread in [Discussions](https://github.com/piyushg-07/postcompass/discussions).
+- **Improve the docs:** fixes to this README, [CONTRIBUTING.md](CONTRIBUTING.md) or code comments are always appreciated.
+- **Send a pull request:** pick an open issue, or discuss bigger changes in an issue first.
+
+### Set up the project
+
+You need **Node.js 24+**, **pnpm** (run `corepack enable` once), **Rust stable** and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your OS.
+
+```bash
+git clone https://github.com/piyushg-07/postcompass.git
+cd postcompass
+corepack enable
+pnpm install
+pnpm dev:desktop   # starts the app with hot reload
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+The first run compiles the Rust backend and takes a few minutes; later runs are fast.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Pull request workflow
 
-```sh
-turbo build --filter=docs
-```
+1. Fork the repository and create a branch from `main`, e.g. `fix/grid-null-paste` or `feat/roles-ui`.
+2. Keep each pull request focused on one change.
+3. Make sure the checks pass:
 
-Without global `turbo`:
+   ```bash
+   pnpm check-types && pnpm lint && pnpm rust:check && pnpm rust:test
+   ```
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+4. Use [Conventional Commits](https://www.conventionalcommits.org/) for messages, e.g. `fix: keep column order after refresh`.
+5. Open the pull request against `main`, fill in the template and add screenshots for UI changes.
 
-### Develop
+The full guide, including architecture, project structure and the release process, is in **[CONTRIBUTING.md](CONTRIBUTING.md)**. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security issues privately as described in [SECURITY.md](SECURITY.md), never in a public issue.
 
-To develop all apps and packages, run the following command:
+## License
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+PostCompass is free and open source under the **[MIT License](LICENSE)**. You can use, modify and share it, including commercially, as long as you keep the copyright notice. It's provided as is, without warranty.
 
-```sh
-cd my-turborepo
-turbo dev
-```
+Copyright © 2026 Piyush Gupta.
 
-Without global `turbo`, use your package manager:
+## Reach out
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+Questions, feedback or just want to say hi? Get in touch:
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+| | GitHub | Email |
+| --- | --- | --- |
+| **Piyush Gupta** (maintainer) | [@piyushg-07](https://github.com/piyushg-07) | [guptapiyush315@gmail.com](mailto:guptapiyush315@gmail.com) |
+| **Also reachable at** | [@hackhub817](https://github.com/hackhub817) | [piyushguptaji123@gmail.com](mailto:piyushguptaji123@gmail.com) |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+For bugs and feature ideas, please use [GitHub Issues](https://github.com/piyushg-07/postcompass/issues) so others can follow along. For security issues, follow [SECURITY.md](SECURITY.md).
 
-```sh
-turbo dev --filter=web
-```
+---
 
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+<div align="center">
+  <sub>Made with 💚 by <a href="https://github.com/piyushg-07">Piyush Gupta</a> for everyone who loves PostgreSQL.<br />If PostCompass makes your day a little easier, a ⭐ on GitHub means a lot.</sub>
+</div>

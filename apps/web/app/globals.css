@@ -1,491 +1,324 @@
 /* ============================================================
-   PostCompass — Design System
-   A dark-first, developer-focused design language.
+   PostCompass website styles.
+   Everything is Tailwind; this file holds only the theme and what
+   utility classes can't express (keyframes, pseudo-elements, vendor
+   selectors and the like).
    ============================================================ */
 
-/* --- Google Fonts --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
 
 /* ============================================================
-   Design Tokens
+   Theme: design tokens as Tailwind utilities
+   (bg-root, text-fg-muted, border-line, font-display, ...)
    ============================================================ */
-:root {
-  /* ---- Backgrounds ---- */
-  --bg-root: #09090b;
-  --bg-surface: #111113;
-  --bg-elevated: #18181b;
-  --bg-card: #1c1c20;
-  --bg-hover: #232328;
-  --bg-active: #2a2a30;
+@theme {
+  /* Backgrounds */
+  --color-root: #09090b;
+  --color-surface: #111113;
+  --color-elevated: #18181b;
+  --color-card: #1c1c20;
+  --color-hover: #232328;
+  --color-active: #2a2a30;
 
-  /* ---- Foregrounds ---- */
-  --fg-primary: #f4f4f5;
-  --fg-secondary: #a1a1aa;
-  --fg-muted: #71717a;
-  --fg-faint: #52525b;
-  --fg-disabled: #3f3f46;
+  /* Text */
+  --color-fg: #f4f4f5;
+  --color-fg-secondary: #a1a1aa;
+  --color-fg-muted: #71717a;
+  --color-fg-faint: #52525b;
+  --color-fg-disabled: #3f3f46;
 
-  /* Text Aliases */
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  /* Brand */
+  --color-accent: #10b981;
+  --color-accent-hover: #34d399;
+  --color-accent-muted: rgba(16, 185, 129, 0.15);
+  --color-accent-subtle: rgba(16, 185, 129, 0.08);
+  --color-accent-glow: rgba(16, 185, 129, 0.25);
 
-  /* ---- Accent (Emerald / Brand) ---- */
-  --accent: #10b981;
-  --accent-hover: #34d399;
-  --accent-muted: rgba(16, 185, 129, 0.15);
-  --accent-subtle: rgba(16, 185, 129, 0.08);
-  --accent-glow: rgba(16, 185, 129, 0.25);
+  /* Borders */
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-subtle: rgba(255, 255, 255, 0.04);
+  --color-line-accent: rgba(16, 185, 129, 0.35);
+  --color-line-hover: rgba(255, 255, 255, 0.16);
 
-  --brand-accent: #10b981;
-  --brand-secondary: #34d399;
+  /* Fonts (self-hosted by next/font, see layout.tsx) */
+  --font-sans: var(--font-sans-loaded), "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-display-loaded), "Fraunces", Georgia, serif;
+  --font-mono: var(--font-mono-loaded), "JetBrains Mono", "Fira Code", "SF Mono", monospace;
 
-  /* ---- Borders ---- */
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-accent: rgba(16, 185, 129, 0.35);
-  --border-hover: rgba(255, 255, 255, 0.16);
-
-  /* ---- Shadows ---- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6);
-  --shadow-accent: 0 0 40px rgba(16, 185, 129, 0.15);
-
-  /* ---- Typography ---- */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'GeistMono', 'Fira Code', 'SF Mono', monospace;
-
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
-  --text-6xl: 3.75rem;
-
+  /* The site's own line heights */
   --leading-tight: 1.15;
   --leading-snug: 1.3;
   --leading-normal: 1.6;
-
-  --tracking-tight: -0.025em;
-  --tracking-normal: 0em;
-
-  /* ---- Spacing ---- */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-  --space-20: 5rem;
-  --space-24: 6rem;
-  --space-32: 8rem;
-
-  /* ---- Radii ---- */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-
-  /* ---- Layout ---- */
-  --max-width: 1200px;
-  --nav-height: 64px;
-
-  /* ---- Transitions ---- */
-  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-base: 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ============================================================
-   Reset & Base
+   Base
    ============================================================ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-  color-scheme: dark;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  scroll-padding-top: calc(var(--nav-height) + 40px);
-  overflow-x: hidden;
-  max-width: 100vw;
-}
-
-@media (prefers-reduced-motion: reduce) {
+@layer base {
   html {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-padding-top: calc(64px + 40px); /* fixed navbar + breathing room */
+    overflow-x: clip;
+    max-width: 100vw;
   }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+
+  body {
+    min-height: 100vh;
+    overflow-x: clip;
+    background-color: var(--color-root);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: var(--leading-normal);
+  }
+
+  /* Tailwind's preflight makes SVGs block-level; keep them inline like the rest of the site expects */
+  svg {
+    display: inline;
+    vertical-align: baseline;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  color: var(--fg-primary);
-  background-color: var(--bg-root);
-  overflow-x: hidden;
-  min-height: 100vh;
+/* ============================================================
+   Scroll reveal (ScrollReveal.tsx): content glides up as it comes into view.
+   Added and removed by script, so it lives here rather than in markup.
+   ============================================================ */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
-}
-
-ul, ol {
-  list-style: none;
+.reveal.revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0s),
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0s);
 }
 
 /* ============================================================
-   Utility Classes
+   Keyframes, used from markup as animate-[name_duration_easing]
    ============================================================ */
-.container {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 var(--space-6);
-  width: 100%;
+@keyframes spin-360 {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.section {
-  padding: var(--space-24) 0;
-  position: relative;
+/* Blinking block caret (navbar prompt, hero query) */
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
-.section-header {
-  text-align: center;
-  margin-bottom: var(--space-16);
-  max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.section-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  background: var(--accent-muted);
-  color: var(--accent);
-  border: 1px solid var(--border-accent);
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--space-4);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
-}
-
-.section-title {
-  font-size: var(--text-4xl);
-  font-weight: 800;
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
-  color: var(--fg-primary);
-  margin-bottom: var(--space-4);
-}
-
-.section-description {
-  font-size: var(--text-lg);
-  color: var(--fg-secondary);
-  line-height: var(--leading-normal);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* ============================================================
-   Buttons
-   ============================================================ */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-  position: relative;
-  outline: none;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg-root), 0 0 0 4px var(--accent);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--fg-primary);
-  border: 1px solid var(--border-default);
-  backdrop-filter: blur(8px);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--border-hover);
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--fg-secondary);
-}
-
-.btn-ghost:hover {
-  color: var(--fg-primary);
-  background: var(--bg-hover);
-}
-
-.btn-lg {
-  padding: var(--space-4) var(--space-8);
-  font-size: var(--text-base);
-  border-radius: var(--radius-lg);
-}
-
-.btn-sm {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-xs);
-}
-
-.btn-icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ============================================================
-   Cards
-   ============================================================ */
-.card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  transition: all var(--transition-base);
-}
-
-.card:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-elevated);
-}
-
-.card-accent:hover {
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-accent);
-}
-
-/* ============================================================
-   Code Blocks
-   ============================================================ */
-.code-block {
-  background: #0d0d10;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: 1.7;
-  color: var(--fg-secondary);
-  overflow-x: auto;
-  position: relative;
-}
-
-.code-block code {
-  font-family: inherit;
-}
-
-.code-block .code-copy {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  color: var(--fg-muted);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-family: var(--font-sans);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all var(--transition-fast);
-}
-
-.code-block .code-copy:hover {
-  color: var(--fg-primary);
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
-}
-
-.code-keyword { color: #c084fc; font-weight: 600; }
-.code-string { color: #34d399; }
-.code-comment { color: var(--fg-faint); font-style: italic; }
-.code-function { color: #60a5fa; }
-.code-number { color: #fb923c; }
-.code-operator { color: var(--fg-muted); }
-
-/* ============================================================
-   Badges
-   ============================================================ */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 2px var(--space-2);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  color: var(--fg-muted);
-}
-
-.badge-accent {
-  background: var(--accent-muted);
-  border-color: var(--border-accent);
-  color: var(--accent);
-}
-
-/* ============================================================
-   Animations
-   ============================================================ */
-@keyframes fadeInUp {
+/* Hero opening sequence */
+@keyframes hero-backdrop-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+  }
+}
+
+@keyframes hero-type-query {
+  from {
+    width: 0;
+  }
+  to {
+    width: calc(var(--len) * 1ch);
+  }
+}
+
+@keyframes hero-word-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.4em, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+/* Features: the small-screen detail fades up when the active feature changes */
+@keyframes ft-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.animate-in {
-  animation: fadeInUp 0.6s ease forwards;
-  opacity: 0;
+/* Navbar query result and autocomplete popovers */
+@keyframes nav-result-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* App preview: toasts, popovers, relationship-line dashes */
+@keyframes ap-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ap-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ap-dash {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* Demo video modal */
+@keyframes dv-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
 }
 
 /* ============================================================
-   Responsive
+   Demo video timeline (DemoVideo.tsx): the range input's vendor parts.
+   Played part in green, buffered part in light grey.
    ============================================================ */
-@media (max-width: 1024px) {
-  .section-title {
-    font-size: var(--text-3xl);
-  }
-  .section {
-    padding: var(--space-16) 0;
-  }
+.dv-timeline::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #34d399 var(--progress),
+    rgba(255, 255, 255, 0.35) var(--progress) var(--buffered),
+    rgba(255, 255, 255, 0.15) var(--buffered)
+  );
 }
 
-@media (max-width: 768px) {
-  .container {
-    padding: 0 var(--space-4);
-  }
-  .section-title {
-    font-size: var(--text-2xl);
-  }
-  .section-description {
-    font-size: var(--text-base);
-  }
-  .section {
-    padding: var(--space-12) 0;
-  }
-  .section-header {
-    margin-bottom: var(--space-10);
-  }
+.dv-timeline::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #34d399 var(--progress),
+    rgba(255, 255, 255, 0.35) var(--progress) var(--buffered),
+    rgba(255, 255, 255, 0.15) var(--buffered)
+  );
 }
 
-@media (max-width: 480px) {
-  .section-title {
-    font-size: var(--text-xl);
+.dv-timeline::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 50%;
+  background: #fafafa;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dv-timeline::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fafafa;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25);
+}
+
+.dv-timeline:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.6);
+}
+
+/* Phones, held either way: the demo modal fills the screen so the video gets all of it.
+   Kept outside any layer on purpose so these win over the utilities on the same elements. */
+@media (pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px) {
+  .dv-dialog {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
   }
-  .btn-lg {
-    padding: var(--space-3) var(--space-6);
-    font-size: var(--text-sm);
+
+  .dv-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The close button on the video replaces the title bar */
+  .dv-dialog-head {
+    display: none;
+  }
+
+  .dv-player {
+    flex: 1;
+    aspect-ratio: auto;
+  }
+
+  .dv-controls {
+    gap: 0.35rem;
+    padding: 2rem 0.6rem calc(0.6rem + env(safe-area-inset-bottom));
+  }
+
+  .dv-time {
+    font-size: 0.72rem;
+  }
+
+  .dv-player-close {
+    top: calc(10px + env(safe-area-inset-top));
   }
 }

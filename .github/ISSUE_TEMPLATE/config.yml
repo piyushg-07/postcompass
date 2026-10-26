@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/piyushg-07/postcompass/discussions
+    about: Ask questions, share ideas and get help in GitHub Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/piyushg-07/postcompass/security/policy
+    about: Please report security issues privately, not as public issues.

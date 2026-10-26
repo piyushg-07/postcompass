@@ -1,0 +1,35 @@
+<!--
+  PostCompass app icon (source for `pnpm tauri icon app-icon.svg`).
+  The in-app compass mark, drawn bolder so it reads at 16px in the title bar.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161616"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#3ecf8e" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#3ecf8e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded tile -->
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#tile)"/>
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#glow)"/>
+  <rect x="34" y="34" width="956" height="956" rx="214" fill="none" stroke="#2a2a2a" stroke-width="4"/>
+
+  <!-- Compass ring with N/E/S/W ticks -->
+  <circle cx="512" cy="512" r="330" fill="none" stroke="#3a3a3a" stroke-width="40"/>
+  <g stroke="#555" stroke-width="28" stroke-linecap="round">
+    <line x1="512" y1="214" x2="512" y2="250"/>
+    <line x1="512" y1="774" x2="512" y2="810"/>
+    <line x1="214" y1="512" x2="250" y2="512"/>
+    <line x1="774" y1="512" x2="810" y2="512"/>
+  </g>
+
+  <!-- Needle: emerald north half, white south half -->
+  <path d="M512 196 L604 512 L420 512 Z" fill="#3ecf8e"/>
+  <path d="M420 512 L604 512 L512 828 Z" fill="#ededed"/>
+  <circle cx="512" cy="512" r="38" fill="#0a0a0a"/>
+</svg>

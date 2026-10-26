@@ -1,51 +1,47 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Spinner, Toaster, TooltipProvider } from "@repo/ui";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
+import { AppStateGate, useAppState } from "./app/app-state";
+import { ErrorBoundary } from "./app/error-boundary";
+import { Shell } from "./app/shell";
+import { Onboarding } from "./features/onboarding/onboarding";
+import { queryClient } from "./lib/query";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+// Dev-only; the import is dropped from production builds
+const QueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import("@tanstack/react-query-devtools").then((m) => ({
+        default: m.ReactQueryDevtools,
+      })),
+    )
+  : () => null;
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
+export function App() {
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ErrorBoundary>
+          <AppStateGate
+            fallback={
+              <div className="flex h-full items-center justify-center text-fg-subtle">
+                <Spinner />
+              </div>
+            }
+          >
+            <Root />
+          </AppStateGate>
+        </ErrorBoundary>
+        <Toaster />
+      </TooltipProvider>
+      <Suspense>
+        <QueryDevtools buttonPosition="bottom-right" />
+      </Suspense>
+    </QueryClientProvider>
   );
 }
 
-export default App;
+/** First launch shows onboarding; afterwards the main app. */
+function Root() {
+  const { state } = useAppState();
+  return state.profile ? <Shell /> : <Onboarding />;
+}

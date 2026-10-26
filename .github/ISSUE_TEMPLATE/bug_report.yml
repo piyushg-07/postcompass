@@ -1,0 +1,129 @@
+name: Bug report
+description: Something in PostCompass isn't working as expected
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please search [existing issues](https://github.com/piyushg-07/postcompass/issues) first.
+        **Security issues:** please don't file them here. See the [security policy](https://github.com/piyushg-07/postcompass/security/policy).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear, short description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a local database
+        2. Go to the Table editor and open `users`
+        3. Edit a cell and press Enter
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Screenshots or a short recording help a lot.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: PostCompass version
+      description: Shown in Settings, or in the installer file name.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version / distribution
+      placeholder: "e.g. Windows 11 24H2, macOS 15.3, Ubuntu 24.04"
+
+  - type: dropdown
+    id: installer
+    attributes:
+      label: Installer type
+      options:
+        - Windows .exe (setup)
+        - Windows .msi
+        - macOS .dmg
+        - Linux .AppImage
+        - Linux .deb
+        - Linux .rpm
+        - Built from source
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pg-provider
+    attributes:
+      label: PostgreSQL provider
+      description: Where is the database you were using?
+      options:
+        - Local server installed by PostCompass
+        - Existing local install (detected)
+        - AWS RDS / Aurora
+        - Google Cloud SQL
+        - Azure
+        - Supabase
+        - Neon
+        - Other cloud / self-hosted
+        - Not database-related
+    validations:
+      required: true
+
+  - type: input
+    id: pg-version
+    attributes:
+      label: PostgreSQL version
+      description: Run `SELECT version();` if you're not sure.
+      placeholder: "e.g. 18.6"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and error messages
+      description: |
+        Paste any error text shown in the app or terminal. Remove passwords, hostnames or other secrets first.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Workarounds you found, when it started, related issues, etc.

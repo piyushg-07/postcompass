@@ -1,0 +1,313 @@
+//! App state persisted as JSON in the app config folder: onboarding profile, managed servers, settings.
+//! Never contains secrets; passwords live in the OS keychain (see `secrets.rs`).
+
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::RwLock;
+
+use pc_core::runtime::ManagedServer;
+use pc_core::{CoreError, CoreResult};
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+// Re-export so `commands::remote_connections` can `use crate::state::SslMode`.
+// Defined once in pc-core::driver; pulling it in here avoids a duplicate-type panic in tauri-specta.
+pub use pc_core::driver::SslMode;
+
+const STATE_VERSION: u32 = 2;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    Developer,
+    Analyst,
+    Dba,
+    Student,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Experience {
+    New,
+    Some,
+    Expert,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum UseCase {
+    LocalDev,
+    Remote,
+    Both,
+    Learning,
+}
+
+/// Answers from onboarding. Present once onboarding is complete.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Profile {
+    pub name: Option<String>,
+    pub role: Role,
+    pub experience: Experience,
+    pub use_case: UseCase,
+    /// Anonymous usage stats. Off unless the user opts in.
+    pub telemetry: bool,
+    pub completed_at: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    /// Stop PostCompass-managed servers when the app quits.
+    pub stop_servers_on_quit: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            stop_servers_on_quit: true,
+        }
+    }
+}
+
+// SslMode is defined in pc-core::driver and re-exported above.
+// It is intentionally NOT redefined here to avoid the duplicate-type error in tauri-specta.
+
+/// A remote PostgreSQL connection saved by the user.
+/// Never contains secrets — password lives in the OS keychain under `remote:<id>`.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteConnection {
+    pub id: String,
+    /// Human-readable label, e.g. "AWS RDS – prod".
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    /// Database to open by default.
+    pub database: String,
+    pub ssl_mode: SslMode,
+    /// PEM file with the provider's CA certificate, for `verify_full`.
+    #[serde(default)]
+    pub ca_cert: Option<String>,
+    /// Short provider tag shown in the UI, e.g. "aws", "digitalocean", "neon", or "other" for
+    /// self-hosted. The UI owns the list (`PROVIDERS` in remote-connection-dialog.tsx).
+    pub provider: String,
+    pub created_at: f64,
+}
+
+/// Everything the UI needs to render; sent whole on load.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AppState {
+    pub profile: Option<Profile>,
+    pub servers: Vec<ManagedServer>,
+    pub remote_connections: Vec<RemoteConnection>,
+    pub settings: Settings,
+}
+
+/// On-disk format: the state plus a version number for future migrations.
+#[derive(Serialize)]
+struct Persisted<'a> {
+    version: u32,
+    #[serde(flatten)]
+    state: &'a AppState,
+}
+
+/// Lenient reader for the on-disk format: missing fields (e.g. from an older version) get defaults.
+/// Kept separate from `AppState` because `#[serde(default)]` would make the UI types optional.
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+struct Stored {
+    profile: Option<Profile>,
+    servers: Vec<ManagedServer>,
+    remote_connections: Vec<RemoteConnection>,
+    settings: StoredSettings,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+struct StoredSettings {
+    stop_servers_on_quit: bool,
+}
+
+impl Default for StoredSettings {
+    fn default() -> Self {
+        Self {
+            stop_servers_on_quit: Settings::default().stop_servers_on_quit,
+        }
+    }
+}
+
+impl From<Stored> for AppState {
+    fn from(stored: Stored) -> Self {
+        Self {
+            profile: stored.profile,
+            servers: stored.servers,
+            remote_connections: stored.remote_connections,
+            settings: Settings {
+                stop_servers_on_quit: stored.settings.stop_servers_on_quit,
+            },
+        }
+    }
+}
+
+pub struct Store {
+    path: PathBuf,
+    state: RwLock<AppState>,
+}
+
+impl Store {
+    /// Loads state from disk. A corrupt file is kept as `state.json.corrupt` and replaced with defaults.
+    /// A file that exists but can't be read is moved aside too, so the first save can't overwrite it.
+    pub fn load(path: PathBuf) -> Self {
+        let state = match read_retrying(&path) {
+            // Bytes, not a String: invalid UTF-8 is corruption, not a missing file
+            Ok(bytes) => serde_json::from_slice::<Stored>(&bytes)
+                .map(AppState::from)
+                .unwrap_or_else(|e| {
+                    eprintln!("state file is invalid ({e}), starting fresh");
+                    let _ = std::fs::rename(&path, path.with_extension("json.corrupt"));
+                    AppState::default()
+                }),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => AppState::default(),
+            Err(e) => {
+                eprintln!("state file could not be read ({e}), starting fresh");
+                let _ = std::fs::rename(&path, path.with_extension("json.unreadable"));
+                AppState::default()
+            }
+        };
+        Self {
+            path,
+            state: RwLock::new(state),
+        }
+    }
+
+    pub fn snapshot(&self) -> AppState {
+        self.state.read().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// Applies a change and writes it to disk atomically (temp file + rename).
+    pub fn update<T>(&self, change: impl FnOnce(&mut AppState) -> T) -> CoreResult<T> {
+        let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
+        let mut next = state.clone();
+        let result = change(&mut next);
+        self.write(&next)?;
+        *state = next;
+        Ok(result)
+    }
+
+    pub fn server(&self, id: &str) -> CoreResult<ManagedServer> {
+        self.snapshot()
+            .servers
+            .into_iter()
+            .find(|s| s.id == id)
+            .ok_or_else(|| CoreError::NotFound(format!("server {id}")))
+    }
+
+    pub fn remote_connection(&self, id: &str) -> CoreResult<RemoteConnection> {
+        self.snapshot()
+            .remote_connections
+            .into_iter()
+            .find(|r| r.id == id)
+            .ok_or_else(|| CoreError::NotFound(format!("remote connection {id}")))
+    }
+
+    fn write(&self, state: &AppState) -> CoreResult<()> {
+        if let Some(dir) = self.path.parent() {
+            std::fs::create_dir_all(dir)
+                .map_err(|e| CoreError::io("could not create the config folder", e))?;
+        }
+        let persisted = Persisted {
+            version: STATE_VERSION,
+            state,
+        };
+        let json = serde_json::to_vec_pretty(&persisted)
+            .map_err(|e| CoreError::Internal(e.to_string()))?;
+        let tmp = self.path.with_extension("json.tmp");
+        // Flushed before the rename, so a crash or power loss can't leave an empty state file behind
+        let mut file =
+            std::fs::File::create(&tmp).map_err(|e| CoreError::io("could not save settings", e))?;
+        file.write_all(&json)
+            .and_then(|()| file.sync_all())
+            .map_err(|e| CoreError::io("could not save settings", e))?;
+        drop(file);
+        std::fs::rename(&tmp, &self.path).map_err(|e| CoreError::io("could not save settings", e))
+    }
+}
+
+/// Reads the state file, retrying briefly: on Windows, antivirus and OneDrive hold files open for
+/// a moment, and a failed read must not be mistaken for "no saved state".
+fn read_retrying(path: &Path) -> std::io::Result<Vec<u8>> {
+    let mut attempt = 0;
+    loop {
+        match std::fs::read(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound && attempt < 2 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            result => return result,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_path(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("postcompass-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir.join("state.json")
+    }
+
+    #[test]
+    fn missing_file_gives_defaults() {
+        let store = Store::load(temp_path("missing"));
+        let state = store.snapshot();
+        assert!(state.profile.is_none());
+        assert!(state.servers.is_empty());
+        assert!(state.settings.stop_servers_on_quit);
+    }
+
+    #[test]
+    fn older_file_without_settings_still_loads() {
+        let path = temp_path("older");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{ "version": 1, "servers": [] }"#).unwrap();
+        let state = Store::load(path).snapshot();
+        assert!(state.settings.stop_servers_on_quit);
+    }
+
+    #[test]
+    fn corrupt_file_is_set_aside() {
+        let path = temp_path("corrupt");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "{ not json").unwrap();
+        let store = Store::load(path.clone());
+        assert!(store.snapshot().profile.is_none());
+        assert!(path.with_extension("json.corrupt").exists());
+    }
+
+    #[test]
+    fn non_utf8_file_is_set_aside_as_corrupt() {
+        let path = temp_path("non-utf8");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, [0xff, 0xfe, 0x00]).unwrap();
+        Store::load(path.clone());
+        assert!(path.with_extension("json.corrupt").exists());
+    }
+
+    #[test]
+    fn updates_round_trip_through_disk() {
+        let path = temp_path("roundtrip");
+        let store = Store::load(path.clone());
+        store
+            .update(|s| s.settings.stop_servers_on_quit = false)
+            .unwrap();
+        let reloaded = Store::load(path);
+        assert!(!reloaded.snapshot().settings.stop_servers_on_quit);
+    }
+}

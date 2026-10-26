@@ -1,0 +1,248 @@
+import { Badge, Button, Dialog, DialogContent } from "@repo/ui";
+import { Cloud, Database, HardDrive, RefreshCw, ScanSearch } from "lucide-react";
+import type { ReactNode } from "react";
+import { useState } from "react";
+import { useAppState } from "../../app/app-state";
+import { useNavigation } from "../../app/navigation";
+import { DatabaseCard } from "./database-card";
+import { InstallFlow } from "./install-flow";
+import { LocalServerLogo } from "./provider-logos";
+import { externalPostgres, SOURCE_LABELS, useDetection } from "./use-detection";
+import { RemoteConnectionCard } from "./remote-connection-card";
+import { RemoteConnectionDialog } from "./remote-connection-dialog";
+import { useServerStatuses } from "./use-server-statuses";
+
+export function DatabasesPage() {
+  const { state, refresh } = useAppState();
+  const installOpen = useNavigation((s) => s.installDialogOpen);
+  const setInstallOpen = useNavigation((s) => s.setInstallDialogOpen);
+  const openRemoteDialog = useNavigation((s) => s.openRemoteDialog);
+  const { statuses, setStatus } = useServerStatuses(
+    state.servers.map((s) => s.id),
+  );
+  const [installing, setInstalling] = useState(false);
+  const [installStage, setInstallStage] = useState<"form" | "progress">(
+    "form",
+  );
+
+  return (
+    <div className="flex flex-col gap-10">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-fg">
+          Databases
+        </h1>
+        <p className="text-sm text-fg-muted">
+          Local and cloud PostgreSQL in one place.
+        </p>
+      </div>
+
+      {/* ── Local databases ──────────────────────────────────────────────── */}
+      <SectionGroup
+        icon={<HardDrive />}
+        title="Local"
+        count={state.servers.length}
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+          {state.servers.map((server) => (
+            <DatabaseCard
+              key={server.id}
+              server={server}
+              status={statuses[server.id]}
+              onStatus={(s) => setStatus(server.id, s)}
+            />
+          ))}
+          {/* Add new tile */}
+          <NewTile
+            icon={<Database />}
+            label="New local database"
+            onClick={() => setInstallOpen(true)}
+          />
+        </div>
+      </SectionGroup>
+
+      {/* ── PostgreSQL installed outside PostCompass ─────────────────────── */}
+      <DetectedSection />
+
+      {/* ── Remote connections ───────────────────────────────────────────── */}
+      <SectionGroup
+        icon={<Cloud />}
+        title="Remote"
+        count={state.remoteConnections.length}
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+          {state.remoteConnections.map((rc) => (
+            <RemoteConnectionCard key={rc.id} remote={rc} />
+          ))}
+          {/* Add new tile */}
+          <NewTile
+            icon={<Cloud />}
+            label="Add remote connection"
+            onClick={() => openRemoteDialog()}
+          />
+        </div>
+      </SectionGroup>
+
+      {/* ── Dialogs ──────────────────────────────────────────────────────── */}
+      <Dialog
+        open={installOpen}
+        onOpenChange={(open) => (open || !installing) && setInstallOpen(open)}
+      >
+        <DialogContent
+          title="New local database"
+          // The progress has its own "Setting up …" heading
+          description={
+            installStage === "form"
+              ? "A private PostgreSQL server on this computer."
+              : undefined
+          }
+          className="w-130"
+          hideClose={installing}
+        >
+          <InstallFlow
+            onCancel={() => setInstallOpen(false)}
+            onBusyChange={setInstalling}
+            onStageChange={setInstallStage}
+            onInstalled={() => {
+              setInstallOpen(false);
+              void refresh();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <RemoteConnectionDialog />
+    </div>
+  );
+}
+
+// ── Found on this computer ─────────────────────────────────────────────────────
+
+/**
+ * PostgreSQL that PostCompass didn't install: running servers you can connect to in one click,
+ * and installs on disk. Hidden when the scan finds nothing.
+ */
+function DetectedSection() {
+  const { state } = useAppState();
+  const openRemoteDialogWith = useNavigation((s) => s.openRemoteDialogWith);
+  const { report, scanning, rescan } = useDetection();
+  if (!report) return null;
+
+  const { servers, installs } = externalPostgres(report, state.servers);
+  if (servers.length === 0 && installs.length === 0) return null;
+
+  return (
+    <SectionGroup
+      icon={<ScanSearch />}
+      title="Found on this computer"
+      count={servers.length + installs.length}
+      action={
+        <Button variant="ghost" size="sm" iconLeft={<RefreshCw className={scanning ? "animate-spin" : undefined} />} onClick={rescan} disabled={scanning}>
+          Rescan
+        </Button>
+      }
+    >
+      <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">
+        {servers.map((server) => {
+          const source = server.label ?? (server.source ? SOURCE_LABELS[server.source] : null);
+          return (
+            <li key={`server-${server.port}`} className="flex items-center gap-4 px-5 py-4">
+              <LocalServerLogo status="running" className="size-6" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="text-sm font-medium text-fg">PostgreSQL running on port {server.port}</span>
+                <span className="truncate font-mono text-xs text-fg-muted">
+                  {server.host}:{server.port}
+                  {source && ` · ${source}`}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                onClick={() =>
+                  openRemoteDialogWith({
+                    name: `PostgreSQL on port ${server.port}`,
+                    host: server.host,
+                    port: server.port,
+                  })
+                }
+              >
+                Connect
+              </Button>
+            </li>
+          );
+        })}
+        {installs.map((install) => (
+          <li key={`install-${install.binDir}`} className="flex items-center gap-4 px-5 py-4">
+            <LocalServerLogo
+              status={install.serviceRunning === null ? undefined : install.serviceRunning ? "running" : "stopped"}
+              className="size-6"
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="flex items-center gap-2 text-sm font-medium text-fg">
+                PostgreSQL {install.version ?? ""} installed
+                <Badge>{SOURCE_LABELS[install.source]}</Badge>
+              </span>
+              <span className="truncate font-mono text-xs text-fg-muted">{install.binDir}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </SectionGroup>
+  );
+}
+
+// ── Section wrapper ────────────────────────────────────────────────────────────
+
+function SectionGroup({
+  icon,
+  title,
+  count,
+  action,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  count: number;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-medium text-fg [&_svg]:size-4 [&_svg]:text-fg-subtle">
+          {icon}
+          {title}
+          <span className="text-xs font-normal text-fg-subtle tabular-nums">
+            {count}
+          </span>
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ── "Add new" dashed tile ──────────────────────────────────────────────────────
+
+function NewTile({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-card border border-dashed border-border-strong transition-colors hover:border-accent/50 hover:bg-surface"
+    >
+      <span className="flex size-9 items-center justify-center rounded-full border border-border bg-surface text-fg-subtle transition-colors group-hover:text-accent [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="text-sm text-fg-muted group-hover:text-fg">{label}</span>
+    </button>
+  );
+}

@@ -1,0 +1,31 @@
+# PostCompass
+
+> PostCompass is a free, open-source (MIT) desktop GUI for PostgreSQL on Windows, macOS and Linux. It can install and run a local PostgreSQL server in one click without Docker or admin rights, connect to cloud PostgreSQL providers, and browse, edit and query data in a native app built with Rust and Tauri.
+
+Key facts:
+
+- Price: free, no account, no paid tier. License: MIT.
+- Platforms: Windows 10/11 (x64), macOS (Apple Silicon and Intel), Linux x86_64 (AppImage, .deb, .rpm).
+- Install with one command: `curl -fsSL https://www.postcompass.cloud/install.sh | sh` (macOS, Linux) or `irm https://www.postcompass.cloud/install.ps1 | iex` (Windows PowerShell).
+- Local PostgreSQL: versions 14 to 18, official binaries verified by SHA-256, run as the current user, listening only on 127.0.0.1.
+- Detects PostgreSQL already installed or running on the computer and connects to it.
+- Cloud presets: AWS RDS / Aurora, Google Cloud SQL, Azure Database for PostgreSQL, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, Cloudflare Hyperdrive, or any PostgreSQL server. TLS modes: Off, Prefer, Require, Verify certificate.
+- Privacy: no telemetry; passwords stored in the OS keychain.
+- Installer size: about 3 to 5 MB (.exe, .msi, .dmg, .deb, .rpm); the Linux AppImage is larger because it bundles its own libraries.
+
+## Pages
+
+- [Home](https://www.postcompass.cloud/): overview, features and FAQ
+- [Download](https://www.postcompass.cloud/download): installers for Windows, macOS and Linux
+- [Full reference for AI assistants](https://www.postcompass.cloud/llms-full.txt): every feature in detail
+
+## Guides
+
+- [How to run PostgreSQL locally without Docker](https://www.postcompass.cloud/guides/run-postgresql-locally-without-docker)
+- [How to connect to AWS RDS PostgreSQL with a GUI](https://www.postcompass.cloud/guides/connect-to-aws-rds-postgresql)
+- [How to read PostgreSQL EXPLAIN ANALYZE output](https://www.postcompass.cloud/guides/read-postgresql-explain-analyze)
+
+## Optional
+
+- [Source code on GitHub](https://github.com/piyushg-07/postcompass)
+- [Releases and changelog](https://github.com/piyushg-07/postcompass/releases)

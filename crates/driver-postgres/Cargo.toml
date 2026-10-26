@@ -1,0 +1,22 @@
+[package]
+name = "driver-postgres"
+description = "PostgreSQL implementation of the PostCompass DatabaseDriver interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+pc-core.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio-postgres = { version = "0.7", default-features = false, features = ["runtime"] }
+postgres-native-tls = "0.5"
+native-tls = "0.2"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[lints]
+workspace = true
