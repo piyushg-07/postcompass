@@ -220,32 +220,22 @@ export default function DemoVideo() {
     <>
       <button
         type="button"
-        className="group relative h-[2.9rem] w-[2.9rem] shrink-0 cursor-pointer rounded-full border-0 bg-transparent p-0 [transition:transform_0.2s_ease] hover:[transform:scale(1.06)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover active:[transform:scale(0.97)]"
-        aria-label="Watch the demo"
+        className="group relative inline-flex h-[2.9rem] shrink-0 cursor-pointer items-center gap-[0.65rem] rounded-full border border-solid border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] py-0 pr-[1.15rem] pl-[0.4rem] text-[0.9375rem] font-semibold whitespace-nowrap text-fg backdrop-blur-[10px] [transition:transform_0.2s_ease,background_0.2s_ease,border-color_0.2s_ease] hover:border-[rgba(255,255,255,0.26)] hover:bg-[rgba(255,255,255,0.09)] hover:[transform:translateY(-1px)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover active:[transform:scale(0.98)]"
         aria-haspopup="dialog"
         onPointerEnter={warmUp}
         onPointerDown={warmUp}
         onFocus={warmUp}
         onClick={openPlayer}
       >
-        {/* A slowly spinning gradient ring around a dark core with the play icon */}
-        <span
-          className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_22px_rgb(var(--accent-rgb)/0.22)] [transition:box-shadow_0.25s_ease] group-hover:shadow-[0_0_32px_rgb(var(--accent-rgb)/0.45)] before:absolute before:inset-[-50%] before:animate-[spin-360_3.2s_linear_infinite] before:bg-[conic-gradient(from_0deg,var(--color-accent),#38bdf8,transparent_38%,transparent_62%,var(--color-accent-light),var(--color-accent))] before:content-[''] motion-reduce:before:animate-none"
-          aria-hidden="true"
-        />
-        {/* The triangle is nudged right so it looks optically centred */}
-        <span
-          className="absolute inset-[1.5px] flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_50%_30%,#1c201e,#0a0c0b_70%)] text-[#fafafa] [transition:color_0.2s_ease] group-hover:text-accent-light [&_svg]:ml-[2px]"
-          aria-hidden="true"
-        >
-          <PlayIcon size={15} />
+        <span className="relative size-[2.1rem] shrink-0" aria-hidden="true">
+          {/* A slowly spinning gradient ring around a dark core with the play icon */}
+          <span className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_18px_rgb(var(--accent-rgb)/0.3)] [transition:box-shadow_0.25s_ease] group-hover:shadow-[0_0_28px_rgb(var(--accent-rgb)/0.5)] before:absolute before:inset-[-50%] before:animate-[spin-360_3.2s_linear_infinite] before:bg-[conic-gradient(from_0deg,var(--color-accent),#38bdf8,transparent_38%,transparent_62%,var(--color-accent-light),var(--color-accent))] before:content-[''] motion-reduce:before:animate-none" />
+          {/* The triangle is nudged right so it looks optically centred */}
+          <span className="absolute inset-[1.5px] flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_50%_30%,#1c201e,#0a0c0b_70%)] text-[#fafafa] [transition:color_0.2s_ease] group-hover:text-accent-light [&_svg]:ml-[2px]">
+            <PlayIcon size={12} />
+          </span>
         </span>
-        <span
-          className="pointer-events-none absolute bottom-[calc(100%_+_10px)] left-1/2 rounded-[6px] border border-solid border-line bg-elevated px-[0.6rem] py-[0.35rem] text-[0.75rem] font-medium whitespace-nowrap text-fg opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.5)] [transform:translate(-50%,4px)] [transition:opacity_0.15s_ease,transform_0.15s_ease] group-hover:opacity-100 group-hover:[transform:translate(-50%,0)] group-focus-visible:opacity-100 group-focus-visible:[transform:translate(-50%,0)]"
-          aria-hidden="true"
-        >
-          See PostCompass in action
-        </span>
+        <span>Watch demo</span>
       </button>
 
       <dialog

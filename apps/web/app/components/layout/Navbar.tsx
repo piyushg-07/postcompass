@@ -281,7 +281,7 @@ export default function Navbar() {
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <a
             href={PRODUCT.github}
-            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[8px] text-[#8b8b94] [transition:color_0.15s_ease,background_0.15s_ease] hover:bg-[rgba(255,255,255,0.06)] hover:text-white focus-visible:bg-[rgba(255,255,255,0.06)] focus-visible:text-white focus-visible:outline-none max-[560px]:hidden"
+            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[8px] text-[#8b8b94] [transition:color_0.15s_ease,background_0.15s_ease] hover:bg-[rgba(255,255,255,0.06)] hover:text-white focus-visible:bg-[rgba(255,255,255,0.06)] focus-visible:text-white focus-visible:outline-none"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="PostCompass on GitHub"
@@ -291,7 +291,7 @@ export default function Navbar() {
           </a>
           <a
             href="/download"
-            className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-accent-fg shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-pale)] active:[transform:scale(0.97)] max-[560px]:h-[32px] max-[560px]:px-[0.7rem] max-[560px]:text-[0.75rem]"
+            className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-accent-fg shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-pale)] active:[transform:scale(0.97)] max-[560px]:hidden"
             title="Download PostCompass"
           >
             <span className="mr-px opacity-55">\</span>download
