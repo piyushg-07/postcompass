@@ -30,7 +30,7 @@ export const RELEASES_URL = `${PRODUCT.github}/releases`;
 export const LATEST_RELEASE_URL = `${PRODUCT.github}/releases/latest`;
 
 // The demo video lives in Vercel Blob storage (kept out of the repo) and plays in the site's own player
-export const DEMO_VIDEO_URL = "https://8wsuxgiwn8vrlgqs.public.blob.vercel-storage.com/PostCompass-demo-hook.mp4";
+export const DEMO_VIDEO_URL = "https://8wsuxgiwn8vrlgqs.public.blob.vercel-storage.com/PostCompass-demo-hook-silver-v3.mp4";
 
 export type Platform = "windows" | "macos" | "linux";
 
