@@ -37,7 +37,7 @@ export function Logo({ size = 32, title }: { size?: number; title?: string }) {
         <line x1="774" y1="512" x2="810" y2="512" />
       </g>
       <path d="M512 196 L604 512 L420 512 Z" fill="currentColor" />
-      <path d="M420 512 L604 512 L512 828 Z" fill="#ededed" />
+      <path d="M420 512 L604 512 L512 828 Z" fill="#5c6068" />
       <circle cx="512" cy="512" r="38" fill="#0a0a0a" />
     </svg>
   );

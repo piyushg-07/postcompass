@@ -48,8 +48,8 @@ function smallSvg(n) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${n}" height="${n}" viewBox="0 0 ${n} ${n}">
   <rect width="${n}" height="${n}" rx="${radius}" fill="#121212"/>
   <circle cx="${c}" cy="${c}" r="${ring}" fill="none" stroke="#525252" stroke-width="${stroke}"/>
-  <path d="M${c} ${tip} L${c + half} ${c} L${c - half} ${c} Z" fill="#3ecf8e"/>
-  <path d="M${c - half} ${c} L${c + half} ${c} L${c} ${n - tip} Z" fill="#f2f2f2"/>
+  <path d="M${c} ${tip} L${c + half} ${c} L${c - half} ${c} Z" fill="#d4d7dd"/>
+  <path d="M${c - half} ${c} L${c + half} ${c} L${c} ${n - tip} Z" fill="#6b6f78"/>
   ${detail}
 </svg>`;
 }

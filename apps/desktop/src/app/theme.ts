@@ -24,7 +24,7 @@ export type AccentId = (typeof ACCENTS)[number]["id"];
 export type Accent = (typeof ACCENTS)[number];
 
 /** Keep in sync with the `--color-accent*` defaults in packages/ui/src/styles/tokens.css. */
-export const DEFAULT_ACCENT: AccentId = "burgundy";
+export const DEFAULT_ACCENT: AccentId = "silver";
 
 export function getAccent(id: string): Accent {
   return ACCENTS.find((a) => a.id === id) ?? ACCENTS.find((a) => a.id === DEFAULT_ACCENT)!;
