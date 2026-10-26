@@ -31,7 +31,7 @@ export function ReadyStep({
         </span>
         <h1 className="flex flex-wrap items-baseline justify-center gap-x-2.5 text-4xl font-semibold tracking-tight">
           {name ? `${name}, you're ready to` : "You're ready to"}
-          <span className="bg-linear-to-r from-accent to-[#7ee7b8] bg-clip-text pr-1 font-serif text-[2.9rem] leading-none font-normal text-transparent italic">
+          <span className="bg-linear-to-r from-accent to-[color-mix(in_srgb,var(--color-accent),white_45%)] bg-clip-text pr-1 font-serif text-[2.9rem] leading-none font-normal text-transparent italic">
             explore
           </span>
         </h1>

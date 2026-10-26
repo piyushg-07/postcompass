@@ -1,11 +1,11 @@
 import { Button } from "@repo/ui";
 import { ArrowRight } from "lucide-react";
-import appIcon from "../../../app-icon.svg";
+import { Logo } from "../../app/logo";
 
 export function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex flex-col items-center gap-10 text-center">
-      <img src={appIcon} alt="PostCompass" width={88} height={88} draggable={false} />
+      <Logo size={88} title="PostCompass" />
       <div className="flex flex-col gap-4">
         <h1 className="text-4xl font-semibold tracking-tight">Welcome to PostCompass</h1>
         <p className="mx-auto max-w-md text-base leading-relaxed text-fg-muted">

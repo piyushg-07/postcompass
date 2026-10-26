@@ -2,7 +2,7 @@ import { HighlightStyle } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 
-/* ── Theme: black surfaces, emerald only for the cursor and matches ─────── */
+/* ── Theme: black surfaces, accent only for the cursor and matches ─────── */
 
 export const theme = EditorView.theme(
   {
@@ -12,7 +12,7 @@ export const theme = EditorView.theme(
     ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--color-accent)", borderLeftWidth: "2px" },
     "&.cm-focused": { outline: "none" },
     "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-      backgroundColor: "rgb(62 207 142 / 0.18) !important",
+      backgroundColor: "color-mix(in srgb, var(--color-accent) 18%, transparent) !important",
     },
     ".cm-activeLine": { backgroundColor: "rgb(255 255 255 / 0.025)" },
     ".cm-gutters": {
@@ -22,7 +22,10 @@ export const theme = EditorView.theme(
       paddingRight: "4px",
     },
     ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--color-fg-muted)" },
-    ".cm-matchingBracket": { backgroundColor: "rgb(62 207 142 / 0.15)", outline: "1px solid rgb(62 207 142 / 0.4)" },
+    ".cm-matchingBracket": {
+      backgroundColor: "color-mix(in srgb, var(--color-accent) 15%, transparent)",
+      outline: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)",
+    },
     ".cm-placeholder": { color: "var(--color-fg-subtle)" },
     ".cm-tooltip": {
       backgroundColor: "var(--color-surface-raised)",

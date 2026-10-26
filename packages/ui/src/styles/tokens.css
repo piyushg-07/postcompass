@@ -1,11 +1,12 @@
 /*
- * PostCompass design tokens: pure black + emerald.
+ * PostCompass design tokens: pure black + one accent color.
  *
- * Emerald (--color-accent) is used ONLY for:
+ * The accent (--color-accent) is used ONLY for:
  *   1. the primary action on a screen   2. focus rings
  *   3. success / running status         4. the active / selected indicator
  *   5. inline links
  * Everything else stays neutral.
+ * The desktop app swaps the accent at runtime (apps/desktop/src/app/theme.ts); these are its defaults (Burgundy).
  *
  * Consumed with Tailwind v4: `bg-bg`, `bg-surface`, `text-fg-muted`, `border-border`, `bg-accent` …
  */
@@ -25,11 +26,11 @@
   --color-fg-muted: #a1a1a1;
   --color-fg-subtle: #6b6b6b;
 
-  /* Accent (emerald) */
-  --color-accent: #3ecf8e;
-  --color-accent-hover: #36b97e;
-  --color-accent-muted: rgb(62 207 142 / 0.1);
-  --color-accent-fg: #020202;
+  /* Accent (default Burgundy; the user can pick another in Settings) */
+  --color-accent: #b8325a;
+  --color-accent-hover: #c94469;
+  --color-accent-muted: rgb(184 50 90 / 0.1);
+  --color-accent-fg: #ffffff;
 
   /* Status */
   --color-danger: #f0616d;
