@@ -27,21 +27,21 @@
   --color-fg-faint: #52525b;
   --color-fg-disabled: #3f3f46;
 
-  /* Brand: Burgundy. Change the accent here (and in app/config/theme.ts for WebGL / OG image) */
-  --color-accent: #b8325a;
-  --color-accent-hover: #d24b72;
-  --color-accent-strong: #8f1f42; /* deeper shade for gradients */
-  --color-accent-light: #e0708f; /* bright shade for text and highlights on dark */
-  --color-accent-pale: #f0a6bb; /* softest shade for badge text */
-  --color-accent-fg: #ffffff; /* text on accent-filled buttons */
-  --color-accent-muted: rgba(184, 50, 90, 0.15);
-  --color-accent-subtle: rgba(184, 50, 90, 0.08);
-  --color-accent-glow: rgba(184, 50, 90, 0.25);
+  /* Brand: Silver. Change the accent here (and in app/config/theme.ts for WebGL / OG image) */
+  --color-accent: #b8bcc4;
+  --color-accent-hover: #d4d7dd;
+  --color-accent-strong: #7d828c; /* deeper shade for gradients */
+  --color-accent-light: #e2e5ea; /* bright shade for text and highlights on dark */
+  --color-accent-pale: #f1f3f5; /* softest shade for badge text */
+  --color-accent-fg: #0b0b0d; /* text on accent-filled buttons */
+  --color-accent-muted: rgba(184, 188, 196, 0.14);
+  --color-accent-subtle: rgba(184, 188, 196, 0.07);
+  --color-accent-glow: rgba(184, 188, 196, 0.22);
 
   /* Borders */
   --color-line: rgba(255, 255, 255, 0.08);
   --color-line-subtle: rgba(255, 255, 255, 0.04);
-  --color-line-accent: rgba(184, 50, 90, 0.35);
+  --color-line-accent: rgba(184, 188, 196, 0.35);
   --color-line-hover: rgba(255, 255, 255, 0.16);
 
   /* Fonts (self-hosted by next/font, see layout.tsx) */
@@ -61,9 +61,9 @@
 @layer base {
   /* Accent channels for translucent glows and shadows: rgb(var(--accent-rgb) / 0.2) */
   :root {
-    --accent-rgb: 184 50 90;
-    --accent-light-rgb: 224 112 143;
-    --accent-pale-rgb: 240 166 187;
+    --accent-rgb: 184 188 196;
+    --accent-light-rgb: 226 229 234;
+    --accent-pale-rgb: 241 243 245;
   }
 
   html {
