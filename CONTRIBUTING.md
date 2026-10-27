@@ -204,7 +204,7 @@ Releases are automated with GitHub Actions ([`.github/workflows/release.yml`](.g
    git push origin HEAD:release
    ```
 
-3. CI builds installers for Windows (`.exe`, `.msi`), macOS Apple Silicon and Intel (`.dmg`) and Linux (`.AppImage`, `.deb`, `.rpm`), creates the tag `vX.Y.Z` and a **draft release** "PostCompass vX.Y.Z" with every file attached and GitHub's auto-generated "What's Changed" notes.
+3. CI builds installers for Windows (`.exe`), macOS Apple Silicon and Intel (`.dmg`) and Linux (`.AppImage`, `.deb`, `.rpm`), creates the tag `vX.Y.Z` and a **draft release** "PostCompass vX.Y.Z" with every file attached and GitHub's auto-generated "What's Changed" notes.
 4. Open the draft on the [Releases page](https://github.com/piyushg-07/postcompass/releases), replace the **Highlights** bullets with what's new in this version, and click **Publish**.
 
 Each release needs a new version number: pushing again with the same version updates the existing draft instead of creating a new one.

@@ -93,8 +93,8 @@ jobs:
           projectPath: apps/desktop
           tauriScript: pnpm tauri
           args: ${{ matrix.args }} --ignore-version-mismatches
-          # Windows updates use the .exe (NSIS) installer, the one most people install;
-          # updating an .exe install with the .msi would add a second copy instead
+          # Windows ships only the .exe (NSIS) installer, which in-app updates also use;
+          # an .msi install updated with the .exe would end up as a second copy
           updaterJsonPreferNsis: true
           # __VERSION__ is replaced with the version from tauri.conf.json
           tagName: v__VERSION__
@@ -116,7 +116,7 @@ jobs:
 
             | Platform | Installer |
             |---|---|
-            | **Windows** 10 / 11 (x64) | [**PostCompass___VERSION___x64-setup.exe**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64-setup.exe) · [`.msi`](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64_en-US.msi) |
+            | **Windows** 10 / 11 (x64) | [**PostCompass___VERSION___x64-setup.exe**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64-setup.exe) |
             | **macOS** Apple Silicon (M1 or newer) | [**PostCompass___VERSION___aarch64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___aarch64.dmg) |
             | **macOS** Intel | [**PostCompass___VERSION___x64.dmg**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___x64.dmg) |
             | **Linux** (any distro) | [**.AppImage**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.AppImage) |

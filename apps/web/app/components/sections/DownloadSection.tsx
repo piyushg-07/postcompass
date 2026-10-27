@@ -136,7 +136,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
 
                 <ul className="flex flex-1 flex-col gap-[2px] border-t border-[rgba(255,255,255,0.06)] pt-3">
                   <li
-                    className="mb-[0.35rem] px-[0.6rem] text-[0.7rem] font-semibold tracking-[0.06em] text-fg-faint uppercase"
+                    className={`mb-[0.35rem] px-[0.6rem] text-[0.7rem] font-semibold tracking-[0.06em] text-fg-faint uppercase ${rest.length ? "" : "invisible"}`}
                     aria-hidden="true"
                   >
                     {rest.length === 1 ? "Also available" : "Other formats"}
@@ -271,7 +271,7 @@ const GUIDE: Record<
       {
         text: (
           <>
-            Run the <em>.exe</em> installer (or the <em>.msi</em>).
+            Run the <em>.exe</em> installer.
           </>
         ),
       },

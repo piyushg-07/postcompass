@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-27
+
+### Removed
+
+- Windows `.msi` installer. Windows now ships only the `.exe` installer, which in-app updates also use, so updating no longer risks a second copy.
+
 ## [0.1.0] - 2026-10-25
 
 The first public release of PostCompass, a fast, modern desktop app for PostgreSQL on Windows, macOS and Linux.
@@ -64,8 +70,9 @@ The first public release of PostCompass, a fast, modern desktop app for PostgreS
 - Connect panel with connection strings and snippets for Node.js, Python, Prisma, Drizzle and Go.
 - Home page with all local and cloud connections.
 - Dark, Supabase-inspired UI.
-- Installers for Windows (`.exe`, `.msi`), macOS Apple Silicon and Intel (`.dmg`, ad-hoc signed) and Linux (`.AppImage`, `.deb`, `.rpm`), built by GitHub Actions.
+- Installers for Windows (`.exe`), macOS Apple Silicon and Intel (`.dmg`, ad-hoc signed) and Linux (`.AppImage`, `.deb`, `.rpm`), built by GitHub Actions.
 - Contributor docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, issue forms and a pull request template.
 
-[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/piyushg-07/postcompass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/piyushg-07/postcompass/releases/tag/v0.1.0

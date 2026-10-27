@@ -11,7 +11,7 @@ Key facts:
 - Detects PostgreSQL already installed or running on the computer and connects to it.
 - Cloud presets: AWS RDS / Aurora, Google Cloud SQL, Azure Database for PostgreSQL, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, Cloudflare Hyperdrive, or any PostgreSQL server. TLS modes: Off, Prefer, Require, Verify certificate.
 - Privacy: no telemetry; passwords stored in the OS keychain.
-- Installer size: about 3 to 5 MB (.exe, .msi, .dmg, .deb, .rpm); the Linux AppImage is larger because it bundles its own libraries.
+- Installer size: about 3 to 5 MB (.exe, .dmg, .deb, .rpm); the Linux AppImage is larger because it bundles its own libraries.
 
 ## Pages
 

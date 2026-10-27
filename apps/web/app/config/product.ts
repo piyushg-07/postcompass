@@ -6,7 +6,7 @@ export const PRODUCT = {
   description:
     "Spin up a local PostgreSQL database in one click, connect to any cloud, and browse, edit and query your data in one fast native app. Free and open source.",
   // Fallback only: the site shows the latest GitHub release when it can reach GitHub (see release.ts)
-  version: "0.1.0",
+  version: "0.1.1",
   license: "MIT",
   github: "https://github.com/piyushg-07/postcompass",
   website: "https://www.postcompass.cloud",
@@ -70,7 +70,6 @@ const PLATFORMS: (Omit<PlatformDownloads, "assets"> & { assets: AssetTemplate[] 
     requirement: "Windows 10 or 11, 64-bit",
     assets: [
       { label: "Installer (.exe)", file: (v) => `PostCompass_${v}_x64-setup.exe`, note: "Recommended", size: "3.3 MB" },
-      { label: "MSI package", file: (v) => `PostCompass_${v}_x64_en-US.msi`, note: "For managed installs", size: "4.6 MB" },
     ],
   },
   {

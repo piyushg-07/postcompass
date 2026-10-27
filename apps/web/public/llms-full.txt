@@ -6,7 +6,7 @@
 - Download: https://www.postcompass.cloud/download
 - Source code: https://github.com/piyushg-07/postcompass
 - License: MIT. Free, with no account and no paid tier.
-- Current version: 0.1.0
+- Current version: 0.1.1
 
 ## What it is for
 
@@ -64,7 +64,7 @@ PostCompass is for developers who work with PostgreSQL day to day. It does two j
 
 | Platform | Files |
 | --- | --- |
-| Windows 10 / 11 (x64) | .exe installer, .msi |
+| Windows 10 / 11 (x64) | .exe installer |
 | macOS Apple Silicon | .dmg |
 | macOS Intel | .dmg |
 | Linux x86_64 | .AppImage, .deb, .rpm |

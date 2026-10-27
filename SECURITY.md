@@ -24,7 +24,7 @@ If that isn't possible, email **[guptapiyush315@gmail.com](mailto:guptapiyush315
 
 Please include:
 
-- The PostCompass version, OS and installer type (`.exe`, `.msi`, `.dmg`, `.AppImage`, `.deb`, `.rpm`)
+- The PostCompass version, OS and installer type (`.exe`, `.dmg`, `.AppImage`, `.deb`, `.rpm`)
 - A description of the issue and its impact
 - Steps to reproduce or a proof of concept
 - Any suggested fix, if you have one

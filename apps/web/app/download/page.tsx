@@ -8,7 +8,7 @@ import { getLatestRelease } from "@/lib/release";
 export const metadata: Metadata = {
   title: "Download PostCompass — Free PostgreSQL GUI & Client for Windows, macOS, Linux",
   description:
-    "Download PostCompass for Windows (.exe, .msi), macOS (Apple Silicon, Intel), or Linux (.AppImage, .deb, .rpm). Free, open source, and lightweight native PostgreSQL desktop app.",
+    "Download PostCompass for Windows (.exe), macOS (Apple Silicon, Intel), or Linux (.AppImage, .deb, .rpm). Free, open source, and lightweight native PostgreSQL desktop app.",
   alternates: {
     canonical: "/download",
   },
