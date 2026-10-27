@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { datadogRum } from "@datadog/browser-rum";
 import {
   PRODUCT,
   RELEASES_URL,
@@ -114,6 +115,7 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                 {primary && (
                   <a
                     href={primary.url}
+                    onClick={() => datadogRum.addAction("download", { platform: d.platform, format: primary.label })}
                     className={`flex h-[2.9rem] items-center gap-[0.55rem] rounded-[10px] px-4 text-[0.9rem] font-semibold [transition:background_0.2s_ease,border-color_0.2s_ease] ${
                       isDetected
                         ? "border-none bg-accent text-accent-fg hover:bg-accent-hover"
@@ -141,7 +143,11 @@ export default function DownloadSection({ asPage = false, downloads }: Props) {
                   </li>
                   {rest.map((a: ReleaseAsset) => (
                     <li key={a.url}>
-                      <a href={a.url} className={ASSET}>
+                      <a
+                        href={a.url}
+                        className={ASSET}
+                        onClick={() => datadogRum.addAction("download", { platform: d.platform, format: a.label })}
+                      >
                         <span className="font-medium">{a.label}</span>
                         <span className="text-[0.8rem] text-fg-faint">
                           {a.note}
@@ -241,7 +247,10 @@ function InstallCommand({ detected, recommended = false }: { detected: Platform 
         </div>
       </div>
       <div className="mt-4">
-        <CodeLine code={shown === "windows" ? POWERSHELL_COMMAND : SHELL_COMMAND} />
+        <CodeLine
+          code={shown === "windows" ? POWERSHELL_COMMAND : SHELL_COMMAND}
+          onCopy={() => datadogRum.addAction("install_command_copied", { shell: shown === "windows" ? "powershell" : "sh" })}
+        />
       </div>
     </div>
   );
@@ -529,7 +538,7 @@ function highlight(code: string) {
   });
 }
 
-function CodeLine({ code }: { code: string }) {
+function CodeLine({ code, onCopy }: { code: string; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-2 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] py-1.5 pr-1.5 pl-3">
@@ -537,6 +546,7 @@ function CodeLine({ code }: { code: string }) {
       <button
         type="button"
         onClick={() => {
+          onCopy?.();
           void navigator.clipboard.writeText(code).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);

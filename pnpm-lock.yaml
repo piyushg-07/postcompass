@@ -357,6 +357,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@datadog/browser-rum':
+        specifier: ^7.16.1
+        version: 7.16.1
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -740,6 +743,23 @@ packages:
   '@dagrejs/graphlib@2.2.4':
     resolution: {integrity: sha512-mepCf/e9+SKYy1d02/UkvSy6+6MoyXhVxP8lLDfA7BPE1X1d4dR0sZznmbM8/XVJ1GPM+Svnx7Xj6ZweByWUkw==}
     engines: {node: '>17.0.0'}
+
+  '@datadog/browser-core@7.16.1':
+    resolution: {integrity: sha512-a/ShIFh9OvdznEL6tM0AIzqj5ZkIUPb8jPPpkChT6AUF4GKbPQMtK0M8yeXsluHlzXlcoTImyYYWxmSTa8aa1A==}
+
+  '@datadog/browser-rum-core@7.16.1':
+    resolution: {integrity: sha512-ammzIkfu3xfyrDTqkpB+Rq3icCcNCqC4zw1KZPVNKAyqgeifF4IRpyYXJ7ntLmsdnAl6BBgUOu2BwVsfoH35CA==}
+
+  '@datadog/browser-rum@7.16.1':
+    resolution: {integrity: sha512-S5I3CsRdz1bzOdUR5EV4tMym4A0CoSjbgv5WYc88WuD9Tr6ghv1ej4FEK+X8LEKyioGmtTjzgT7DWToYKKAbDA==}
+    peerDependencies:
+      '@datadog/browser-logs': 7.16.1
+    peerDependenciesMeta:
+      '@datadog/browser-logs':
+        optional: true
+
+  '@datadog/js-core@0.0.18':
+    resolution: {integrity: sha512-aGriDAfBGmKtsoDY7/OUr3wieTagV8QWJNcY8ogp7NQKFlFGwJ7uj0jXxjnbysgDDWlVmgEuk9+nuqxDQS6NQg==}
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
@@ -4218,6 +4238,23 @@ snapshots:
       '@dagrejs/graphlib': 2.2.4
 
   '@dagrejs/graphlib@2.2.4': {}
+
+  '@datadog/browser-core@7.16.1':
+    dependencies:
+      '@datadog/js-core': 0.0.18
+
+  '@datadog/browser-rum-core@7.16.1':
+    dependencies:
+      '@datadog/browser-core': 7.16.1
+      '@datadog/js-core': 0.0.18
+
+  '@datadog/browser-rum@7.16.1':
+    dependencies:
+      '@datadog/browser-core': 7.16.1
+      '@datadog/browser-rum-core': 7.16.1
+      '@datadog/js-core': 0.0.18
+
+  '@datadog/js-core@0.0.18': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 

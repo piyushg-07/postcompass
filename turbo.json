@@ -10,6 +10,10 @@
         "$TURBO_DEFAULT$",
         ".env*"
       ],
+      "env": [
+        "NEXT_PUBLIC_DD_RUM_APPLICATION_ID",
+        "NEXT_PUBLIC_DD_RUM_CLIENT_TOKEN"
+      ],
       "outputs": [
         ".next/**",
         "!.next/cache/**",

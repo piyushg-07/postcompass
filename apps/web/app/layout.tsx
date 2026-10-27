@@ -6,6 +6,7 @@ import "./globals.css";
 import { PRODUCT } from "@/config/product";
 import { AUTHOR, SEO_CONFIG, getJsonLdStructuredData, toJsonLd } from "@/config/seo";
 import ScrollReveal from "@/components/layout/ScrollReveal";
+import DatadogRum from "@/components/layout/DatadogRum";
 
 // The site's fonts, self-hosted and preloaded by next/font so text renders right away without a layout jump
 const sans = Geist({ subsets: ["latin"], variable: "--font-sans-loaded", display: "swap" });
@@ -92,6 +93,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         {children}
         <ScrollReveal />
+        <DatadogRum />
         <Analytics />
         <SpeedInsights />
       </body>

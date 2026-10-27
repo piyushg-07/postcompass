@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@datadog/browser-rum": "^7.16.1",
     "@repo/ui": "workspace:*",
     "@types/three": "^0.186.0",
     "@vercel/analytics": "^2.0.1",
