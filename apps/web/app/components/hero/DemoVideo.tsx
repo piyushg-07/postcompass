@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { datadogRum } from "@datadog/browser-rum";
 import { DEMO_VIDEO_URL } from "@/config/product";
 import { X } from "@/components/ui/Icons";
 
 // A phone held either way: narrow in portrait, short in landscape (same rule as the CSS)
 const PHONE = "(pointer: coarse) and (max-width: 640px), (pointer: coarse) and (max-height: 500px)";
 const HIDE_CONTROLS_MS = 2500;
+// How far into the video a viewer got, reported once each per viewing
+const MILESTONES = [10, 25, 50, 75];
 
 // A button in the control bar
 const CTRL =
@@ -62,6 +65,7 @@ export default function DemoVideo() {
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<number | undefined>(undefined);
+  const milestones = useRef(new Set<number>());
 
   const [open, setOpen] = useState(false);
   // Hover, focus or press starts buffering, so playback starts quickly on click
@@ -104,6 +108,11 @@ export default function DemoVideo() {
   const reset = () => {
     const video = videoRef.current;
     if (video) {
+      datadogRum.addAction("demo_video_closed", {
+        watched_seconds: Math.round(video.currentTime),
+        percent: video.duration ? Math.round((video.currentTime / video.duration) * 100) : 0,
+      });
+      milestones.current.clear();
       video.pause();
       video.currentTime = 0;
     }
@@ -136,6 +145,7 @@ export default function DemoVideo() {
   };
 
   const openPlayer = () => {
+    datadogRum.addAction("demo_video_opened");
     warmUp();
     setOpen(true);
     // The phone's Back button or gesture then closes the video instead of leaving the page.
@@ -272,12 +282,30 @@ export default function DemoVideo() {
               setPlaying(false);
               setControlsShown(true);
             }}
-            onEnded={() => setControlsShown(true)}
+            onEnded={() => {
+              setControlsShown(true);
+              // The last timeupdate can land just short of the end, so the end itself is the 100% mark
+              if (!milestones.current.has(100)) {
+                milestones.current.add(100);
+                datadogRum.addAction("demo_video_progress", { percent: 100 });
+              }
+            }}
             onWaiting={() => setBuffering(true)}
             onPlaying={() => setBuffering(false)}
             onCanPlay={() => setBuffering(false)}
             onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-            onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              setTime(v.currentTime);
+              if (!v.duration) return;
+              const percent = (v.currentTime / v.duration) * 100;
+              for (const m of MILESTONES) {
+                if (percent >= m && !milestones.current.has(m)) {
+                  milestones.current.add(m);
+                  datadogRum.addAction("demo_video_progress", { percent: m });
+                }
+              }
+            }}
             onProgress={(e) => {
               const v = e.currentTarget;
               if (v.buffered.length && v.duration) setBuffered((v.buffered.end(v.buffered.length - 1) / v.duration) * 100);

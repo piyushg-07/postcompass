@@ -421,7 +421,10 @@ function InstallGuide({ detected }: { detected: Platform | null }) {
                   id={`install-tab-${p}`}
                   aria-selected={selected}
                   aria-controls={`install-panel-${p}`}
-                  onClick={() => setTab(p)}
+                  onClick={() => {
+                    setTab(p);
+                    datadogRum.addAction("install_guide_tab", { platform: p });
+                  }}
                   className={`inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[0.85rem] font-medium [transition:background_0.15s_ease,color_0.15s_ease] ${
                     selected
                       ? "bg-[rgba(255,255,255,0.08)] text-fg"
@@ -473,6 +476,7 @@ function InstallGuide({ detected }: { detected: Platform | null }) {
           Still stuck?{" "}
           <a
             href={`${PRODUCT.github}/issues/new/choose`}
+            onClick={() => datadogRum.addAction("install_help_clicked", { target: "issue" })}
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent-hover hover:underline"
@@ -482,6 +486,7 @@ function InstallGuide({ detected }: { detected: Platform | null }) {
           or browse{" "}
           <a
             href={RELEASES_URL}
+            onClick={() => datadogRum.addAction("install_help_clicked", { target: "releases" })}
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent-hover hover:underline"

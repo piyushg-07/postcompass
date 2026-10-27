@@ -3,6 +3,7 @@
 // The navbar is a live psql prompt: sections are tables, navigating runs a query.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { datadogRum } from "@datadog/browser-rum";
 import { PRODUCT } from "@/config/product";
 import { Github } from "@/components/ui/Icons";
 
@@ -281,6 +282,7 @@ export default function Navbar() {
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <a
             href={PRODUCT.github}
+            onClick={() => datadogRum.addAction("github_clicked", { location: "navbar" })}
             className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[8px] text-[#8b8b94] [transition:color_0.15s_ease,background_0.15s_ease] hover:bg-[rgba(255,255,255,0.06)] hover:text-white focus-visible:bg-[rgba(255,255,255,0.06)] focus-visible:text-white focus-visible:outline-none"
             target="_blank"
             rel="noopener noreferrer"
@@ -291,6 +293,7 @@ export default function Navbar() {
           </a>
           <a
             href="/download"
+            onClick={() => datadogRum.addAction("download_cta_clicked", { location: "navbar" })}
             className="inline-flex h-[36px] items-center rounded-[9px] bg-accent px-[0.95rem] font-mono text-[0.85rem] font-bold text-accent-fg shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.5)] [transition:background_0.2s_ease,transform_0.15s_ease] hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-pale)] active:[transform:scale(0.97)] max-[560px]:hidden"
             title="Download PostCompass"
           >

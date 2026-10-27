@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { datadogRum } from "@datadog/browser-rum";
 import dynamic from "next/dynamic";
 import type HyperspeedComponent from "@/components/hero/Hyperspeed";
 import { WindowsIcon, AppleIcon, LinuxIcon } from "@/components/ui/Icons";
@@ -198,6 +199,7 @@ export default function Hero({ version }: { version: string }) {
         <div className="mt-[2.25rem] flex animate-[hero-fade-up_0.6s_ease_1.45s_both] flex-wrap justify-center gap-3 motion-reduce:animate-none max-[640px]:flex-nowrap">
           <a
             href="#download"
+            onClick={() => datadogRum.addAction("download_cta_clicked", { location: "hero", os })}
             className="inline-flex h-[2.9rem] items-center gap-[0.55rem] rounded-[10px] bg-accent px-[1.4rem] text-[0.9375rem] font-semibold text-accent-fg no-underline shadow-[inset_0_0_0_1px_rgb(var(--accent-light-rgb)/0.5),0_8px_28px_rgb(var(--accent-rgb)/0.28)] [transition:transform_0.15s_ease,background_0.2s_ease,border-color_0.2s_ease,box-shadow_0.2s_ease] hover:bg-accent-hover hover:shadow-[inset_0_0_0_1px_rgb(var(--accent-pale-rgb)/0.6),0_12px_34px_rgb(var(--accent-rgb)/0.38)] hover:[transform:translateY(-1px)] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-hover"
             aria-label={`Download for ${OS_LABEL[os]}`}
             suppressHydrationWarning
