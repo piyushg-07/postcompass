@@ -89,6 +89,7 @@ Installers are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper 
 - How to run PostgreSQL locally without Docker: https://www.postcompass.cloud/guides/run-postgresql-locally-without-docker
 - How to connect to AWS RDS PostgreSQL with a GUI: https://www.postcompass.cloud/guides/connect-to-aws-rds-postgresql
 - How to read PostgreSQL EXPLAIN ANALYZE output: https://www.postcompass.cloud/guides/read-postgresql-explain-analyze
+- pgAdmin alternatives: free PostgreSQL GUI clients compared: https://www.postcompass.cloud/guides/free-postgresql-gui-clients-compared
 
 ## FAQ
 

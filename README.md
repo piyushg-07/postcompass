@@ -8,6 +8,12 @@
 Run a local database in one click, connect to any cloud, and browse, edit and query your data in one place.</p>
 
 <p>
+  <a href="https://www.postcompass.cloud"><strong>Website</strong></a> ·
+  <a href="https://www.postcompass.cloud/download"><strong>Download</strong></a> ·
+  <a href="https://www.postcompass.cloud/guides">Guides</a>
+</p>
+
+<p>
   <a href="https://github.com/piyushg-07/postcompass/releases/latest"><img src="https://img.shields.io/github/v/release/piyushg-07/postcompass?style=flat-square&color=b8bcc4&label=download" alt="Latest release" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111?style=flat-square" alt="Platforms" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b8bcc4?style=flat-square" alt="MIT License" /></a>

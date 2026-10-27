@@ -282,6 +282,131 @@ export const GUIDES: Guide[] = [
       },
     ],
   },
+  {
+    slug: "free-postgresql-gui-clients-compared",
+    title: "pgAdmin alternatives: free PostgreSQL GUI clients compared",
+    description:
+      "An honest comparison of free PostgreSQL GUI clients: pgAdmin, DBeaver Community, Beekeeper Studio and PostCompass, plus the paid options, and which to pick for what.",
+    updated: "2026-10-27",
+    readMinutes: 6,
+    sections: [
+      {
+        heading: "The short answer",
+        blocks: [
+          {
+            type: "p",
+            text: "pgAdmin is the most complete free tool for administering a PostgreSQL server. DBeaver Community is the best free choice if you work with many different databases. Beekeeper Studio is a simple free editor for several SQL databases. PostCompass is a free, PostgreSQL-only desktop app that can also install and run local PostgreSQL servers for you, with no Docker.",
+          },
+          {
+            type: "note",
+            text: "Licenses and prices are as of October 2026. Check each project's website before you decide, since they change.",
+          },
+        ],
+      },
+      {
+        heading: "At a glance",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "pgAdmin 4: free and open source (PostgreSQL License). PostgreSQL only. Runs as a desktop app or in a web browser. Strongest for server administration.",
+              "DBeaver Community: free and open source (Apache 2.0). Dozens of databases through JDBC drivers. Java-based, so heavier, with a very large feature set.",
+              "Beekeeper Studio Community: free and open source (GPLv3). PostgreSQL, MySQL, SQLite, SQL Server and more. A paid edition adds extra features.",
+              "PostCompass: free and open source (MIT). PostgreSQL only. Native app built with Rust and Tauri, about a 3 MB installer on Windows. Installs and runs PostgreSQL 14 to 18 locally in one click.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "pgAdmin",
+        blocks: [
+          {
+            type: "p",
+            text: "pgAdmin is the long-standing administration tool from the PostgreSQL community. It covers almost every server object: roles and permissions, tablespaces, maintenance tasks such as VACUUM, backup and restore, and a query tool with a graphical EXPLAIN. It also runs in server mode, so a team can share one web-based install.",
+          },
+          {
+            type: "p",
+            text: "The trade-off is that pgAdmin is built for administrators first. Many developers find its many panels and dialogs slow for everyday work such as browsing tables and editing rows, and it doesn't install or run a PostgreSQL server for you.",
+          },
+        ],
+      },
+      {
+        heading: "DBeaver Community",
+        blocks: [
+          {
+            type: "p",
+            text: "DBeaver is a universal database tool. One app connects to PostgreSQL, MySQL, SQLite, Oracle, SQL Server and many others, with an ER diagram, data export and import, and a capable SQL editor. If you switch between several database engines every day, it's hard to beat for free.",
+          },
+          {
+            type: "p",
+            text: "Because it runs on Java and the Eclipse platform, it uses more memory and takes longer to start than a native app, and the interface is dense.",
+          },
+        ],
+      },
+      {
+        heading: "Beekeeper Studio",
+        blocks: [
+          {
+            type: "p",
+            text: "Beekeeper Studio is a cross-platform SQL editor and database manager with a clean interface. The open-source Community Edition supports the common SQL databases, and a paid edition unlocks more. It's a good pick if you want something simpler than DBeaver that still covers more than PostgreSQL.",
+          },
+        ],
+      },
+      {
+        heading: "PostCompass",
+        blocks: [
+          {
+            type: "p",
+            text: "PostCompass focuses only on PostgreSQL. Besides connecting to existing servers, including AWS RDS, Google Cloud SQL, Azure, Neon, DigitalOcean and any other PostgreSQL server, it can download the official PostgreSQL 14 to 18 binaries, verify their checksums, and run a local server as your user, with no Docker and no admin rights.",
+          },
+          {
+            type: "list",
+            items: [
+              "Spreadsheet-style table editor with filters, sorting, CSV import and export, and foreign-key navigation.",
+              "SQL editor with schema-aware autocomplete, query history and charts.",
+              "Visual EXPLAIN ANALYZE that flags the slowest step and runs inside a rolled-back transaction.",
+              "Interactive ER diagram, a command palette, and passwords stored in the operating system keychain. No account and no telemetry.",
+            ],
+          },
+          {
+            type: "p",
+            text: "Where it falls short: it doesn't support other databases such as MySQL, and it has fewer server-administration screens than pgAdmin.",
+          },
+        ],
+      },
+      {
+        heading: "Paid options worth knowing",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "TablePlus: a fast native client for many databases on macOS, Windows and Linux. Paid, with a free trial that limits open tabs and connections.",
+              "DataGrip: JetBrains' database IDE with excellent SQL assistance. Paid for commercial use, free for non-commercial use.",
+              "Postico: a polished PostgreSQL client for macOS only. Paid, with a free evaluation.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "Which should you choose?",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "You administer PostgreSQL servers, roles and maintenance: pgAdmin.",
+              "You work with many different database engines: DBeaver Community or Beekeeper Studio.",
+              "You build apps on PostgreSQL and want a fast, simple GUI plus local databases without Docker: PostCompass.",
+              "You want the strongest SQL editing and already use JetBrains IDEs: DataGrip.",
+            ],
+          },
+          {
+            type: "p",
+            text: "They don't exclude each other. Many developers keep pgAdmin for occasional admin work and use a lighter client for everyday queries.",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getGuide(slug: string) {

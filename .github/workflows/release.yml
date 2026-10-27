@@ -123,9 +123,9 @@ jobs:
             | **Linux** Ubuntu / Debian | [**.deb**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass___VERSION___amd64.deb) |
             | **Linux** Fedora / RHEL | [**.rpm**](https://github.com/piyushg-07/postcompass/releases/download/v__VERSION__/PostCompass-__VERSION__-1.x86_64.rpm) |
 
-            ## 🛡️ First launch
+            ## 🛡️ If your system shows a warning
 
-            PostCompass isn't code-signed yet, so your system may show a warning the first time:
+            PostCompass isn't code-signed yet, so your system may warn you when you install or open it:
 
             - **Windows:** the installer shows *Unknown publisher*. On the SmartScreen prompt, click **More info → Run anyway**.
             - **macOS:** drag PostCompass to Applications and open it. When macOS says it can't verify the app, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.

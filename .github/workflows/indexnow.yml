@@ -1,0 +1,32 @@
+# After each successful production deploy on Vercel, tells Bing and the other IndexNow search engines
+# to recrawl every page in the sitemap (see apps/web/scripts/indexnow.mjs).
+#
+# Vercel reports deploys to GitHub as deployment statuses. GitHub only runs this from the default
+# branch, so it starts working once this file is on main. It can also be run by hand from the Actions tab.
+
+name: IndexNow
+
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/web/scripts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Submit the sitemap to IndexNow
+        run: node apps/web/scripts/indexnow.mjs

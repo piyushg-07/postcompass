@@ -12,7 +12,9 @@
       ],
       "env": [
         "NEXT_PUBLIC_DD_RUM_APPLICATION_ID",
-        "NEXT_PUBLIC_DD_RUM_CLIENT_TOKEN"
+        "NEXT_PUBLIC_DD_RUM_CLIENT_TOKEN",
+        "GOOGLE_SITE_VERIFICATION",
+        "BING_SITE_VERIFICATION"
       ],
       "outputs": [
         ".next/**",

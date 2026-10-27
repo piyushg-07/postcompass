@@ -1,4 +1,5 @@
 import { PRODUCT, FAQ_ITEMS, CLOUD_PROVIDERS } from "./product";
+import { GUIDES } from "./guides";
 
 /** The maintainer, so search engines and AI assistants can tie the project to a real person. */
 export const AUTHOR = {
@@ -46,11 +47,38 @@ export function getJsonLdStructuredData() {
     sameAs: [AUTHOR.url],
   };
 
+  // The project as a brand, so "PostCompass" resolves to this site and its GitHub repo, not to "Compass"
+  const organization = {
+    "@type": "Organization",
+    "@id": `${PRODUCT.website}#organization`,
+    name: PRODUCT.name,
+    alternateName: "Post Compass",
+    url: PRODUCT.website,
+    logo: {
+      "@type": "ImageObject",
+      url: `${PRODUCT.website}/logo.png`,
+    },
+    description: SEO_CONFIG.description,
+    founder: { "@id": `${PRODUCT.website}#author` },
+    sameAs: [PRODUCT.github],
+  };
+
   const softwareAppSchema = {
     "@type": "SoftwareApplication",
     "@id": `${PRODUCT.website}#software`,
     name: PRODUCT.name,
-    alternateName: "PostCompass PostgreSQL GUI",
+    alternateName: ["Post Compass", "PostCompass PostgreSQL GUI"],
+    sameAs: [PRODUCT.github],
+    releaseNotes: `${PRODUCT.github}/releases`,
+    softwareHelp: { "@type": "CreativeWork", url: `${PRODUCT.website}/guides` },
+    // The guides aren't linked in the page UI, so every page lists them here for search engines and AI assistants
+    subjectOf: GUIDES.map((g) => ({
+      "@type": "TechArticle",
+      headline: g.title,
+      description: g.description,
+      url: `${PRODUCT.website}/guides/${g.slug}`,
+      dateModified: g.updated,
+    })),
     operatingSystem: "Windows 10, Windows 11, macOS (Apple Silicon and Intel), Linux (x86_64)",
     applicationCategory: "DeveloperApplication",
     applicationSubCategory: "Database client",
@@ -83,7 +111,7 @@ export function getJsonLdStructuredData() {
       "Passwords stored in the operating system keychain; no telemetry",
     ],
     author: { "@id": `${PRODUCT.website}#author` },
-    publisher: { "@id": `${PRODUCT.website}#author` },
+    publisher: { "@id": `${PRODUCT.website}#organization` },
   };
 
   const webSiteSchema = {
@@ -91,14 +119,15 @@ export function getJsonLdStructuredData() {
     "@id": `${PRODUCT.website}#website`,
     url: PRODUCT.website,
     name: PRODUCT.name,
+    alternateName: "Post Compass",
     description: SEO_CONFIG.description,
     inLanguage: "en",
-    publisher: { "@id": `${PRODUCT.website}#author` },
+    publisher: { "@id": `${PRODUCT.website}#organization` },
   };
 
   return {
     "@context": "https://schema.org",
-    "@graph": [author, softwareAppSchema, webSiteSchema],
+    "@graph": [author, organization, softwareAppSchema, webSiteSchema],
   };
 }
 
