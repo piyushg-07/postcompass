@@ -19,8 +19,6 @@ Run a local database in one click, connect to any cloud, and browse, edit and qu
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b8bcc4?style=flat-square" alt="MIT License" /></a>
 </p>
 
-<a href="docs/assets/demo.mp4"><img src="docs/assets/demo.gif" alt="PostCompass in action" width="100%" /></a>
-
 </div>
 
 ## Why PostCompass

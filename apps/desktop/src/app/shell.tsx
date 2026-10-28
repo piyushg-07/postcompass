@@ -9,6 +9,7 @@ import { SettingsPage } from "../features/settings/settings-page";
 import { ErrorBoundary } from "./error-boundary";
 import { useNavigation } from "./navigation";
 import { Sidebar } from "./sidebar/sidebar";
+import { WindowFrame } from "./title-bar";
 import { useUiPrefs } from "./ui-prefs";
 import { useUpdateCheck } from "./updates";
 
@@ -31,46 +32,48 @@ export function Shell() {
   useAutoCollapse(inExplorer);
 
   return (
-    <div className="flex h-full">
-      <Sidebar />
+    <WindowFrame>
+      <div className="flex h-full">
+        <Sidebar />
 
-      {/* The explorer fills the window and scrolls inside its own panes. `clip` (unlike `hidden`)
+        {/* The explorer fills the window and scrolls inside its own panes. `clip` (unlike `hidden`)
           also stops focus and scrollIntoView from scrolling it, which pushed the header and tabs out of view. */}
-      <main
-        className={cn(
-          "min-w-0 flex-1",
-          inExplorer ? "overflow-clip" : "overflow-y-auto",
-        )}
-      >
-        <ErrorBoundary resetKey={`${section}:${openServerId}`}>
-          {section === "explorer" && openServerId ? (
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center text-fg-subtle">
-                  <Spinner />
-                </div>
-              }
-            >
-              <ExplorerPage
-                key={openServerId}
-                serverId={openServerId}
-                onClose={() => closeServer(openServerId)}
-              />
-            </Suspense>
-          ) : (
-            <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
-              {section === "home" && <HomePage />}
-              {section === "databases" && <DatabasesPage />}
-              {section === "settings" && <SettingsPage />}
-            </div>
+        <main
+          className={cn(
+            "min-w-0 flex-1",
+            inExplorer ? "overflow-clip" : "overflow-y-auto",
           )}
-        </ErrorBoundary>
-      </main>
+        >
+          <ErrorBoundary resetKey={`${section}:${openServerId}`}>
+            {section === "explorer" && openServerId ? (
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-fg-subtle">
+                    <Spinner />
+                  </div>
+                }
+              >
+                <ExplorerPage
+                  key={openServerId}
+                  serverId={openServerId}
+                  onClose={() => closeServer(openServerId)}
+                />
+              </Suspense>
+            ) : (
+              <div className="mx-auto flex max-w-5xl flex-col gap-8 px-8 py-8">
+                {section === "home" && <HomePage />}
+                {section === "databases" && <DatabasesPage />}
+                {section === "settings" && <SettingsPage />}
+              </div>
+            )}
+          </ErrorBoundary>
+        </main>
 
-      <CommandPalette />
-      <BackupDialog />
-      <RestoreDialog />
-    </div>
+        <CommandPalette />
+        <BackupDialog />
+        <RestoreDialog />
+      </div>
+    </WindowFrame>
   );
 }
 
