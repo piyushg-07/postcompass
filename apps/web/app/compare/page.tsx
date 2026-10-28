@@ -3,7 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionHeader from "@/components/ui/SectionHeader";
 import CompareTable from "@/components/compare/CompareTable";
-import { AppleIcon, ArrowRight, Check, Download, Github, LinuxIcon, Lock, WindowsIcon, X } from "@/components/ui/Icons";
+import { AppleIcon, Check, Download, Github, LinuxIcon, Lock, WindowsIcon, X } from "@/components/ui/Icons";
 import { PRODUCT, getDownloads } from "@/config/product";
 import { COMPARED_ON, SOURCES } from "@/config/compare";
 import { getLatestRelease } from "@/lib/release";
@@ -104,12 +104,6 @@ export default async function ComparePage() {
   const downloads = getDownloads(await getLatestRelease());
   const windowsSize = downloads.platforms.find((p) => p.platform === "windows")?.assets[0]?.size ?? "3 MB";
 
-  const STATS = [
-    { value: windowsSize, label: "Windows installer" },
-    { value: "1 click", label: "to a running PostgreSQL" },
-    { value: "$0", label: "every feature, MIT licensed" },
-    { value: "0", label: "telemetry, no account" },
-  ];
 
   const PROBLEMS = [
     {
@@ -140,67 +134,29 @@ export default async function ComparePage() {
       <Navbar />
       <main id="main-content">
         {/* Hero */}
-        <section className="relative overflow-hidden pt-36 pb-16 max-md:pt-28">
+        <section className="relative overflow-hidden pt-64 pb-32 max-md:pt-36 max-md:pb-16">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgb(var(--accent-rgb)/0.14),transparent_70%)]"
             aria-hidden="true"
           />
           <div className={`${CONTAINER} relative text-center`}>
-            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-line-accent bg-accent-muted px-3 py-1 text-xs font-semibold tracking-[0.05em] text-accent uppercase">
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-line-accent bg-accent-muted px-3 py-1 text-xs font-semibold tracking-[0.05em] text-accent uppercase">
               Why PostCompass
             </span>
-            <h1 className="mx-auto max-w-[860px] font-display text-[3.4rem] leading-[1.08] font-bold tracking-[-0.03em] text-fg max-lg:text-5xl max-md:text-4xl max-[480px]:text-[2rem]">
-              Every Postgres tool costs you something.{" "}
+            <h1 className="mx-auto font-display text-[3rem] leading-[1.1] font-bold tracking-[-0.03em] text-fg max-lg:text-5xl max-md:text-4xl max-[480px]:text-[2rem]">
+              Every Postgres tool costs you something.
+              {/* The answer always starts its own line, so "Setup," is never left dangling */}
+              <br />
               <em className="bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-light))] bg-clip-text font-medium text-transparent">
                 Setup, memory or money.
               </em>
             </h1>
-            <p className="mx-auto mt-6 max-w-[640px] text-lg leading-normal text-fg-secondary max-md:text-base">
-              PostCompass costs you none of them. Here&apos;s how it compares.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <a
-                href="/download"
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-accent px-5 font-mono text-[0.9rem] font-bold text-accent-fg [transition:background_0.2s_ease] hover:bg-accent-hover"
-              >
-                <Download size={16} /> Download free
-              </a>
-              <a
-                href="#comparison"
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] px-5 text-[0.9rem] font-medium text-fg-secondary [transition:border-color_0.15s_ease,color_0.15s_ease] hover:border-[rgba(255,255,255,0.25)] hover:text-white"
-              >
-                See the comparison <ArrowRight size={15} />
-              </a>
-            </div>
-
-            <dl
-              data-reveal="stagger"
-              className="mx-auto mt-16 grid max-w-[960px] grid-cols-4 overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] max-md:grid-cols-2"
-            >
-              {STATS.map((s) => (
-                <div
-                  key={s.label}
-                  className="border-[rgba(255,255,255,0.06)] px-4 py-6 not-first:border-l max-md:nth-3:border-l-0 max-md:nth-[n+3]:border-t"
-                >
-                  <dt className="sr-only">{s.label}</dt>
-                  <dd className="font-mono text-[1.9rem] leading-none font-bold tracking-[-0.03em] text-white max-md:text-2xl">
-                    {s.value}
-                  </dd>
-                  <dd className="mt-2 text-[0.8rem] text-fg-muted">{s.label}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
         </section>
 
         {/* Comparison */}
-        <section className={SECTION} id="comparison">
+        <section className="relative pb-24 max-lg:pb-16 max-md:pb-12" id="comparison">
           <div className={CONTAINER}>
-            <SectionHeader
-              badge="Side by side"
-              title="PostCompass and the alternatives"
-              description="Facts from each tool's own website. Unconfirmed cells are left blank."
-            />
             <CompareTable />
             <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.78rem] text-fg-muted">
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
