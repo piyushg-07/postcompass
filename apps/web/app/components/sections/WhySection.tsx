@@ -47,14 +47,18 @@ export default function WhySection() {
             </li>
           ))}
         </ul>
-        <div className="mt-10 text-center">
+        {/* Same psql-command style as the navbar's \download button */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
           <a
             href="/compare"
-            className="group/link inline-flex h-11 items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] px-5 text-[0.9rem] font-medium text-fg-secondary [transition:border-color_0.15s_ease,color_0.15s_ease] hover:border-[rgb(var(--accent-rgb)/0.45)] hover:text-white"
+            className="group/link moving-border inline-flex h-12 items-center rounded-[11px] px-6 font-mono text-[0.95rem] font-bold text-accent-light [transition:transform_0.2s_ease,color_0.2s_ease] hover:-translate-y-0.5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-pale)] active:translate-y-0 active:[transform:scale(0.97)]"
           >
-            Compare with pgAdmin, DBeaver, DataGrip and more
-            <ArrowRight size={15} className="[transition:transform_0.15s_ease] group-hover/link:translate-x-0.5" />
+            <span className="mr-px opacity-55">\</span>compare
+            <ArrowRight size={16} className="ml-2.5 [transition:transform_0.2s_ease] group-hover/link:translate-x-1" />
           </a>
+          <span className="font-mono text-[0.82rem] text-fg-muted">
+            vs pgAdmin, DBeaver, DataGrip <span className="text-fg-faint">+3</span>
+          </span>
         </div>
       </div>
     </section>

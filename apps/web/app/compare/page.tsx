@@ -28,6 +28,8 @@ const CARD =
 const VISUAL =
   "flex h-48 items-center justify-center border-b border-[rgba(255,255,255,0.06)] bg-[radial-gradient(ellipse_80%_90%_at_50%_0%,rgb(var(--accent-rgb)/0.08),transparent_70%)] px-6";
 const SECTION = "relative py-24 max-lg:py-16 max-md:py-12";
+/** Bento spans for the problem cards, in order: big, small, small, wide, small, small */
+const BENTO = ["col-span-2 row-span-2 max-[961px]:row-span-1", "", "", "col-span-2", "", ""];
 const CONTAINER = "mx-auto w-full max-w-[1200px] px-6 max-md:px-4";
 
 /* ---- The problem: three things other tools charge you ---- */
@@ -99,33 +101,103 @@ function PaywallVisual() {
   );
 }
 
+function EnginesVisual() {
+  const engines = ["MySQL", "SQL Server", "Oracle", "MongoDB", "SQLite", "Redis"];
+  return (
+    <div className="w-full max-w-[16rem] font-mono text-[0.72rem]" aria-hidden="true">
+      <div className="flex flex-wrap gap-[0.35rem]">
+        {engines.map((e) => (
+          <span key={e} className="rounded-[6px] border border-[rgba(255,255,255,0.07)] px-2 py-[0.2rem] text-fg-faint">
+            {e}
+          </span>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2 rounded-[8px] border border-[rgb(var(--accent-rgb)/0.3)] bg-[rgb(var(--accent-rgb)/0.08)] px-[0.6rem] py-[0.4rem] text-accent-pale">
+        <Check size={12} /> PostgreSQL, and nothing else
+      </div>
+    </div>
+  );
+}
+
+function PlanVisual() {
+  const lines = ["Hash Join (cost=12.4..431.0)", "  -> Seq Scan on orders", "  -> Hash (rows=1042 loops=1)"];
+  return (
+    <div className="w-full max-w-[16rem] font-mono text-[0.72rem]" aria-hidden="true">
+      <ul className="flex flex-col gap-[0.3rem] text-fg-faint">
+        {lines.map((l) => (
+          <li key={l} className="truncate whitespace-pre">
+            {l}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex items-center justify-between rounded-[8px] border border-[rgba(245,181,68,0.35)] bg-[rgba(245,181,68,0.08)] px-[0.6rem] py-[0.4rem] text-key-primary">
+        <span>Seq Scan on orders</span>
+        <span>slowest</span>
+      </div>
+    </div>
+  );
+}
+
+function AccountVisual() {
+  const asks = ["Create an account", "Activate online", "Send usage data"];
+  return (
+    <div className="flex w-full max-w-[16rem] flex-col gap-[0.45rem] text-[0.8rem]" aria-hidden="true">
+      {asks.map((a) => (
+        <div
+          key={a}
+          className="flex items-center justify-between rounded-[8px] border border-[rgba(255,255,255,0.07)] bg-[rgba(10,12,11,0.8)] px-3 py-[0.45rem] text-fg-muted"
+        >
+          {a}
+          <X size={11} className="text-fg-faint" />
+        </div>
+      ))}
+      <div className="mt-1 flex items-center justify-center gap-1.5 font-mono text-[0.72rem] text-accent-pale">
+        <Check size={12} /> Just open the app
+      </div>
+    </div>
+  );
+}
 
 export default async function ComparePage() {
   const downloads = getDownloads(await getLatestRelease());
   const windowsSize = downloads.platforms.find((p) => p.platform === "windows")?.assets[0]?.size ?? "3 MB";
 
-
   const PROBLEMS = [
     {
       visual: <SetupVisual />,
-      tag: "The setup tax",
-      title: "A database before you can use your database tool",
-      text: "Every other client assumes PostgreSQL is already running. Getting there means installers, admin rights, services, or Docker.",
-      answer: "PostCompass downloads, verifies and runs PostgreSQL 14 to 18 for you.",
+      title: "Postgres before your Postgres tool",
+      text: "Installers, admin rights or Docker, just to start.",
+      answer: "One click runs PostgreSQL 14 to 18.",
     },
     {
       visual: <WeightVisual size={windowsSize} />,
-      tag: "The weight",
       title: "A whole runtime for a table viewer",
-      text: "Most clients ship a Java VM, a copy of Chromium, or both. That's a big download, slower starts and memory you'd rather give your database.",
-      answer: "PostCompass is built in Rust and uses the webview already in your OS.",
+      text: "Java or Chromium inside. Slow starts, more memory.",
+      answer: "Built in Rust on your OS's webview.",
     },
     {
       visual: <PaywallVisual />,
-      tag: "The paywall",
       title: "The useful parts cost extra",
-      text: "Free editions often stop short: diagrams, query-plan graphs or import and export move to a paid plan, per seat, per year.",
-      answer: "PostCompass has one edition. Everything is in it, free.",
+      text: "Diagrams and plan graphs behind paid tiers.",
+      answer: "One edition. Everything is free.",
+    },
+    {
+      visual: <EnginesVisual />,
+      title: "Built for every database but yours",
+      text: "Menus for engines you never touch.",
+      answer: "Made only for PostgreSQL.",
+    },
+    {
+      visual: <PlanVisual />,
+      title: "Query plans you can't read",
+      text: "EXPLAIN output as a wall of text.",
+      answer: "A tree with the slowest step highlighted.",
+    },
+    {
+      visual: <AccountVisual />,
+      title: "Sign in to see your own data",
+      text: "Accounts, activation and telemetry.",
+      answer: "No account. No telemetry.",
     },
   ];
 
@@ -192,24 +264,38 @@ export default async function ComparePage() {
           <div className={CONTAINER}>
             <SectionHeader
               badge="The problem"
-              title="Three taxes every Postgres developer pays"
-              description="Pick any popular client and you pay at least one of them."
+              title="What Postgres developers put up with"
             />
-            <ul data-reveal="stagger" className="grid grid-cols-3 gap-5 max-[861px]:grid-cols-1">
-              {PROBLEMS.map(({ visual, tag, title, text, answer }) => (
-                <li key={tag} className={CARD}>
-                  <div className={VISUAL}>{visual}</div>
-                  <div className="flex flex-1 flex-col px-6 pt-5 pb-6">
-                    <span className="font-mono text-[0.72rem] tracking-[0.04em] text-fg-faint uppercase">{tag}</span>
-                    <h3 className="mt-2 mb-2 text-[1.15rem] font-[650] tracking-[-0.015em] text-fg">{title}</h3>
-                    <p className="mb-5 text-[0.925rem] leading-[1.6] text-fg-secondary">{text}</p>
-                    <p className="mt-auto flex gap-2 border-t border-[rgba(255,255,255,0.06)] pt-4 text-[0.875rem] leading-snug text-accent-pale">
-                      <Check size={15} className="mt-[0.15rem] shrink-0 text-accent-light" />
+            {/* Bento: a big first card, then smaller and wide ones around it, closing with a download tile */}
+            <ul
+              data-reveal="stagger"
+              className="grid grid-cols-4 gap-4 max-[961px]:grid-cols-2 max-[640px]:grid-cols-1 max-[640px]:[&>li]:col-span-1"
+            >
+              {PROBLEMS.map(({ visual, title, text, answer }, i) => (
+                <li key={title} className={`${CARD} ${BENTO[i] ?? ""}`}>
+                  <div className={`${VISUAL} ${i === 0 ? "h-auto min-h-48 flex-1 [&>*]:scale-[1.25] max-[961px]:[&>*]:scale-100" : ""}`}>{visual}</div>
+                  <div className={`flex flex-col px-6 pt-5 pb-6 ${i === 0 ? "" : "flex-1"}`}>
+                    <h3 className="text-[1.1rem] font-[650] tracking-[-0.015em] text-fg">{title}</h3>
+                    <p className="mt-1 mb-5 text-[0.9rem] text-fg-muted">{text}</p>
+                    <p className="mt-auto flex items-center gap-2 border-t border-[rgba(255,255,255,0.06)] pt-4 text-[0.875rem] text-accent-pale">
+                      <Check size={14} className="shrink-0 text-accent-light" />
                       {answer}
                     </p>
                   </div>
                 </li>
               ))}
+              <li className="relative col-span-2 flex flex-col items-start justify-center overflow-hidden rounded-[16px] border border-[rgb(var(--accent-rgb)/0.3)] bg-[radial-gradient(ellipse_80%_100%_at_100%_0%,rgb(var(--accent-rgb)/0.16),transparent_70%)] p-8 max-md:p-6">
+                <span className="font-mono text-[0.72rem] tracking-[0.04em] text-accent uppercase">The fix</span>
+                <h3 className="mt-2 font-display text-[1.9rem] leading-tight font-bold tracking-[-0.02em] text-fg max-md:text-2xl">
+                  Six problems. One free app.
+                </h3>
+                <a
+                  href="/download"
+                  className="mt-6 inline-flex h-11 items-center gap-2 rounded-[10px] bg-accent px-5 font-mono text-[0.9rem] font-bold text-accent-fg [transition:background_0.2s_ease] hover:bg-accent-hover"
+                >
+                  <Download size={16} /> Download free
+                </a>
+              </li>
             </ul>
           </div>
         </section>
