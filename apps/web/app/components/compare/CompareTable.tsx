@@ -72,12 +72,18 @@ export default function CompareTable() {
                 <th
                   key={t.id}
                   scope="col"
-                  className={`px-3 py-5 align-bottom ${ours ? "relative bg-[rgb(var(--accent-rgb)/0.07)]" : ""}`}
+                  className={`px-3 py-5 align-top ${ours ? "relative bg-[rgb(var(--accent-rgb)/0.07)]" : ""}`}
                 >
                   {ours && (
                     <span className="absolute top-0 right-0 left-0 h-[2px] bg-[linear-gradient(90deg,transparent,var(--color-accent-light),transparent)]" />
                   )}
-                  <span className={`block text-[0.9rem] font-semibold tracking-[-0.01em] ${ours ? "text-white" : "text-fg-secondary"}`}>
+                  <span
+                    className={`mx-auto mb-2.5 flex size-10 items-center justify-center rounded-[10px] border ${ours ? "border-[rgb(var(--accent-rgb)/0.35)] bg-[rgb(var(--accent-rgb)/0.1)] shadow-[0_0_18px_rgb(var(--accent-rgb)/0.25)]" : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)]"}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={t.logo} alt="" width={26} height={26} className="size-[26px] rounded-[6px] object-contain" loading="lazy" />
+                  </span>
+                  <span className={`block text-[0.9rem] font-semibold tracking-[-0.01em] whitespace-nowrap ${ours ? "text-white" : "text-fg-secondary"}`}>
                     {t.name}
                   </span>
                   <span className="mt-1 block font-mono text-[0.66rem] font-normal text-fg-faint">{t.runtime}</span>

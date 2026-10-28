@@ -199,7 +199,7 @@ export default async function ComparePage() {
             <SectionHeader
               badge="Side by side"
               title="PostCompass and the alternatives"
-              description="Checked against each tool's own website. Where we couldn't confirm something, we left it blank."
+              description="Facts from each tool's own website. Unconfirmed cells are left blank."
             />
             <CompareTable />
             <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.78rem] text-fg-muted">

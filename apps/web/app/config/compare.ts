@@ -11,16 +11,18 @@ export interface Tool {
   /** What the app ships with, i.e. what you're really installing */
   runtime: string;
   url: string;
+  /** Official icon, from the tool's own site or repository (public/compare/) */
+  logo: string;
 }
 
 export const TOOLS: Tool[] = [
-  { id: "postcompass", name: "PostCompass", runtime: "Rust + system webview", url: "https://github.com/piyushg-07/postcompass" },
-  { id: "pgadmin", name: "pgAdmin 4", runtime: "Python web app in Electron", url: "https://www.pgadmin.org/download/" },
-  { id: "dbeaver", name: "DBeaver", runtime: "Java (Eclipse) + bundled JDK", url: "https://dbeaver.com/edition/" },
-  { id: "datagrip", name: "DataGrip", runtime: "Java (IntelliJ platform)", url: "https://www.jetbrains.com/datagrip/buy/" },
-  { id: "tableplus", name: "TablePlus", runtime: "Native", url: "https://tableplus.com/pricing" },
-  { id: "beekeeper", name: "Beekeeper Studio", runtime: "Electron", url: "https://www.beekeeperstudio.io/pricing" },
-  { id: "postico", name: "Postico 2", runtime: "Native (macOS only)", url: "https://eggerapps.at/postico2/buy.html" },
+  { id: "postcompass", name: "PostCompass", runtime: "Rust + system webview", url: "https://github.com/piyushg-07/postcompass", logo: "/logo.png" },
+  { id: "pgadmin", name: "pgAdmin 4", runtime: "Python web app in Electron", url: "https://www.pgadmin.org/download/", logo: "/compare/pgadmin.png" },
+  { id: "dbeaver", name: "DBeaver", runtime: "Java (Eclipse) + bundled JDK", url: "https://dbeaver.com/edition/", logo: "/compare/dbeaver.png" },
+  { id: "datagrip", name: "DataGrip", runtime: "Java (IntelliJ platform)", url: "https://www.jetbrains.com/datagrip/buy/", logo: "/compare/datagrip.svg" },
+  { id: "tableplus", name: "TablePlus", runtime: "Native", url: "https://tableplus.com/pricing", logo: "/compare/tableplus.png" },
+  { id: "beekeeper", name: "Beekeeper Studio", runtime: "Electron", url: "https://www.beekeeperstudio.io/pricing", logo: "/compare/beekeeper.svg" },
+  { id: "postico", name: "Postico 2", runtime: "Native (macOS only)", url: "https://eggerapps.at/postico2/buy.html", logo: "/compare/postico.png" },
 ];
 
 /** yes / no / partial (with a note), or unknown when we couldn't verify it */
