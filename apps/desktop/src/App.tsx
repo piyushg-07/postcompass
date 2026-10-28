@@ -4,6 +4,7 @@ import { lazy, Suspense } from "react";
 import { AppStateGate, useAppState } from "./app/app-state";
 import { ErrorBoundary } from "./app/error-boundary";
 import { Shell } from "./app/shell";
+import { WindowFrame } from "./app/title-bar";
 import { Onboarding } from "./features/onboarding/onboarding";
 import { queryClient } from "./lib/query";
 
@@ -23,9 +24,11 @@ export function App() {
         <ErrorBoundary>
           <AppStateGate
             fallback={
-              <div className="flex h-full items-center justify-center text-fg-subtle">
-                <Spinner />
-              </div>
+              <WindowFrame>
+                <div className="flex h-full items-center justify-center text-fg-subtle">
+                  <Spinner />
+                </div>
+              </WindowFrame>
             }
           >
             <Root />
@@ -43,5 +46,11 @@ export function App() {
 /** First launch shows onboarding; afterwards the main app. */
 function Root() {
   const { state } = useAppState();
-  return state.profile ? <Shell /> : <Onboarding />;
+  return state.profile ? (
+    <Shell />
+  ) : (
+    <WindowFrame>
+      <Onboarding />
+    </WindowFrame>
+  );
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-28
+
+### Changed
+
+- New title bar that matches the app: the PostCompass name with our own minimize, maximize and close buttons on Windows and Linux. macOS keeps its native window buttons, with the name centered.
+
 ## [0.1.1] - 2026-10-27
 
 ### Removed
@@ -73,6 +79,7 @@ The first public release of PostCompass, a fast, modern desktop app for PostgreS
 - Installers for Windows (`.exe`), macOS Apple Silicon and Intel (`.dmg`, ad-hoc signed) and Linux (`.AppImage`, `.deb`, `.rpm`), built by GitHub Actions.
 - Contributor docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, issue forms and a pull request template.
 
-[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/piyushg-07/postcompass/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/piyushg-07/postcompass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/piyushg-07/postcompass/releases/tag/v0.1.0

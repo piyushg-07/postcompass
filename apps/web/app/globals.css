@@ -122,6 +122,52 @@
 }
 
 /* ============================================================
+   Moving border (the home page compare button): a light travels around
+   a transparent button. The page color fills the inside (padding-box)
+   and a turning conic gradient shows only in the 1px border.
+   ============================================================ */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.moving-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-root), var(--color-root)) padding-box,
+    conic-gradient(
+        from var(--border-angle),
+        rgba(255, 255, 255, 0.12) 0% 55%,
+        var(--color-accent-light) 75%,
+        rgba(255, 255, 255, 0.12) 90%
+      )
+      border-box;
+  box-shadow: 0 0 22px -6px rgb(var(--accent-rgb) / 0.45);
+  transition: box-shadow 0.2s ease;
+  animation: border-turn 4s linear infinite;
+}
+
+.moving-border:hover {
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    conic-gradient(
+        from var(--border-angle),
+        rgba(255, 255, 255, 0.2) 0% 55%,
+        var(--color-accent-light) 75%,
+        rgba(255, 255, 255, 0.2) 90%
+      )
+      border-box;
+  box-shadow: 0 0 30px -4px rgb(var(--accent-rgb) / 0.6);
+}
+
+@keyframes border-turn {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+/* ============================================================
    Scroll reveal (ScrollReveal.tsx): content glides up as it comes into view.
    Added and removed by script, so it lives here rather than in markup.
    ============================================================ */
