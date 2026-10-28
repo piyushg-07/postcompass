@@ -18,6 +18,7 @@ interface Table {
 
 const TABLES: Table[] = [
   { name: "features", id: "features", about: "what PostCompass does" },
+  { name: "why", id: "why", about: "how it compares with other tools" },
   { name: "how_it_works", id: "how-it-works", about: "three steps to your first query" },
   { name: "download", id: "download", about: "installers for every OS" },
   { name: "faq", id: "faq", about: "questions, answered" },
