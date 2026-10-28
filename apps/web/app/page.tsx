@@ -2,6 +2,7 @@ import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/sections/Hero";
 import FeaturesSection from "@/components/sections/FeaturesSection";
 import HowItWorks from "@/components/sections/HowItWorks";
+import WhySection from "@/components/sections/WhySection";
 import DownloadSection from "@/components/sections/DownloadSection";
 import FaqSection from "@/components/sections/FaqSection";
 import Footer from "@/components/layout/Footer";
@@ -18,6 +19,7 @@ export default async function Home() {
       <main id="main-content">
         <Hero version={downloads.version} />
         <FeaturesSection />
+        <WhySection />
         <HowItWorks />
         <DownloadSection downloads={downloads} />
         <FaqSection />
