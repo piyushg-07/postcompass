@@ -139,6 +139,11 @@ export default async function ComparePage() {
             className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgb(var(--accent-rgb)/0.14),transparent_70%)]"
             aria-hidden="true"
           />
+          {/* Faint dot grid that fades out towards the edges */}
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_55%_60%_at_50%_45%,black_20%,transparent_75%)]"
+            aria-hidden="true"
+          />
           <div className={`${CONTAINER} relative text-center`}>
             <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-line-accent bg-accent-muted px-3 py-1 text-xs font-semibold tracking-[0.05em] text-accent uppercase">
               Why PostCompass
