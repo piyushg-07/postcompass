@@ -6,7 +6,7 @@
 - Download: https://www.postcompass.cloud/download
 - Source code: https://github.com/piyushg-07/postcompass
 - License: MIT. Free, with no account and no paid tier.
-- Current version: 0.1.1
+- Current version: 0.1.2
 
 ## What it is for
 

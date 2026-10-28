@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "desktop"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "driver-postgres",
  "futures-util",
@@ -1095,7 +1095,7 @@ dependencies = [
 
 [[package]]
 name = "driver-postgres"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "futures-util",
@@ -3120,7 +3120,7 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pc-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "serde",
@@ -3710,7 +3710,7 @@ dependencies = [
 
 [[package]]
 name = "runtime-postgres"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "driver-postgres",
