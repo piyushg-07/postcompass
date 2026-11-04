@@ -249,6 +249,27 @@ pub struct RestoreResult {
     pub duration_ms: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyRequest {
+    /// Database to read on the cloud server; often the connection's default, or the one open in the explorer.
+    pub source_database: String,
+    /// New database to create on the local server.
+    pub database: String,
+    /// Tables, views and functions without their rows: quick, and no production data on this computer.
+    pub schema_only: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyResult {
+    pub database: String,
+    pub size_bytes: f64,
+    pub duration_ms: u32,
+    /// Objects the local server couldn't create (e.g. an extension it doesn't have). The rest is copied.
+    pub skipped: u32,
+}
+
 /// How command-line tools reach the server.
 #[derive(Clone)]
 pub struct ToolConnection {
@@ -256,6 +277,10 @@ pub struct ToolConnection {
     pub port: u16,
     pub user: String,
     pub password: String,
+    /// libpq `sslmode` (`disable`, `prefer`, `require`, `verify-full`); `None` leaves libpq's default.
+    pub ssl_mode: Option<&'static str>,
+    /// libpq `sslrootcert`: a CA file, or `system` for the OS trust store (libpq 16+).
+    pub ssl_root_cert: Option<String>,
 }
 
 /* ── The interface ────────────────────────────────────────────────────── */

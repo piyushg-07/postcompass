@@ -87,6 +87,11 @@ export const commands = {
 	backupDatabase: (serverId: string, request: BackupRequest, jobId: string, onLog: Channel<string>) => typedError<BackupResult, CoreError>(__TAURI_INVOKE("backup_database", { serverId, request, jobId, onLog })),
 	/**  Restores a backup file (either format, detected automatically) in one transaction. */
 	restoreDatabase: (serverId: string, request: RestoreRequest, jobId: string, onLog: Channel<string>) => typedError<RestoreResult, CoreError>(__TAURI_INVOKE("restore_database", { serverId, request, jobId, onLog })),
+	/**
+	 *  Copies a saved cloud connection's database into a new database on a local server. The cloud
+	 *  database is only read. Progress lines stream over `on_log`; `job_id` lets `cancel_job` stop it.
+	 */
+	copyToLocal: (remoteId: string, serverId: string, request: CopyRequest, jobId: string, onLog: Channel<string>) => typedError<CopyResult, CoreError>(__TAURI_INVOKE("copy_to_local", { remoteId, serverId, request, jobId, onLog })),
 	cancelJob: (jobId: string) => typedError<null, CoreError>(__TAURI_INVOKE("cancel_job", { jobId })),
 };
 
@@ -179,6 +184,23 @@ export type ConstraintInfo = {
 };
 
 export type ConstraintKind = "check" | "unique" | "exclusion";
+
+export type CopyRequest = {
+	/**  Database to read on the cloud server; often the connection's default, or the one open in the explorer. */
+	sourceDatabase: string,
+	/**  New database to create on the local server. */
+	database: string,
+	/**  Tables, views and functions without their rows: quick, and no production data on this computer. */
+	schemaOnly: boolean,
+};
+
+export type CopyResult = {
+	database: string,
+	sizeBytes: number | null,
+	durationMs: number,
+	/**  Objects the local server couldn't create (e.g. an extension it doesn't have). The rest is copied. */
+	skipped: number,
+};
 
 export type CoreError = {
 	code: ErrorCode,

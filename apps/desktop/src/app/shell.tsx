@@ -1,7 +1,11 @@
 import { cn, Spinner } from "@repo/ui";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { BackupDialog, RestoreDialog } from "../features/backup/backup-dialogs";
+import {
+  BackupDialog,
+  CopyToLocalDialog,
+  RestoreDialog,
+} from "../features/backup/backup-dialogs";
 import { HomePage } from "../features/home/home-page";
 import { CommandPalette } from "../features/palette/command-palette";
 import { DatabasesPage } from "../features/servers/databases-page";
@@ -72,6 +76,7 @@ export function Shell() {
         <CommandPalette />
         <BackupDialog />
         <RestoreDialog />
+        <CopyToLocalDialog />
       </div>
     </WindowFrame>
   );

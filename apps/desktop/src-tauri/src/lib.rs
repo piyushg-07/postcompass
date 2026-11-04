@@ -61,6 +61,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         data::explain_sql,
         backup::backup_database,
         backup::restore_database,
+        backup::copy_to_local,
         backup::cancel_job,
     ])
 }

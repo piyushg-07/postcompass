@@ -1,12 +1,27 @@
-import { Button, EmptyState } from "@repo/ui";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  EmptyState,
+  IconButton,
+} from "@repo/ui";
 import { LocalServerLogo, ProviderLogo } from "../servers/provider-logos";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Unplug } from "lucide-react";
+import {
+  ChevronRight,
+  HardDriveDownload,
+  MoreHorizontal,
+  Unplug,
+} from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useAppState } from "../../app/app-state";
 import { commands, describeError, unwrap } from "../../lib/ipc";
 import { queryKeys } from "../../lib/query";
+import { useBackupDialogs } from "../backup/backup-store";
 import { ConnectButton } from "./connect-dialog";
 import { ConnectionBanner } from "./connection-banner";
 import { CreateTableSheet } from "./create-table-sheet";
@@ -170,14 +185,37 @@ export function ExplorerPage({
         {connection.data && server && (
           <ConnectButton server={server} database={database} />
         )}
-        <Button
-          size="sm"
-          variant="ghost"
-          iconLeft={<Unplug />}
-          onClick={() => void disconnect()}
-        >
-          Disconnect
-        </Button>
+        {/* Less common actions in one menu, so the header stays quiet */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton size="sm" label="Connection actions" icon={<MoreHorizontal />} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {/* Cloud databases only: the one open now, so a switched database is the one copied */}
+            {connection.data && remote && (
+              <>
+                <DropdownMenuItem
+                  icon={<HardDriveDownload />}
+                  onSelect={() =>
+                    useBackupDialogs
+                      .getState()
+                      .openCopy({ remoteId: remote.id, database })
+                  }
+                >
+                  Copy to local…
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem
+              icon={<Unplug />}
+              danger
+              onSelect={() => void disconnect()}
+            >
+              Disconnect
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
