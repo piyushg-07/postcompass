@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-04
+
+### Added
+
+- Copy to local: copy any saved cloud database (AWS RDS, Neon, Supabase, Azure…) into a new database on a local server, to debug production issues safely. Choose structure and data, or structure only to keep production data off your computer. The cloud database is only read. Open it from a connection's menu or from the explorer's actions menu.
+
+### Changed
+
+- Disconnect moved into the new actions menu at the top right of the explorer.
+
+### Fixed
+
+- Long lines in backup, restore and install logs now wrap and stay inside the log box.
+
 ## [0.1.2] - 2026-10-28
 
 ### Changed
@@ -79,7 +93,8 @@ The first public release of PostCompass, a fast, modern desktop app for PostgreS
 - Installers for Windows (`.exe`), macOS Apple Silicon and Intel (`.dmg`, ad-hoc signed) and Linux (`.AppImage`, `.deb`, `.rpm`), built by GitHub Actions.
 - Contributor docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, issue forms and a pull request template.
 
-[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/piyushg-07/postcompass/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/piyushg-07/postcompass/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/piyushg-07/postcompass/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/piyushg-07/postcompass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/piyushg-07/postcompass/releases/tag/v0.1.0
