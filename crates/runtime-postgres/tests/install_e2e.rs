@@ -218,6 +218,8 @@ async fn exercise_backup_restore(
         port: config.port,
         user: config.user.clone(),
         password: config.password.clone(),
+        ssl_mode: None,
+        ssl_root_cert: None,
     };
     let lines = Arc::new(Mutex::new(Vec::<String>::new()));
     let sink = lines.clone();

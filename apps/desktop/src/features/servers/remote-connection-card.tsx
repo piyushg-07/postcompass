@@ -11,12 +11,19 @@ import {
   toast,
 } from "@repo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Copy,
+  HardDriveDownload,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useAppState } from "../../app/app-state";
 import { useNavigation } from "../../app/navigation";
 import type { RemoteConnection } from "../../lib/bindings";
 import { commands, describeError, unwrap } from "../../lib/ipc";
+import { useBackupDialogs } from "../backup/backup-store";
 import { useWorkspaceStore } from "../explorer/workspace-store";
 import { forgetConnection } from "./connection-cache";
 import { PROVIDER_LOGOS, ProviderLogo } from "./provider-logos";
@@ -81,6 +88,7 @@ export function RemoteConnectionCard({ remote }: { remote: RemoteConnection }) {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem icon={<Pencil />} onSelect={() => openRemoteDialog(remote.id)}>Edit connection</DropdownMenuItem>
                 <DropdownMenuItem icon={<Copy />} onSelect={copyConnectionString}>Copy connection string</DropdownMenuItem>
+                <DropdownMenuItem icon={<HardDriveDownload />} onSelect={() => useBackupDialogs.getState().openCopy({ remoteId: remote.id, database: remote.database })}>Copy to local…</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem icon={<Trash2 />} danger onSelect={() => setConfirmRemove(true)}>Remove connection…</DropdownMenuItem>
               </DropdownMenuContent>

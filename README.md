@@ -32,6 +32,7 @@ Run a local database in one click, connect to any cloud, and browse, edit and qu
 
 - **PostgreSQL in one click:** install versions 14 to 18, start and stop servers, back up and restore.
 - **Every cloud:** AWS RDS / Aurora, Google Cloud SQL, Azure, Alibaba Cloud, Oracle Cloud, DigitalOcean, Heroku Postgres, Neon, Railway, Render, Cloudflare Hyperdrive, or any PostgreSQL server.
+- **Copy to local:** copy any cloud database into a local server in one click, with or without its data, to debug production issues safely.
 - **Table editor:** inline edits that save instantly, filters, sorting, CSV import and export, and foreign-key navigation.
 - **SQL editor:** autocomplete for your schema, query history, saved queries and charts.
 - **Visual EXPLAIN:** see your query plan as a tree, with the slowest step highlighted.

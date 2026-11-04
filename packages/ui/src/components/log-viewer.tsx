@@ -28,7 +28,8 @@ export function LogViewer({ lines, className, emptyText = "No output yet." }: { 
   };
 
   return (
-    <div className={cn("relative rounded-control border border-border bg-bg", className)}>
+    // A flex column that clips, so a `max-h-*` passed in `className` limits the scrolling area inside
+    <div className={cn("relative flex flex-col overflow-hidden rounded-control border border-border bg-bg", className)}>
       <button
         type="button"
         onClick={() => void copy()}
@@ -43,7 +44,7 @@ export function LogViewer({ lines, className, emptyText = "No output yet." }: { 
           const el = e.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
         }}
-        className="max-h-56 overflow-auto p-3 pr-9 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-fg-muted select-text"
+        className="max-h-56 min-h-0 flex-1 overflow-auto p-3 pr-9 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-fg-muted select-text [overflow-wrap:anywhere]"
       >
         {lines.length ? lines.join("\n") : <span className="text-fg-subtle">{emptyText}</span>}
       </pre>

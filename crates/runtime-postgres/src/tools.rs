@@ -1,12 +1,12 @@
-//! Backup and restore with PostgreSQL's own tools (`pg_dump`, `pg_restore`, `psql`, `createdb`).
+//! Backup, restore and copy with PostgreSQL's own tools (`pg_dump`, `pg_restore`, `psql`, `createdb`, `dropdb`).
 //! Passwords go through `PGPASSWORD`, never the command line.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use pc_core::runtime::{
-    BackupContent, BackupFormat, BackupRequest, BackupResult, CancellationToken, RestoreRequest,
-    RestoreResult, ToolConnection,
+    BackupContent, BackupFormat, BackupRequest, BackupResult, CancellationToken, CopyRequest,
+    CopyResult, RestoreRequest, RestoreResult, ToolConnection,
 };
 use pc_core::{CoreError, CoreResult};
 use tokio::process::Command;
@@ -41,6 +41,15 @@ fn command(bin_dir: &Path, name: &str, conn: &ToolConnection) -> CoreResult<Comm
     ])
     .env("PGPASSWORD", &conn.password)
     .env("PGCONNECT_TIMEOUT", "10");
+    // Set or cleared explicitly, so a PGSSLMODE in the user's environment never applies by accident
+    match conn.ssl_mode {
+        Some(mode) => cmd.env("PGSSLMODE", mode),
+        None => cmd.env_remove("PGSSLMODE"),
+    };
+    match &conn.ssl_root_cert {
+        Some(cert) => cmd.env("PGSSLROOTCERT", cert),
+        None => cmd.env_remove("PGSSLROOTCERT"),
+    };
     Ok(cmd)
 }
 
@@ -228,9 +237,183 @@ pub async fn restore(
     })
 }
 
+/// `532 KB`, `12.4 MB`: small schema-only dumps would otherwise all read "0.0 MB".
+fn human_size(bytes: u64) -> String {
+    if bytes < 1_048_576 {
+        format!("{} KB", bytes.div_ceil(1024))
+    } else {
+        format!("{:.1} MB", bytes as f64 / 1_048_576.0)
+    }
+}
+
+/// What `pg_restore` prints last when it carried on past errors, followed by how many.
+const ERRORS_IGNORED: &str = "errors ignored on restore:";
+
+fn skipped_count(line: &str) -> Option<u32> {
+    let at = line.find(ERRORS_IGNORED)? + ERRORS_IGNORED.len();
+    line[at..].trim().parse().ok()
+}
+
+/// Copies `source_db` from `source` (usually a cloud server) into a new database on `target`, using
+/// the target's own tools: dump to `temp_dir`, create the database, restore. The restore carries on
+/// past objects the target can't create (an extension it doesn't have, a cloud-only role…) and
+/// reports how many it skipped. On failure or cancel the new database is removed again, and the
+/// dump file is always deleted.
+#[allow(clippy::too_many_arguments)]
+pub async fn copy(
+    bin_dir: &Path,
+    source: &ToolConnection,
+    source_db: &str,
+    target: &ToolConnection,
+    request: &CopyRequest,
+    temp_dir: &Path,
+    log: &(dyn Fn(String) + Send + Sync),
+    cancel: &CancellationToken,
+) -> CoreResult<CopyResult> {
+    let started = Instant::now();
+    tokio::fs::create_dir_all(temp_dir)
+        .await
+        .map_err(|e| CoreError::io("could not create a temporary folder", e))?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let dump = temp_dir.join(format!("copy-{}-{stamp}.dump", std::process::id()));
+
+    let result = copy_via(
+        bin_dir, source, source_db, target, request, &dump, log, cancel,
+    )
+    .await;
+    let _ = tokio::fs::remove_file(&dump).await;
+    let (size, skipped) = result?;
+    Ok(CopyResult {
+        database: request.database.clone(),
+        size_bytes: size as f64,
+        duration_ms: elapsed_ms(started),
+        skipped,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn copy_via(
+    bin_dir: &Path,
+    source: &ToolConnection,
+    source_db: &str,
+    target: &ToolConnection,
+    request: &CopyRequest,
+    dump: &Path,
+    log: &(dyn Fn(String) + Send + Sync),
+    cancel: &CancellationToken,
+) -> CoreResult<(u64, u32)> {
+    let mut cmd = command(bin_dir, "pg_dump", source)?;
+    cmd.args([
+        "--verbose",
+        "--no-password",
+        "--format=custom",
+        // Cloud roles don't exist locally; everything is owned by the local superuser instead
+        "--no-owner",
+        "--no-privileges",
+        "--dbname",
+        &dbname_arg(source_db),
+    ])
+    .arg("--file")
+    .arg(dump);
+    if request.schema_only {
+        cmd.arg("--schema-only");
+    }
+    log(format!("Reading {source_db} from {}", source.host));
+    process::run_streaming(cmd, log, cancel).await?;
+    let size = tokio::fs::metadata(dump)
+        .await
+        .map(|m| m.len())
+        .unwrap_or(0);
+    log(format!("Read {}", human_size(size)));
+
+    let mut create = command(bin_dir, "createdb", target)?;
+    create.args(["--no-password", "--echo", "--", &request.database]);
+    process::run_streaming(create, log, cancel).await?;
+
+    match restore_tolerant(bin_dir, target, &request.database, dump, log, cancel).await {
+        Ok(skipped) => Ok((size, skipped)),
+        Err(e) => {
+            log(format!(
+                "Removing {} after the failed copy",
+                request.database
+            ));
+            let mut drop = command(bin_dir, "dropdb", target)?;
+            drop.args(["--no-password", "--if-exists", "--", &request.database]);
+            // Its own token: the cleanup has to run even when the copy was cancelled
+            let _ = process::run_streaming(drop, log, &CancellationToken::new()).await;
+            Err(e)
+        }
+    }
+}
+
+/// `pg_restore` without `--exit-on-error`: objects that fail are skipped and counted, the rest restores.
+async fn restore_tolerant(
+    bin_dir: &Path,
+    conn: &ToolConnection,
+    database: &str,
+    dump: &Path,
+    log: &(dyn Fn(String) + Send + Sync),
+    cancel: &CancellationToken,
+) -> CoreResult<u32> {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    let mut cmd = command(bin_dir, "pg_restore", conn)?;
+    cmd.args([
+        "--verbose",
+        "--no-password",
+        "--no-owner",
+        "--no-privileges",
+        "--dbname",
+        &dbname_arg(database),
+    ])
+    .arg(dump);
+    log(format!("Restoring into {database}"));
+
+    let skipped = AtomicU32::new(0);
+    let watch = |line: String| {
+        if let Some(n) = skipped_count(&line) {
+            skipped.store(n, Ordering::Relaxed);
+        }
+        log(line);
+    };
+    match process::run_streaming(cmd, &watch, cancel).await {
+        Ok(()) => Ok(0),
+        // It exits non-zero after skipping something; only then is that a partial success
+        Err(CoreError::ProcessFailed { .. }) if skipped.load(Ordering::Relaxed) > 0 => {
+            let n = skipped.load(Ordering::Relaxed);
+            log(format!(
+                "Copy complete; {n} object(s) couldn't be created locally"
+            ));
+            Ok(n)
+        }
+        Err(e) => Err(e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sizes_read_naturally() {
+        assert_eq!(human_size(35_204), "35 KB");
+        assert_eq!(human_size(13_002_342), "12.4 MB");
+    }
+
+    #[test]
+    fn reads_the_skipped_count() {
+        assert_eq!(
+            skipped_count("pg_restore: warning: errors ignored on restore: 3"),
+            Some(3)
+        );
+        assert_eq!(
+            skipped_count("pg_restore: creating TABLE public.users"),
+            None
+        );
+    }
 
     #[test]
     fn quotes_database_names_as_conninfo() {

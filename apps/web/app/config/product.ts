@@ -6,7 +6,7 @@ export const PRODUCT = {
   description:
     "Spin up a local PostgreSQL database in one click, connect to any cloud, and browse, edit and query your data in one fast native app. Free and open source.",
   // Fallback only: the site shows the latest GitHub release when it can reach GitHub (see release.ts)
-  version: "0.1.2",
+  version: "0.1.3",
   license: "MIT",
   github: "https://github.com/piyushg-07/postcompass",
   website: "https://www.postcompass.cloud",

@@ -6,7 +6,7 @@
 - Download: https://www.postcompass.cloud/download
 - Source code: https://github.com/piyushg-07/postcompass
 - License: MIT. Free, with no account and no paid tier.
-- Current version: 0.1.2
+- Current version: 0.1.3
 
 ## What it is for
 
@@ -23,6 +23,7 @@ PostCompass is for developers who work with PostgreSQL day to day. It does two j
 - Servers listen only on 127.0.0.1 and use scram-sha-256 password authentication.
 - Start, stop and remove servers; create, rename and drop databases and schemas.
 - Backup and restore with bundled pg_dump and pg_restore.
+- Copy to local: copies any saved cloud connection's database (structure and data, or structure only) into a new database on a local server; the cloud database is only read.
 - Detects PostgreSQL already installed or running on the computer (system installers, Homebrew, Postgres.app, Docker) and offers to connect to it.
 
 ## Cloud and remote connections
